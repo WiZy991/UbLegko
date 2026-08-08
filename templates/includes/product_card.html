@@ -1,0 +1,53 @@
+<article class="product-card">
+  <a href="{{ product.get_absolute_url }}" class="product-card__image">
+    {% if product.image %}
+      <img src="{{ product.image.url }}" alt="{{ product.name }}">
+    {% else %}
+      Фото
+    {% endif %}
+  </a>
+  <h3 class="product-card__name"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>
+  <p class="product-card__desc">{{ product.short_description|default:product.description|truncatechars:70 }}</p>
+  <div class="product-card__meta">
+    <span class="price">{{ product.price|floatformat:0 }} руб</span>
+    {% if product.unit %}<span class="status-pill">{{ product.unit }}</span>{% endif %}
+    {% if product.is_promo %}<span class="badge-promo">Акция</span>{% endif %}
+  </div>
+  {% if product.old_price %}
+    <div class="product-card__meta">
+      <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
+    </div>
+  {% endif %}
+  <div class="product-card__meta">
+    <span class="status-pill">{{ product.get_status_display }}</span>
+    {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
+  </div>
+  <form class="product-card__actions" action="{% url 'cart:add' product.id %}" method="post" data-ajax-cart>
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+    <div class="product-card__buy">
+      <div class="qty" data-qty-group>
+        <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
+        <input type="number" name="quantity" value="1" min="1" aria-label="Количество">
+        <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
+      </div>
+      <span class="rating">★ {{ product.rating }}</span>
+    </div>
+    <button class="btn btn-primary" type="submit">В корзину</button>
+  </form>
+  {% if user.is_authenticated %}
+    <form action="{% url 'cart:favorite_toggle' product.id %}" method="post" data-ajax-favorite style="margin-top:6px;">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button
+        class="btn btn-ghost btn-fav {% if product.id in favorite_ids %}is-active{% endif %}"
+        type="submit"
+        style="width:100%;"
+        data-fav-label-on="Убрать из избранного"
+        data-fav-label-off="В избранное"
+      >
+        {% if product.id in favorite_ids %}Убрать из избранного{% else %}В избранное{% endif %}
+      </button>
+    </form>
+  {% endif %}
+</article>

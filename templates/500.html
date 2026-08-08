@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Ошибка сервера — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="error-page">
+  <div>
+    <h1>500</h1>
+    <p>Внутренняя ошибка сервера. Попробуйте позже.</p>
+    <a class="btn btn-primary" style="width:auto;margin-top:16px;" href="{% url 'catalog:home' %}">На главную</a>
+  </div>
+</div>
+{% endblock %}

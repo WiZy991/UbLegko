@@ -1,0 +1,82 @@
+from django.db import models
+
+
+class City(models.Model):
+    name = models.CharField('Город', max_length=120)
+    region = models.CharField('Регион', max_length=120, blank=True, default='Приморский край')
+    is_default = models.BooleanField('По умолчанию', default=False)
+    is_active = models.BooleanField('Активен', default=True)
+    sort_order = models.PositiveIntegerField('Порядок', default=0)
+
+    class Meta:
+        verbose_name = 'Город'
+        verbose_name_plural = 'Города'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+    @property
+    def display_name(self):
+        if self.name.startswith('г.') or self.name.startswith('г '):
+            return self.name
+        return f'г. {self.name}'
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            City.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
+        super().save(*args, **kwargs)
+
+
+class SiteSettings(models.Model):
+    company_name = models.CharField('Название компании', max_length=200, default='ООО СОЛНЕЧНЫЙ МЕЧ')
+    brand_name = models.CharField('Бренд', max_length=100, default='УБИРАЕМСЯЛЕГКО')
+    slogan = models.CharField(
+        'Слоган',
+        max_length=255,
+        default='Что-то не отмывается, просто скажите',
+    )
+    tagline = models.CharField(
+        'Подзаголовок',
+        max_length=255,
+        default='профессиональные моющие средства для дома и организаций',
+    )
+    phone = models.CharField('Телефон', max_length=40, default='8-991-496-18-97')
+    email = models.EmailField('Email', default='pro-brite_uss@mail.ru')
+    order_email = models.EmailField('Email для заявок', default='pro-brite_uss@mail.ru')
+    city = models.CharField('Город (текст в футере)', max_length=100, default='г. Уссурийск')
+    address = models.CharField(
+        'Адрес',
+        max_length=300,
+        default='ул. Горького 91, ст4 (вход с ул. Амурская)',
+    )
+    full_address = models.CharField(
+        'Полный адрес',
+        max_length=400,
+        default='Приморский край, г. Уссурийск, ул. Горького 91, ст4, магазин «Убираемсялегко»',
+    )
+    working_hours = models.CharField(
+        'Часы работы',
+        max_length=100,
+        default='с 9.00 до 20.00 (без выходных)',
+    )
+    inn = models.CharField('ИНН', max_length=20, default='2511130194')
+    ogrn = models.CharField('ОГРН', max_length=20, default='1242500027120')
+    max_channel_url = models.URLField('Ссылка на канал MAX', blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Настройки сайта'
+        verbose_name_plural = 'Настройки сайта'
+
+    def __str__(self):
+        return 'Настройки сайта'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj

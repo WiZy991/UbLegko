@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="layout" data-catalog-root>
+  {% include "includes/sidebar.html" %}
+  <div>
+    <h2 class="category-block__title">Результаты поиска{% if query %}: «{{ query }}»{% endif %}</h2>
+    <div class="category-block__line"></div>
+    {% include "includes/sort_bar.html" %}
+    {% include "includes/filter_bar.html" %}
+    <div class="product-grid">
+      {% for product in products %}
+        {% include "includes/product_card.html" %}
+      {% empty %}
+        <div class="empty-state">Ничего не найдено</div>
+      {% endfor %}
+    </div>
+    {% include "includes/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

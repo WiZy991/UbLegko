@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Личный кабинет — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<h1>Личный кабинет</h1>
+<div class="contacts-grid">
+  <div class="form-card">
+    <h2 style="margin-top:0;">Профиль</h2>
+    <p style="color:var(--text-muted);">Логин: {{ user.username }}</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
+        </div>
+      {% endfor %}
+      <button class="btn btn-primary" type="submit">Сохранить</button>
+    </form>
+    <p style="margin-top:16px;"><a class="link-accent" href="{% url 'favorites' %}">Перейти в избранное</a></p>
+  </div>
+  <div class="content-card">
+    <h2 style="margin-top:0;">Мои заявки</h2>
+    {% for order in orders %}
+      <div style="padding:12px 0;border-bottom:1px solid var(--line);">
+        <strong>Заявка №{{ order.pk }}</strong>
+        <div style="color:var(--text-muted);font-size:0.9rem;">
+          {{ order.created_at|date:"d.m.Y H:i" }} · {{ order.get_status_display }} · {{ order.total|floatformat:0 }} руб
+        </div>
+        <ul style="margin:8px 0 0;padding-left:18px;color:var(--text-muted);">
+          {% for item in order.items.all %}
+            <li>{{ item.product_name }} × {{ item.quantity }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% empty %}
+      <p class="empty-state" style="padding:20px 0;">Заявок пока нет</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

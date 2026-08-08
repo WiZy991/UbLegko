@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Заявка отправлена — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="content-card auth-wrap" style="text-align:center;">
+  <h1>Заявка №{{ order.pk }} принята</h1>
+  <p>Мы свяжемся с вами по телефону {{ order.phone }}.</p>
+  <a class="btn btn-primary" style="width:auto;margin-top:12px;" href="{% url 'catalog:home' %}">Вернуться в каталог</a>
+</div>
+{% endblock %}

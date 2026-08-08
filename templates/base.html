@@ -1,0 +1,185 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ site_settings.brand_name }}{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260808p">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  <a href="{% url 'catalog:home' %}" class="brand-banner">
+    <span class="brand-stars brand-stars--left" aria-hidden="true">
+      <span class="brand-stars__item brand-stars__item--lg">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+    </span>
+    <span class="brand-banner__content">
+      <h1 class="brand-banner__title">УБИРАЕМСЯ ЛЕГКО</h1>
+      <p class="brand-banner__tagline">{{ site_settings.tagline }}</p>
+    </span>
+    <span class="brand-stars brand-stars--right" aria-hidden="true">
+      <span class="brand-stars__item brand-stars__item--lg">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+    </span>
+  </a>
+
+  <div class="header-sticky">
+    <div class="topbar">
+      <div class="container topbar__inner">
+        <div class="topbar__left">
+          {% include "includes/city_selector.html" %}
+          {% if site_settings.max_channel_url %}
+            <a class="pill-link pill-link--max" href="{{ site_settings.max_channel_url }}" target="_blank" rel="noopener"><span class="pill-link--max__full">Канал в MAX</span><span class="pill-link--max__short">MAX</span></a>
+          {% else %}
+            <span class="pill-link pill-link--max"><span class="pill-link--max__full">Канал в MAX</span><span class="pill-link--max__short">MAX</span></span>
+          {% endif %}
+        </div>
+        <div class="topbar__center">
+          <div class="topbar__slogan">{{ site_settings.slogan }}</div>
+          <a class="topbar__phone" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">тел. {{ site_settings.phone }}</a>
+        </div>
+        <div class="topbar__right">
+          <a class="cart-link" href="{% url 'cart:detail' %}">
+            <span class="cart-link__icon" aria-hidden="true">🛒</span>
+            <span data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
+          </a>
+          {% if user.is_authenticated %}
+            <a class="pill-link" href="{% url 'accounts:profile' %}">Кабинет</a>
+            <form action="{% url 'accounts:logout' %}" method="post" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="pill-link pill-link--button">Выход</button>
+            </form>
+          {% else %}
+            <a class="auth-link" href="{% url 'accounts:login' %}">Вход</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="search-row">
+      <div class="container search-row__inner">
+        <form
+          class="search-form"
+          action="{% url 'catalog:search' %}"
+          method="get"
+          data-search-form
+          data-suggest-url="{% url 'catalog:search_suggest' %}"
+          autocomplete="off"
+        >
+          <span class="search-form__icon" aria-hidden="true">🔍</span>
+          <input
+            type="search"
+            name="q"
+            placeholder="Например: Amol"
+            value="{{ request.GET.q }}"
+            data-search-input
+            autocomplete="off"
+            aria-autocomplete="list"
+            aria-controls="search-suggest"
+            aria-expanded="false"
+            aria-label="Поиск товаров"
+          >
+          <button class="search-form__submit" type="submit">Найти</button>
+          <div class="search-suggest" id="search-suggest" data-search-suggest hidden role="listbox"></div>
+        </form>
+        {% if user.is_authenticated %}
+          <a class="favorites-link" href="{% url 'favorites' %}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
+            Избранное
+            <span class="favorites-count" data-favorites-count>{{ favorites_count }}</span>
+          </a>
+        {% else %}
+          <a class="favorites-link" href="{% url 'accounts:login' %}?next={% url 'favorites' %}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
+            Избранное
+            <span class="favorites-count" data-favorites-count>0</span>
+          </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <main class="page">
+    <div class="container">
+      {% if messages %}
+        <ul class="messages">
+          {% for message in messages %}
+            <li class="{{ message.tags }}">{{ message }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__banner" aria-hidden="true">
+      <span class="site-footer__stars site-footer__stars--left">
+        <span class="site-footer__star site-footer__star--lg">✦</span>
+        <span class="site-footer__star site-footer__star--md">✦</span>
+        <span class="site-footer__star site-footer__star--sm">✦</span>
+      </span>
+      <p class="site-footer__banner-title">УБИРАЕМСЯ ЛЕГКО</p>
+      <span class="site-footer__stars site-footer__stars--right">
+        <span class="site-footer__star site-footer__star--lg">✦</span>
+        <span class="site-footer__star site-footer__star--md">✦</span>
+        <span class="site-footer__star site-footer__star--sm">✦</span>
+      </span>
+    </div>
+    <div class="container site-footer__inner">
+      <div class="site-footer__grid">
+        <section class="site-footer__col">
+          <h2 class="site-footer__heading">Магазин</h2>
+          <p class="site-footer__text">{{ site_settings.full_address }}</p>
+          <p class="site-footer__meta">{{ site_settings.working_hours }}</p>
+        </section>
+        <section class="site-footer__col">
+          <h2 class="site-footer__heading">Компания</h2>
+          <p class="site-footer__company">{{ site_settings.company_name }}</p>
+          <p class="site-footer__text">ИНН: {{ site_settings.inn }}</p>
+          <p class="site-footer__text">ОГРН: {{ site_settings.ogrn }}</p>
+        </section>
+        <section class="site-footer__col">
+          <h2 class="site-footer__heading">Контакты</h2>
+          <p class="site-footer__text">
+            Тел:
+            <a class="site-footer__link" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">{{ site_settings.phone }}</a>
+          </p>
+          <p class="site-footer__text">
+            Email:
+            <a class="site-footer__link" href="mailto:{{ site_settings.email }}">{{ site_settings.email }}</a>
+          </p>
+          {% if site_settings.max_channel_url %}
+            <p class="site-footer__text">
+              <a class="site-footer__link site-footer__link--max" href="{{ site_settings.max_channel_url }}" target="_blank" rel="noopener">Канал в MAX</a>
+            </p>
+          {% endif %}
+        </section>
+        <section class="site-footer__col">
+          <h2 class="site-footer__heading">Разделы</h2>
+          <ul class="site-footer__nav">
+            <li><a class="site-footer__link" href="{% url 'catalog:home' %}">Каталог</a></li>
+            <li><a class="site-footer__link" href="{% url 'core:contacts' %}">Контакты</a></li>
+            <li><a class="site-footer__link" href="{% url 'cart:detail' %}">Корзина</a></li>
+            {% if user.is_authenticated %}
+              <li><a class="site-footer__link" href="{% url 'accounts:profile' %}">Личный кабинет</a></li>
+            {% else %}
+              <li><a class="site-footer__link" href="{% url 'accounts:login' %}">Вход</a></li>
+            {% endif %}
+          </ul>
+        </section>
+      </div>
+      <p class="site-footer__slogan">«{{ site_settings.slogan }}»</p>
+    </div>
+  </footer>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="{% static 'js/main.js' %}?v=20260808p"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

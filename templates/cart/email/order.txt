@@ -1,0 +1,15 @@
+Новая заявка №{{ order.pk }} с сайта {{ site.brand_name }}
+
+Клиент: {{ order.full_name }}
+Телефон: {{ order.phone }}
+Email: {{ order.email|default:"—" }}
+Адрес доставки: {{ order.address|default:"—" }}
+Комментарий: {{ order.comment|default:"—" }}
+Дата: {{ order.created_at|date:"d.m.Y H:i" }}
+
+Состав заявки:
+{% for item in order.items.all %}
+- {{ item.product_name }} × {{ item.quantity }} = {{ item.line_total }} руб
+{% endfor %}
+
+Итого: {{ order.total }} руб

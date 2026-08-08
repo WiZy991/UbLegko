@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Оформление заявки — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<h1>Оформление заявки</h1>
+<div class="contacts-grid">
+  <div class="form-card">
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <div class="form-group">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
+        </div>
+      {% endfor %}
+      <button class="btn btn-primary" type="submit">Отправить заявку</button>
+    </form>
+  </div>
+  <div class="content-card">
+    <h2 style="margin-top:0;">Ваш заказ</h2>
+    <ul class="contacts-list">
+      {% for item in items %}
+        <li>{{ item.product.name }} × {{ item.quantity }} — {{ item.total|floatformat:0 }} руб</li>
+      {% endfor %}
+    </ul>
+    <p class="cart-total" style="text-align:left;">Итого: {{ cart_total|floatformat:0 }} руб</p>
+  </div>
+</div>
+{% endblock %}

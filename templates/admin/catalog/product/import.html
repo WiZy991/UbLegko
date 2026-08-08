@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+<p>
+  Загрузите файл прайса <strong>.xls / .xlsx / .csv</strong>.
+  Товары создаются автоматически и <strong>сразу распределяются по категориям</strong>
+  по названию и описанию (авто, химчистка, стирка, мыло и т.д.).
+</p>
+<p>Используются столбцы:</p>
+<ul>
+  <li><strong>Наименование товара</strong> (обязательно)</li>
+  <li><strong>Описание товара</strong></li>
+  <li><strong>Ед. изм.</strong></li>
+  <li><strong>Цена</strong> (обязательно)</li>
+  <li><strong>Страна-производитель</strong></li>
+  <li>дополнительно: Старая цена, Категория</li>
+</ul>
+<form method="post" enctype="multipart/form-data" style="max-width:520px;">
+  {% csrf_token %}
+  <div style="margin-bottom:14px;">
+    <label for="id_file"><strong>Файл Excel</strong></label><br>
+    <input id="id_file" type="file" name="file" accept=".csv,.xlsx,.xls" required>
+  </div>
+  <input type="submit" value="Загрузить товары" class="default">
+  <a href="{% url 'admin:catalog_product_changelist' %}" style="margin-left:12px;">Отмена</a>
+</form>
+{% endblock %}

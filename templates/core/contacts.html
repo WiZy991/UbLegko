@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Контакты — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<h1>Контакты</h1>
+<div class="contacts-grid">
+  <div class="content-card">
+    <img class="contacts-logo" src="{% static 'img/logo.png' %}?v=20260808j" alt="{{ site.brand_name }}">
+    <h2 style="margin-top:0;">{{ site.company_name }}</h2>
+    <ul class="contacts-list">
+      <li><strong>Телефон:</strong> <a href="tel:{{ site.phone|cut:' '|cut:'-' }}">{{ site.phone }}</a></li>
+      <li><strong>Email:</strong> <a class="link-accent" href="mailto:{{ site.email }}">{{ site.email }}</a></li>
+      <li><strong>Адрес:</strong> {{ site.city }}, {{ site.address }}</li>
+      <li><strong>Часы работы:</strong> {{ site.working_hours }}</li>
+      <li><strong>ИНН:</strong> {{ site.inn }}</li>
+      <li><strong>ОГРН:</strong> {{ site.ogrn }}</li>
+      {% if site.max_channel_url %}
+        <li><strong>Канал MAX:</strong> <a class="link-accent" href="{{ site.max_channel_url }}" target="_blank" rel="noopener">Перейти</a></li>
+      {% endif %}
+    </ul>
+    <p style="margin-top:18px;color:var(--text-muted);">«{{ site.slogan }}»</p>
+  </div>
+  <div class="content-card">
+    <h2 style="margin-top:0;">Магазин «Убираемсялегко»</h2>
+    <p>{{ site.full_address }}</p>
+    <p>Профессиональные моющие средства для дома и организаций.</p>
+    <a class="btn btn-primary" style="width:auto;margin-top:12px;" href="{% url 'catalog:home' %}">Перейти в каталог</a>
+  </div>
+</div>
+{% endblock %}

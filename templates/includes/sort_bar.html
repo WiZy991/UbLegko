@@ -1,0 +1,8 @@
+{% load catalog_extras %}
+<nav class="sort-bar" aria-label="Сортировка">
+  {% for key, value in sort_options.items %}
+    <a href="{% catalog_query sort=key %}" class="{% if sort == key %}is-active{% endif %}" data-catalog-nav>
+      {{ value.0 }}
+    </a>
+  {% endfor %}
+</nav>

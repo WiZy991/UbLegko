@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}Регистрация — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="form-card auth-wrap">
+  <h1>Регистрация</h1>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
+        {% if field.help_text %}<span class="field-help">{{ field.help_text|striptags }}</span>{% endif %}
+      </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Зарегистрироваться</button>
+  </form>
+  <p style="margin-top:16px;">Уже есть аккаунт? <a class="link-accent" href="{% url 'accounts:login' %}">Войти</a></p>
+</div>
+{% endblock %}

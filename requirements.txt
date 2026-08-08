@@ -1,0 +1,11 @@
+asgiref==3.12.1
+Django==6.1
+django-jazzmin==3.0.5
+et_xmlfile==2.0.0
+gunicorn==23.0.0
+openpyxl==3.1.5
+packaging==26.3
+Pillow==12.3.0
+sqlparse==0.5.5
+tzdata==2026.3
+xlrd==1.2.0

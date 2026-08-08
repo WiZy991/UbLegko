@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Вход — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="form-card auth-wrap">
+  <h1>Вход</h1>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div class="messages"><li class="error">{{ form.non_field_errors|striptags }}</li></div>
+    {% endif %}
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
+      </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Войти</button>
+  </form>
+  <p style="margin-top:16px;">Нет аккаунта? <a class="link-accent" href="{% url 'accounts:register' %}">Регистрация</a></p>
+</div>
+{% endblock %}

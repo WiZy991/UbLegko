@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Корзина — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<h1>Корзина</h1>
+<div class="cart-table-wrap">
+  {% if items %}
+    <table class="cart-table">
+      <thead>
+        <tr>
+          <th>Товар</th>
+          <th>Цена</th>
+          <th>Кол-во</th>
+          <th>Сумма</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></td>
+            <td>{{ item.price|floatformat:0 }} руб</td>
+            <td>
+              <form class="cart-qty-form" action="{% url 'cart:update' item.product.id %}" method="post" data-cart-qty-form>
+                {% csrf_token %}
+                <div class="qty" data-qty-group>
+                  <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
+                  <input class="cart-qty-input" type="number" name="quantity" value="{{ item.quantity }}" min="1" inputmode="numeric" aria-label="Количество">
+                  <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
+                </div>
+              </form>
+            </td>
+            <td data-cart-line-total>{{ item.total|floatformat:0 }} руб</td>
+            <td>
+              <form action="{% url 'cart:remove' item.product.id %}" method="post">
+                {% csrf_token %}
+                <button class="btn btn-ghost" type="submit" style="padding:6px 10px;">Удалить</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="cart-total" data-cart-page-total>Итого: {{ cart_total|floatformat:0 }} руб</p>
+    <div style="text-align:right;margin-top:12px;">
+      <a class="btn btn-primary" style="width:auto;" href="{% url 'cart:checkout' %}">Оформить заявку</a>
+    </div>
+  {% else %}
+    <div class="empty-state">Корзина пуста. <a class="link-accent" href="{% url 'catalog:home' %}">Перейти в каталог</a></div>
+  {% endif %}
+</div>
+
+{% if recommendations %}
+  <h2 class="section-title">С этими товарами обычно берут</h2>
+  <p style="color:var(--text-muted);margin:-8px 0 16px;">Инвентарь и средства, которые логично покупают вместе</p>
+  <div class="product-grid">
+    {% for product in recommendations %}
+      {% include "includes/product_card.html" with favorite_ids=favorite_ids %}
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}

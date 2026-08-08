@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Каталог — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="layout" data-catalog-root>
+  {% include "includes/sidebar.html" %}
+  <div>
+    {% include "includes/sort_bar.html" %}
+    {% include "includes/filter_bar.html" %}
+    {% if grouped_products %}
+      {% for category, items in grouped_products.items %}
+        <section class="category-block">
+          <h2 class="category-block__title">{{ category.name }}</h2>
+          <div class="category-block__line"></div>
+          <div class="product-grid">
+            {% for product in items %}
+              {% include "includes/product_card.html" %}
+            {% endfor %}
+          </div>
+        </section>
+      {% empty %}
+        <div class="empty-state">Товары пока не добавлены</div>
+      {% endfor %}
+    {% else %}
+      <div class="product-grid">
+        {% for product in products %}
+          {% include "includes/product_card.html" %}
+        {% empty %}
+          <div class="empty-state">Товары не найдены</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    {% include "includes/pagination.html" %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="layout">
+  {% include "includes/sidebar.html" %}
+  <div>
+    <article class="product-detail">
+      <div class="product-detail__image">
+        {% if product.image %}
+          <img src="{{ product.image.url }}" alt="{{ product.name }}">
+        {% else %}
+          Фото
+        {% endif %}
+      </div>
+      <div>
+        <p style="color:var(--text-muted);margin:0 0 8px;">
+          <a href="{{ product.category.get_absolute_url }}">{{ product.category.name }}</a>
+        </p>
+        <h1 style="margin:0 0 10px;">{{ product.name }}</h1>
+        <div class="product-card__meta" style="justify-content:flex-start;gap:12px;margin-bottom:12px;">
+          <span class="price">{{ product.price|floatformat:0 }} руб</span>
+          {% if product.old_price %}
+            <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
+          {% endif %}
+          {% if product.is_promo %}<span class="badge-promo">Акция</span>{% endif %}
+          <span class="rating">★ {{ product.rating }}</span>
+          <span class="status-pill">{{ product.get_status_display }}</span>
+        </div>
+        <div class="product-card__meta" style="justify-content:flex-start;gap:10px;margin-bottom:12px;">
+          {% if product.unit %}<span class="status-pill">Ед.: {{ product.unit }}</span>{% endif %}
+          {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
+        </div>
+        {% if product.short_description %}
+          <p style="color:var(--text-muted);">{{ product.short_description }}</p>
+        {% endif %}
+        {% if product.description and product.description != product.short_description %}
+          <div style="white-space:pre-line;margin:16px 0;">{{ product.description }}</div>
+        {% elif product.description and not product.short_description %}
+          <div style="white-space:pre-line;margin:16px 0;">{{ product.description }}</div>
+        {% endif %}
+        <form action="{% url 'cart:add' product.id %}" method="post" data-ajax-cart class="product-buy-row">
+          {% csrf_token %}
+          <div class="qty" data-qty-group>
+            <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
+            <input type="number" name="quantity" value="1" min="1" aria-label="Количество">
+            <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
+          </div>
+          <button class="btn btn-primary product-buy-row__cart" type="submit">В корзину</button>
+        </form>
+        {% if user.is_authenticated %}
+          <form action="{% url 'cart:favorite_toggle' product.id %}" method="post" data-ajax-favorite style="margin-top:12px;">
+            {% csrf_token %}
+            <button
+              class="btn btn-ghost btn-fav {% if is_favorite %}is-active{% endif %}"
+              type="submit"
+              style="width:auto;"
+              data-fav-label-on="Убрать из избранного"
+              data-fav-label-off="В избранное"
+            >
+              {% if is_favorite %}Убрать из избранного{% else %}В избранное{% endif %}
+            </button>
+          </form>
+        {% endif %}
+      </div>
+    </article>
+
+    {% if similar_products %}
+      <h2 class="section-title">Похожие товары</h2>
+      <p style="color:var(--text-muted);margin:-8px 0 16px;">Другие фасовки и товары той же линейки</p>
+      <div class="product-grid">
+        {% for product in similar_products %}
+          {% include "includes/product_card.html" %}
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% if bought_together %}
+      <h2 class="section-title">С этим товаром обычно берут</h2>
+      <p style="color:var(--text-muted);margin:-8px 0 16px;">Инвентарь и средства, которые логично покупают вместе</p>
+      <div class="product-grid">
+        {% for product in bought_together %}
+          {% include "includes/product_card.html" %}
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

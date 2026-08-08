@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Избранное — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="layout">
+  {% include "includes/sidebar.html" %}
+  <div>
+    <h1 class="category-block__title">Избранное</h1>
+    <div class="category-block__line"></div>
+    <div class="product-grid">
+      {% for product in products %}
+        {% include "includes/product_card.html" %}
+      {% empty %}
+        <div class="empty-state">В избранном пока ничего нет</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
