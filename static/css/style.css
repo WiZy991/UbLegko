@@ -285,6 +285,10 @@ select {
   line-height: 1.35;
 }
 
+.city-selector__hint-city {
+  white-space: nowrap;
+}
+
 .city-selector__item:hover,
 .city-selector__item.is-active {
   background: rgba(0, 172, 215, 0.12);
