@@ -1,12 +1,26 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import (
+    LoginView,
+    LogoutView,
+    PasswordResetConfirmView,
+    PasswordResetDoneView,
+    PasswordResetView,
+)
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse_lazy
 
 from cart.models import Order
 
-from .forms import DeliveryAddressForm, LoginForm, ProfileForm, RegisterForm
+from .forms import (
+    DeliveryAddressForm,
+    LoginForm,
+    PasswordResetConfirmForm,
+    PasswordResetRequestForm,
+    ProfileForm,
+    RegisterForm,
+)
 from .models import DeliveryAddress, Profile
 
 
@@ -18,6 +32,39 @@ class UserLoginView(LoginView):
 
 class UserLogoutView(LogoutView):
     next_page = 'catalog:home'
+
+
+class UserPasswordResetView(PasswordResetView):
+    template_name = 'accounts/password_reset.html'
+    email_template_name = 'accounts/email/password_reset_email.txt'
+    subject_template_name = 'accounts/email/password_reset_subject.txt'
+    form_class = PasswordResetRequestForm
+    success_url = reverse_lazy('accounts:password_reset_done')
+
+    def form_valid(self, form):
+        from core.models import SiteSettings
+
+        self.extra_email_context = {
+            'site_name': SiteSettings.load().brand_name,
+        }
+        return super().form_valid(form)
+
+
+class UserPasswordResetDoneView(PasswordResetDoneView):
+    template_name = 'accounts/password_reset_done.html'
+
+
+class UserPasswordResetConfirmView(PasswordResetConfirmView):
+    template_name = 'accounts/password_reset_confirm.html'
+    form_class = PasswordResetConfirmForm
+    success_url = reverse_lazy('accounts:profile')
+    post_reset_login = True
+    post_reset_login_backend = 'django.contrib.auth.backends.ModelBackend'
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, 'Пароль изменён. Вы вошли в личный кабинет.')
+        return response
 
 
 def register(request):
@@ -61,7 +108,9 @@ def profile(request):
                 messages.success(request, 'Адрес добавлен')
                 return redirect('accounts:profile')
         elif action == 'delete_address':
-            addr = get_object_or_404(DeliveryAddress, pk=request.POST.get('address_id'), user=request.user)
+            addr = get_object_or_404(
+                DeliveryAddress, pk=request.POST.get('address_id'), user=request.user
+            )
             was_default = addr.is_default
             addr.delete()
             if was_default:
@@ -72,7 +121,9 @@ def profile(request):
             messages.success(request, 'Адрес удалён')
             return redirect('accounts:profile')
         elif action == 'set_default_address':
-            addr = get_object_or_404(DeliveryAddress, pk=request.POST.get('address_id'), user=request.user)
+            addr = get_object_or_404(
+                DeliveryAddress, pk=request.POST.get('address_id'), user=request.user
+            )
             addr.is_default = True
             addr.save()
             messages.success(request, 'Адрес по умолчанию обновлён')

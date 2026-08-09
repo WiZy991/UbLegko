@@ -26,6 +26,9 @@
     {% endfor %}
     <button class="btn btn-primary" type="submit">Войти</button>
   </form>
-  <p style="margin-top:16px;">Нет аккаунта? <a class="link-accent" href="{% url 'accounts:register' %}?next={{ request.GET.next|default:'/'|urlencode }}">Регистрация</a></p>
+  <p style="margin-top:16px;">
+    <a class="link-accent" href="{% url 'accounts:password_reset' %}">Забыли пароль?</a>
+  </p>
+  <p style="margin-top:12px;">Нет аккаунта? <a class="link-accent" href="{% url 'accounts:register' %}?next={{ request.GET.next|default:'/'|urlencode }}">Регистрация</a></p>
 </div>
 {% endblock %}

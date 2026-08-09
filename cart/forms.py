@@ -116,14 +116,17 @@ class CheckoutForm(forms.Form):
         method = cleaned.get('delivery_method')
         if method == self.DELIVERY_PICKUP:
             cleaned['address'] = ''
+            cleaned['address_name'] = ''
             return cleaned
 
         saved = cleaned.get('saved_address')
         if saved is not None:
             cleaned['address'] = saved.address
+            cleaned['address_name'] = saved.name
         else:
             address = (cleaned.get('address') or '').strip()
             cleaned['address'] = address
+            cleaned['address_name'] = ''
             if not address:
                 self.add_error(
                     'address' if 'address' in self.fields else 'saved_address',

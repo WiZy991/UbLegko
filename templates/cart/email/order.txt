@@ -4,7 +4,8 @@
 Телефон: {{ order.phone }}
 Email: {{ order.email|default:"—" }}
 Способ получения: {{ order.get_delivery_method_display }}
-Адрес доставки: {{ order.address|default:"—" }}
+{% if order.address_name %}Название адреса: {{ order.address_name }}
+{% endif %}Адрес доставки: {{ order.address|default:"—" }}
 Комментарий: {{ order.comment|default:"—" }}
 Дата: {{ order.created_at|date:"d.m.Y H:i" }}
 

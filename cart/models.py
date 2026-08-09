@@ -55,6 +55,7 @@ class Order(models.Model):
         default='courier',
     )
     address = models.CharField('Адрес доставки', max_length=400, blank=True)
+    address_name = models.CharField('Название адреса', max_length=100, blank=True)
     comment = models.TextField('Комментарий', blank=True)
     status = models.CharField(
         'Статус',

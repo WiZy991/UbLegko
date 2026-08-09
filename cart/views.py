@@ -149,6 +149,7 @@ def checkout(request):
                 email=form.cleaned_data.get('email', ''),
                 delivery_method=form.cleaned_data['delivery_method'],
                 address=form.cleaned_data.get('address', ''),
+                address_name=form.cleaned_data.get('address_name', ''),
                 comment=form.cleaned_data['comment'],
             )
             if request.user.is_authenticated:

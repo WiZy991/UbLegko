@@ -1,5 +1,10 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.contrib.auth.forms import (
+    AuthenticationForm,
+    PasswordResetForm,
+    SetPasswordForm,
+    UserCreationForm,
+)
 from django.contrib.auth.models import User
 
 from core.validators import clean_ru_phone, clean_user_email
@@ -9,12 +14,14 @@ from .models import DeliveryAddress, Profile
 PASSWORD_HELP = 'Ваш пароль должен содержать как минимум 8 символов.'
 PHONE_HELP = 'Для уточнения заказа и для связи с курьером'
 NAME_HELP = 'Как к вам обращаться'
+EMAIL_HELP = 'Для восстановления пароля'
 
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(
         label='Email',
         required=True,
+        help_text=EMAIL_HELP,
         widget=forms.EmailInput(attrs={
             'class': 'form-input',
             'autocomplete': 'email',
@@ -92,6 +99,35 @@ class LoginForm(AuthenticationForm):
                 field.widget.attrs['autocomplete'] = 'current-password'
 
 
+class PasswordResetRequestForm(PasswordResetForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['email'].label = 'Email'
+        self.fields['email'].help_text = 'Укажите email, с которым вы регистрировались'
+        self.fields['email'].widget.attrs.update({
+            'class': 'form-input',
+            'autocomplete': 'email',
+            'placeholder': 'email@example.com',
+            'data-email-validate': '1',
+        })
+
+    def clean_email(self):
+        return clean_user_email(self.cleaned_data.get('email', ''))
+
+
+class PasswordResetConfirmForm(SetPasswordForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['new_password1'].label = 'Новый пароль'
+        self.fields['new_password2'].label = 'Подтверждение пароля'
+        self.fields['new_password1'].help_text = PASSWORD_HELP
+        self.fields['new_password2'].help_text = ''
+        for name, field in self.fields.items():
+            field.widget.attrs['class'] = 'form-input'
+            field.widget.attrs['data-password-toggle'] = '1'
+            field.widget.attrs['autocomplete'] = 'new-password'
+
+
 class ProfileForm(forms.ModelForm):
     phone = forms.CharField(
         label='Телефон',
@@ -115,6 +151,7 @@ class ProfileForm(forms.ModelForm):
         }
         help_texts = {
             'first_name': NAME_HELP,
+            'email': EMAIL_HELP,
         }
         widgets = {
             'first_name': forms.TextInput(attrs={

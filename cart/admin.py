@@ -19,12 +19,13 @@ class OrderAdmin(admin.ModelAdmin):
         'delivery_method',
         'email',
         'address',
+        'address_name',
         'status',
         'created_at',
         'total_display',
     )
     list_filter = ('status', 'delivery_method', 'created_at')
-    search_fields = ('full_name', 'phone', 'email', 'address')
+    search_fields = ('full_name', 'phone', 'email', 'address', 'address_name')
     list_editable = ('status',)
     readonly_fields = (
         'user',
@@ -33,6 +34,7 @@ class OrderAdmin(admin.ModelAdmin):
         'email',
         'delivery_method',
         'address',
+        'address_name',
         'comment',
         'created_at',
     )
