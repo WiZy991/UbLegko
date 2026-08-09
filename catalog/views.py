@@ -177,6 +177,17 @@ class ProductDetailView(DetailView):
         if not request.user.is_authenticated:
             return redirect_to_login(self.object.get_absolute_url())
 
+        if request.POST.get('action') == 'delete_review':
+            deleted, _ = ProductReview.objects.filter(
+                product=self.object, user=request.user
+            ).delete()
+            if deleted:
+                from .models import update_product_rating
+
+                update_product_rating(self.object.pk)
+                messages.success(request, 'Ваш отзыв удалён')
+            return redirect(self.object.get_absolute_url() + '#reviews')
+
         form = ProductReviewForm(request.POST)
         if form.is_valid():
             review, created = ProductReview.objects.update_or_create(

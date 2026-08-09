@@ -1150,6 +1150,9 @@ select {
   color: #ffc107;
   font-weight: 700;
   font-size: 0.92rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
 }
 
 .rating__count {
@@ -1180,6 +1183,24 @@ select {
 .review-form__submit {
   width: auto;
   min-width: 180px;
+}
+
+.review-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.review-form__delete {
+  background: transparent;
+  color: var(--danger, #d64545);
+  border: 1px solid currentColor;
+  font-weight: 600;
+}
+
+.review-form__delete:hover {
+  background: rgba(214, 69, 69, 0.08);
 }
 
 .review-form textarea {
@@ -1301,6 +1322,26 @@ select {
   margin-left: auto;
   color: var(--text-muted);
   font-size: 0.88rem;
+}
+
+.review-card__delete-form {
+  margin: 0;
+}
+
+.review-card__delete {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.review-card__delete:hover {
+  color: var(--danger, #d64545);
 }
 
 .review-card__text {

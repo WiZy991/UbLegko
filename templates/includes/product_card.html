@@ -91,7 +91,9 @@
         >
         <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
       </div>
-      <span class="rating">★ {{ product.rating }}</span>
+      {% if product.reviews_count %}
+        <span class="rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
+      {% endif %}
     </div>
   </form>
 </article>

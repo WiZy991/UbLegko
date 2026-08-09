@@ -31,7 +31,6 @@ PRODUCTS = [
         'price': Decimal('650'),
         'is_promo': True,
         'is_featured': True,
-        'rating': Decimal('4.9'),
     },
     {
         'name': 'Pro-Brite Universal 1 л',
@@ -41,7 +40,6 @@ PRODUCTS = [
         'price': Decimal('490'),
         'is_promo': False,
         'is_featured': True,
-        'rating': Decimal('4.8'),
     },
     {
         'name': 'Carpet Clean 1 л',
@@ -51,7 +49,6 @@ PRODUCTS = [
         'price': Decimal('780'),
         'is_promo': True,
         'is_featured': False,
-        'rating': Decimal('4.7'),
     },
     {
         'name': 'Wash Soft 5 л',
@@ -61,7 +58,6 @@ PRODUCTS = [
         'price': Decimal('1200'),
         'is_promo': False,
         'is_featured': False,
-        'rating': Decimal('4.6'),
     },
     {
         'name': 'Dish Pro 5 л',
@@ -71,7 +67,6 @@ PRODUCTS = [
         'price': Decimal('1450'),
         'is_promo': False,
         'is_featured': True,
-        'rating': Decimal('4.8'),
     },
     {
         'name': 'Sanit Gel 0,5 л',
@@ -81,7 +76,6 @@ PRODUCTS = [
         'price': Decimal('320'),
         'is_promo': True,
         'is_featured': False,
-        'rating': Decimal('4.5'),
     },
 ]
 
@@ -118,7 +112,8 @@ class Command(BaseCommand):
                     'price': data['price'],
                     'is_promo': data['is_promo'],
                     'is_featured': data['is_featured'],
-                    'rating': data['rating'],
+                    'rating': Decimal('0'),
+                    'reviews_count': 0,
                     'status': Product.Status.IN_STOCK,
                     'is_visible': True,
                 },

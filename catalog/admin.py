@@ -148,6 +148,7 @@ class ProductAdmin(admin.ModelAdmin):
     autocomplete_fields = ['category']
     inlines = [ProductRecommendationInline]
     change_list_template = 'admin/catalog/product/change_list.html'
+    readonly_fields = ('rating', 'reviews_count')
     fieldsets = (
         (None, {
             'fields': (
@@ -157,7 +158,7 @@ class ProductAdmin(admin.ModelAdmin):
             ),
         }),
         ('Цены и статус', {
-            'fields': ('price', 'old_price', 'status', 'rating', 'is_promo', 'is_featured', 'is_visible'),
+            'fields': ('price', 'old_price', 'status', 'rating', 'reviews_count', 'is_promo', 'is_featured', 'is_visible'),
         }),
     )
 

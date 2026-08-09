@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Avg
+from django.db.models import Avg, Count
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -67,7 +67,8 @@ class Product(models.Model):
         blank=True,
     )
     image = models.ImageField('Изображение', upload_to='products/', blank=True)
-    rating = models.DecimalField('Рейтинг', max_digits=3, decimal_places=1, default=5.0)
+    rating = models.DecimalField('Рейтинг', max_digits=3, decimal_places=1, default=Decimal('0'))
+    reviews_count = models.PositiveIntegerField('Число оценок', default=0)
     status = models.CharField(
         'Статус',
         max_length=20,
@@ -172,7 +173,15 @@ class ProductReview(models.Model):
 
 
 def update_product_rating(product_id):
-    avg = ProductReview.objects.filter(product_id=product_id).aggregate(Avg('rating'))['rating__avg']
-    if avg is None:
+    agg = ProductReview.objects.filter(product_id=product_id).aggregate(
+        avg=Avg('rating'),
+        cnt=Count('id'),
+    )
+    count = int(agg['cnt'] or 0)
+    if count == 0 or agg['avg'] is None:
+        Product.objects.filter(pk=product_id).update(rating=Decimal('0'), reviews_count=0)
         return
-    Product.objects.filter(pk=product_id).update(rating=Decimal(str(round(float(avg), 1))))
+    Product.objects.filter(pk=product_id).update(
+        rating=Decimal(str(round(float(agg['avg']), 1))),
+        reviews_count=count,
+    )

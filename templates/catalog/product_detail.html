@@ -70,7 +70,9 @@
             <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
           {% endif %}
           {% if product.is_promo %}<span class="badge-promo">Акция</span>{% endif %}
-          <span class="rating">★ {{ product.rating }}{% if reviews_count %} <span class="rating__count">({{ reviews_count }})</span>{% endif %}</span>
+          {% if product.reviews_count %}
+            <span class="rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
+          {% endif %}
           <span class="status-pill">{{ product.get_status_display }}</span>
         </div>
         <div class="product-card__meta" style="justify-content:flex-start;gap:10px;margin-bottom:12px;">
@@ -152,9 +154,23 @@
             {% endif %}
           </div>
 
-          <button class="btn btn-primary review-form__submit" type="submit">
-            {% if user_review %}Сохранить отзыв{% else %}Отправить отзыв{% endif %}
-          </button>
+          <div class="review-form__actions">
+            <button class="btn btn-primary review-form__submit" type="submit">
+              {% if user_review %}Сохранить отзыв{% else %}Отправить отзыв{% endif %}
+            </button>
+            {% if user_review %}
+              <button
+                class="btn review-form__delete"
+                type="submit"
+                name="action"
+                value="delete_review"
+                formnovalidate
+                onclick="return confirm('Удалить ваш отзыв и оценку?');"
+              >
+                Удалить отзыв
+              </button>
+            {% endif %}
+          </div>
         </form>
       {% else %}
         <p class="review-login-hint">
@@ -168,7 +184,7 @@
       {% if reviews %}
         <ul class="review-list">
           {% for review in reviews %}
-            <li class="review-card">
+            <li class="review-card{% if user_review and review.id == user_review.id %} is-own{% endif %}">
               <div class="review-card__head">
                 <span class="review-card__author">{{ review.user.get_username }}</span>
                 <span class="review-card__stars" aria-label="Оценка {{ review.rating }} из 5">
@@ -177,6 +193,20 @@
                   {% endfor %}
                 </span>
                 <time class="review-card__date" datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|date:"d.m.Y" }}</time>
+                {% if user_review and review.id == user_review.id %}
+                  <form method="post" class="review-card__delete-form">
+                    {% csrf_token %}
+                    <button
+                      class="review-card__delete"
+                      type="submit"
+                      name="action"
+                      value="delete_review"
+                      onclick="return confirm('Удалить ваш отзыв и оценку?');"
+                    >
+                      Удалить
+                    </button>
+                  </form>
+                {% endif %}
               </div>
               <p class="review-card__text">{{ review.comment }}</p>
             </li>
