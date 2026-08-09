@@ -1030,6 +1030,10 @@ select {
   box-shadow: 0 10px 24px rgba(15, 30, 40, 0.1);
 }
 
+.product-card__media {
+  position: relative;
+}
+
 .product-card__image {
   aspect-ratio: 1;
   background: #eef3f7;
@@ -1046,6 +1050,62 @@ select {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.product-card__fav {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  margin: 0;
+}
+
+.fav-heart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 2px 10px rgba(15, 30, 40, 0.16);
+  color: #9aa3ab;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.fav-heart svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+}
+
+.fav-heart:hover {
+  transform: scale(1.06);
+  color: #c62828;
+  background: #fff;
+}
+
+.fav-heart.is-active {
+  color: #c62828;
+}
+
+.fav-heart.is-active svg {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.product-detail__image .product-card__fav,
+.product-detail__image > .fav-heart {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
 }
 
 .product-card__name {
@@ -1368,6 +1428,7 @@ input[type="number"] {
 }
 
 .product-detail__image {
+  position: relative;
   background: #eef3f7;
   border: 1px solid var(--line);
   border-radius: 12px;

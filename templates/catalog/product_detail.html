@@ -14,6 +14,38 @@
         {% else %}
           Фото
         {% endif %}
+        {% if user.is_authenticated %}
+          <form
+            class="product-card__fav"
+            action="{% url 'cart:favorite_toggle' product.id %}"
+            method="post"
+            data-ajax-favorite
+          >
+            {% csrf_token %}
+            <button
+              type="submit"
+              class="fav-heart{% if is_favorite %} is-active{% endif %}"
+              aria-label="{% if is_favorite %}Убрать из избранного{% else %}В избранное{% endif %}"
+              data-fav-label-on="Убрать из избранного"
+              data-fav-label-off="В избранное"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/>
+              </svg>
+            </button>
+          </form>
+        {% else %}
+          <a
+            class="fav-heart"
+            href="{% url 'accounts:login' %}?next={{ request.path }}"
+            aria-label="Войдите, чтобы добавить в избранное"
+            title="Войдите, чтобы добавить в избранное"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/>
+            </svg>
+          </a>
+        {% endif %}
       </div>
       <div>
         <p style="color:var(--text-muted);margin:0 0 8px;">
@@ -62,20 +94,6 @@
             <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
           </div>
         </form>
-        {% if user.is_authenticated %}
-          <form action="{% url 'cart:favorite_toggle' product.id %}" method="post" data-ajax-favorite style="margin-top:12px;">
-            {% csrf_token %}
-            <button
-              class="btn btn-ghost btn-fav {% if is_favorite %}is-active{% endif %}"
-              type="submit"
-              style="width:auto;"
-              data-fav-label-on="Убрать из избранного"
-              data-fav-label-off="В избранное"
-            >
-              {% if is_favorite %}Убрать из избранного{% else %}В избранное{% endif %}
-            </button>
-          </form>
-        {% endif %}
       </div>
     </article>
 

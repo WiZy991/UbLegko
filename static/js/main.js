@@ -37,44 +37,48 @@
     if (sticky) new ResizeObserver(syncStickyHeaderHeight).observe(sticky);
   }
 
-  document.addEventListener("click", (event) => {
-    const minus = event.target.closest("[data-qty-minus]");
-    const plus = event.target.closest("[data-qty-plus]");
-    if (!minus && !plus) return;
-    const group = event.target.closest("[data-qty-group]");
-    if (!group) return;
-    const input = group.querySelector("input");
-    if (!input) return;
-    const min = Number.isFinite(parseInt(input.min, 10)) ? parseInt(input.min, 10) : 0;
-    const current = parseInt(input.value || String(min), 10);
-    const safeCurrent = Number.isFinite(current) ? current : min;
-    input.value = String(minus ? Math.max(min, safeCurrent - 1) : safeCurrent + 1);
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    input.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-
   const cartQtyState = new WeakMap();
 
   function ensureCartQtyState(input) {
     let state = cartQtyState.get(input);
     if (!state) {
-      // defaultValue не меняется от кликов +/- — это «последнее отправленное» на старте
-      const initial = input.defaultValue !== undefined && input.defaultValue !== ""
-        ? input.defaultValue
-        : "0";
-      state = { lastSent: String(initial), inflight: null, timer: null };
+      const initial =
+        input.defaultValue !== undefined && input.defaultValue !== ""
+          ? input.defaultValue
+          : "0";
+      state = { lastSent: String(initial), inflight: null, timer: null, requestId: 0 };
       cartQtyState.set(input, state);
     }
     return state;
   }
 
-  function syncProductQtyInputs(productId, quantity) {
+  function getCsrfToken(form) {
+    const field = form && form.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (field && field.value) return field.value;
+    return getCookie("csrftoken");
+  }
+
+  function syncProductQtyInputs(productId, quantity, exceptInput) {
     if (!productId) return;
-    document.querySelectorAll(`[data-cart-qty-form][data-product-id="${productId}"] input[name="quantity"]`).forEach((el) => {
-      el.value = String(quantity);
-      const state = ensureCartQtyState(el);
-      state.lastSent = String(quantity);
-    });
+    document
+      .querySelectorAll(`[data-cart-qty-form][data-product-id="${productId}"] input[name="quantity"]`)
+      .forEach((el) => {
+        if (exceptInput && el === exceptInput) return;
+        el.value = String(quantity);
+        const state = ensureCartQtyState(el);
+        state.lastSent = String(quantity);
+      });
+  }
+
+  function updateCartTotals(data) {
+    const pageTotal = document.querySelector("[data-cart-page-total]");
+    if (pageTotal && data.cart_total !== undefined) {
+      pageTotal.textContent = `Итого: ${data.cart_total} руб`;
+    }
+    const headerTotal = document.querySelector("[data-cart-total]");
+    if (headerTotal && data.cart_total !== undefined) {
+      headerTotal.textContent = `${data.cart_total} руб`;
+    }
   }
 
   async function submitCartQty(form, input) {
@@ -85,44 +89,42 @@
     value = Math.max(min, value);
     input.value = String(value);
     if (String(value) === String(state.lastSent)) return;
-    state.lastSent = String(value);
 
     const formData = new FormData(form);
     formData.set("quantity", String(value));
+    const requestId = ++state.requestId;
+
     try {
       if (state.inflight) state.inflight.abort();
       state.inflight = new AbortController();
       const response = await fetch(form.action, {
         method: "POST",
         body: formData,
+        credentials: "same-origin",
         signal: state.inflight.signal,
         headers: {
           "X-Requested-With": "XMLHttpRequest",
-          "X-CSRFToken": getCookie("csrftoken"),
+          "X-CSRFToken": getCsrfToken(form),
         },
       });
+      if (requestId !== state.requestId) return;
       const data = await response.json();
-      if (!data.ok) {
-        form.submit();
+      if (requestId !== state.requestId) return;
+      if (!response.ok || !data.ok) {
+        input.value = String(state.lastSent);
         return;
       }
-      const qty = data.removed ? 0 : data.quantity;
+
+      const qty = data.removed ? 0 : Number(data.quantity);
       input.value = String(qty);
       state.lastSent = String(qty);
-      syncProductQtyInputs(form.getAttribute("data-product-id"), qty);
+      syncProductQtyInputs(form.getAttribute("data-product-id"), qty, input);
+      updateCartTotals(data);
 
       const row = form.closest("tr");
       const lineTotal = row ? row.querySelector("[data-cart-line-total]") : null;
       if (lineTotal && data.line_total !== undefined) {
         lineTotal.textContent = `${data.line_total} руб`;
-      }
-      const pageTotal = document.querySelector("[data-cart-page-total]");
-      if (pageTotal && data.cart_total !== undefined) {
-        pageTotal.textContent = `Итого: ${data.cart_total} руб`;
-      }
-      const headerTotal = document.querySelector("[data-cart-total]");
-      if (headerTotal && data.cart_total !== undefined) {
-        headerTotal.textContent = `${data.cart_total} руб`;
       }
       if (data.removed && row) {
         row.remove();
@@ -138,13 +140,42 @@
       }
     } catch (err) {
       if (err && err.name === "AbortError") return;
-      form.submit();
+      if (requestId !== state.requestId) return;
+      input.value = String(state.lastSent);
     }
   }
+
+  document.addEventListener("click", (event) => {
+    const minus = event.target.closest("[data-qty-minus]");
+    const plus = event.target.closest("[data-qty-plus]");
+    if (!minus && !plus) return;
+    const group = event.target.closest("[data-qty-group]");
+    if (!group) return;
+    const input = group.querySelector('input[name="quantity"], input');
+    if (!input) return;
+    event.preventDefault();
+
+    const min = Number.isFinite(parseInt(input.min, 10)) ? parseInt(input.min, 10) : 0;
+    const current = parseInt(input.value || String(min), 10);
+    const safeCurrent = Number.isFinite(current) ? current : min;
+    const next = minus ? Math.max(min, safeCurrent - 1) : safeCurrent + 1;
+    input.value = String(next);
+
+    const form = input.closest("[data-cart-qty-form]");
+    if (form) {
+      const state = ensureCartQtyState(input);
+      clearTimeout(state.timer);
+      submitCartQty(form, input);
+      return;
+    }
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  });
 
   document.addEventListener("change", (event) => {
     const input = event.target.closest('[data-cart-qty-form] input[name="quantity"]');
     if (!input) return;
+    if (event.isTrusted === false) return;
     const form = input.closest("[data-cart-qty-form]");
     if (form) submitCartQty(form, input);
   });
@@ -152,6 +183,7 @@
   document.addEventListener("input", (event) => {
     const input = event.target.closest('[data-cart-qty-form] input[name="quantity"]');
     if (!input) return;
+    if (event.isTrusted === false) return;
     const form = input.closest("[data-cart-qty-form]");
     if (!form) return;
     const state = ensureCartQtyState(input);
@@ -432,12 +464,16 @@
       });
       const data = await response.json();
       if (data.ok) {
-        const btn = form.querySelector(".btn-fav, .btn-heart");
+        const btn = form.querySelector(".btn-fav, .btn-heart, .fav-heart");
         if (btn) {
           btn.classList.toggle("is-active", data.active);
           const onLabel = btn.dataset.favLabelOn || "Убрать из избранного";
           const offLabel = btn.dataset.favLabelOff || "В избранное";
-          btn.textContent = data.active ? onLabel : offLabel;
+          if (btn.classList.contains("fav-heart")) {
+            btn.setAttribute("aria-label", data.active ? onLabel : offLabel);
+          } else {
+            btn.textContent = data.active ? onLabel : offLabel;
+          }
         }
         document.querySelectorAll("[data-favorites-count]").forEach((el) => {
           if (data.favorites_count !== undefined) {
