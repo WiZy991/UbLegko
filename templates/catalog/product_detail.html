@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load catalog_extras %}
+{% load catalog_extras static %}
 
 {% block title %}{{ product.name }} — {{ site_settings.brand_name }}{% endblock %}
 
@@ -13,6 +13,15 @@
           <img src="{{ product.image.url }}" alt="{{ product.name }}">
         {% else %}
           Фото
+        {% endif %}
+        {% if product.is_promo %}
+          <img
+            class="badge-promo-img badge-promo-img--detail"
+            src="{% static 'img/badge-akciya.png' %}?v=3"
+            alt="Акция"
+            width="96"
+            height="96"
+          >
         {% endif %}
         {% if user.is_authenticated %}
           <form
@@ -69,7 +78,6 @@
           {% if product.old_price %}
             <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
           {% endif %}
-          {% if product.is_promo %}<span class="badge-promo">Акция</span>{% endif %}
           {% if product.reviews_count %}
             <span class="rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
           {% endif %}

@@ -1,4 +1,4 @@
-{% load catalog_extras %}
+{% load catalog_extras static %}
 <article class="product-card">
   <div class="product-card__media">
     <a href="{{ product.get_absolute_url }}" class="product-card__image">
@@ -8,6 +8,15 @@
         Фото
       {% endif %}
     </a>
+    {% if product.is_promo %}
+      <img
+        class="badge-promo-img"
+        src="{% static 'img/badge-akciya.png' %}?v=3"
+        alt="Акция"
+        width="72"
+        height="72"
+      >
+    {% endif %}
     {% if user.is_authenticated %}
       <form
         class="product-card__fav"
@@ -59,7 +68,6 @@
   <div class="product-card__meta">
     <span class="price">{{ product.price|floatformat:0 }} руб</span>
     {% if product.unit %}<span class="status-pill">{{ product.unit }}</span>{% endif %}
-    {% if product.is_promo %}<span class="badge-promo">Акция</span>{% endif %}
   </div>
   {% if product.old_price %}
     <div class="product-card__meta">
