@@ -55,18 +55,30 @@
 
   const cartQtyState = new WeakMap();
 
+  function ensureCartQtyState(input) {
+    let state = cartQtyState.get(input);
+    if (!state) {
+      // defaultValue не меняется от кликов +/- — это «последнее отправленное» на старте
+      const initial = input.defaultValue !== undefined && input.defaultValue !== ""
+        ? input.defaultValue
+        : "0";
+      state = { lastSent: String(initial), inflight: null, timer: null };
+      cartQtyState.set(input, state);
+    }
+    return state;
+  }
+
   function syncProductQtyInputs(productId, quantity) {
     if (!productId) return;
     document.querySelectorAll(`[data-cart-qty-form][data-product-id="${productId}"] input[name="quantity"]`).forEach((el) => {
       el.value = String(quantity);
-      const state = cartQtyState.get(el);
-      if (state) state.lastSent = String(quantity);
+      const state = ensureCartQtyState(el);
+      state.lastSent = String(quantity);
     });
   }
 
   async function submitCartQty(form, input) {
-    const state = cartQtyState.get(input) || { lastSent: input.defaultValue || input.value, inflight: null };
-    cartQtyState.set(input, state);
+    const state = ensureCartQtyState(input);
     const min = Number.isFinite(parseInt(input.min, 10)) ? parseInt(input.min, 10) : 0;
     let value = parseInt(input.value || String(min), 10);
     if (!Number.isFinite(value)) value = min;
@@ -142,8 +154,7 @@
     if (!input) return;
     const form = input.closest("[data-cart-qty-form]");
     if (!form) return;
-    const state = cartQtyState.get(input) || { lastSent: input.value, timer: null };
-    cartQtyState.set(input, state);
+    const state = ensureCartQtyState(input);
     clearTimeout(state.timer);
     state.timer = setTimeout(() => submitCartQty(form, input), 450);
   });
