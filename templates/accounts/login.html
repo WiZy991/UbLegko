@@ -5,15 +5,13 @@
 {% block content %}
 <div class="form-card auth-wrap">
   <h1>Вход</h1>
-  {% if '/favorites' in request.GET.next or request.GET.next == '/favorites/' %}
-    <div class="auth-hint">
-      <p><strong>Избранное доступно только зарегистрированным пользователям.</strong></p>
-      <p>
-        Регистрация позволяет сохранить ваше имя, номер телефона и адреса доставки,
-        а также оценивать товары и писать комментарии.
-      </p>
-    </div>
-  {% endif %}
+  <div class="auth-hint">
+    <p><strong>Избранное доступно только зарегистрированным пользователям.</strong></p>
+    <p>
+      Регистрация позволяет сохранить ваше имя, номер телефона и адреса доставки,
+      а также оценивать товары и писать комментарии.
+    </p>
+  </div>
   <form method="post" novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}

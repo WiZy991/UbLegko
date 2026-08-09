@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260809r">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260809s">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -57,6 +57,12 @@
           {% else %}
             <span class="pill-link pill-link--max"><span class="pill-link--max__full">Канал в MAX</span><span class="pill-link--max__short">MAX</span></span>
           {% endif %}
+          <a
+            class="pill-link pill-link--gis"
+            href="https://2gis.ru/ussuriysk/geo/70000001103185644"
+            target="_blank"
+            rel="noopener"
+          >2ГИС</a>
         </div>
         <div class="topbar__center">
           <div class="topbar__slogan">{{ site_settings.slogan }}</div>
@@ -131,6 +137,11 @@
 
   <main class="page">
     <div class="container">
+      {% if request.path != '/' %}
+        <nav class="nav-back-wrap" aria-label="Навигация">
+          <a class="nav-back" href="{% url 'catalog:home' %}">← Назад в каталог</a>
+        </nav>
+      {% endif %}
       {% if messages %}
         <ul class="messages">
           {% for message in messages %}

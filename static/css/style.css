@@ -430,6 +430,30 @@ select {
   display: none;
 }
 
+.nav-back-wrap {
+  margin: 0 0 14px;
+}
+
+.nav-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 2px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font-weight: 700;
+  text-decoration: none;
+  line-height: 1.2;
+}
+
+.nav-back:hover {
+  background: #f3f8fb;
+  color: #111;
+}
+
 .auth-link {
   display: inline-flex;
   align-items: center;
