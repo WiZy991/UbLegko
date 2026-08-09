@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260808p">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260809i">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -17,6 +17,8 @@
       <span class="brand-stars__item brand-stars__item--lg">✦</span>
       <span class="brand-stars__item brand-stars__item--md">✦</span>
       <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny">✦</span>
     </span>
     <span class="brand-banner__content">
       <h1 class="brand-banner__title">УБИРАЕМСЯ ЛЕГКО</h1>
@@ -26,6 +28,8 @@
       <span class="brand-stars__item brand-stars__item--lg">✦</span>
       <span class="brand-stars__item brand-stars__item--md">✦</span>
       <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny">✦</span>
     </span>
   </a>
 
@@ -46,7 +50,13 @@
         </div>
         <div class="topbar__right">
           <a class="cart-link" href="{% url 'cart:detail' %}">
-            <span class="cart-link__icon" aria-hidden="true">🛒</span>
+            <span class="cart-link__icon" aria-hidden="true">
+              <svg class="cart-link__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.5 5h1.6l1.3 9.2a1.5 1.5 0 0 0 1.5 1.3h8.7a1.5 1.5 0 0 0 1.5-1.2l1.1-6.3H7.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="9.2" cy="19" r="1.4" fill="currentColor"/>
+                <circle cx="16.3" cy="19" r="1.4" fill="currentColor"/>
+              </svg>
+            </span>
             <span data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
           </a>
           {% if user.is_authenticated %}
@@ -69,6 +79,7 @@
           method="get"
           data-search-form
           data-suggest-url="{% url 'catalog:search_suggest' %}"
+          data-home-url="{% url 'catalog:home' %}"
           autocomplete="off"
         >
           <span class="search-form__icon" aria-hidden="true">🔍</span>
@@ -154,11 +165,6 @@
             Email:
             <a class="site-footer__link" href="mailto:{{ site_settings.email }}">{{ site_settings.email }}</a>
           </p>
-          {% if site_settings.max_channel_url %}
-            <p class="site-footer__text">
-              <a class="site-footer__link site-footer__link--max" href="{{ site_settings.max_channel_url }}" target="_blank" rel="noopener">Канал в MAX</a>
-            </p>
-          {% endif %}
         </section>
         <section class="site-footer__col">
           <h2 class="site-footer__heading">Разделы</h2>
@@ -179,7 +185,7 @@
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="{% static 'js/main.js' %}?v=20260808p"></script>
+  <script src="{% static 'js/main.js' %}?v=20260809h"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,4 +1,9 @@
+from decimal import Decimal
+
+from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models import Avg
 from django.urls import reverse
 from django.utils.text import slugify
 
@@ -124,3 +129,50 @@ class ProductRecommendation(models.Model):
 
     def __str__(self):
         return f'{self.product} → {self.recommended_product}'
+
+
+class ProductReview(models.Model):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='reviews',
+        verbose_name='Товар',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='product_reviews',
+        verbose_name='Пользователь',
+    )
+    rating = models.PositiveSmallIntegerField(
+        'Оценка',
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    comment = models.TextField('Комментарий', max_length=2000)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+    updated_at = models.DateTimeField('Обновлён', auto_now=True)
+
+    class Meta:
+        verbose_name = 'Отзыв'
+        verbose_name_plural = 'Отзывы'
+        ordering = ['-created_at']
+        unique_together = [('product', 'user')]
+
+    def __str__(self):
+        return f'{self.product} — {self.rating}★ ({self.user})'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        update_product_rating(self.product_id)
+
+    def delete(self, *args, **kwargs):
+        product_id = self.product_id
+        super().delete(*args, **kwargs)
+        update_product_rating(product_id)
+
+
+def update_product_rating(product_id):
+    avg = ProductReview.objects.filter(product_id=product_id).aggregate(Avg('rating'))['rating__avg']
+    if avg is None:
+        return
+    Product.objects.filter(pk=product_id).update(rating=Decimal(str(round(float(avg), 1))))

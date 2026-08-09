@@ -12,11 +12,30 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('id', 'full_name', 'phone', 'email', 'address', 'status', 'created_at', 'total_display')
-    list_filter = ('status', 'created_at')
+    list_display = (
+        'id',
+        'full_name',
+        'phone',
+        'delivery_method',
+        'email',
+        'address',
+        'status',
+        'created_at',
+        'total_display',
+    )
+    list_filter = ('status', 'delivery_method', 'created_at')
     search_fields = ('full_name', 'phone', 'email', 'address')
     list_editable = ('status',)
-    readonly_fields = ('user', 'full_name', 'phone', 'email', 'address', 'comment', 'created_at')
+    readonly_fields = (
+        'user',
+        'full_name',
+        'phone',
+        'email',
+        'delivery_method',
+        'address',
+        'comment',
+        'created_at',
+    )
     inlines = [OrderItemInline]
 
     @admin.display(description='Сумма')

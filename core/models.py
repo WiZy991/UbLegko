@@ -62,7 +62,11 @@ class SiteSettings(models.Model):
     )
     inn = models.CharField('ИНН', max_length=20, default='2511130194')
     ogrn = models.CharField('ОГРН', max_length=20, default='1242500027120')
-    max_channel_url = models.URLField('Ссылка на канал MAX', blank=True)
+    max_channel_url = models.URLField(
+        'Ссылка на канал MAX',
+        blank=True,
+        default='https://max.ru/join/5n4w4WgqNIhX-fh4J5fjF5-NeJ_q728An7crUD3gF08',
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

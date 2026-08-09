@@ -1,33 +1,12 @@
 {% load catalog_extras %}
-<div class="filter-bar" aria-label="Фильтры каталога">
+{% if has_active_filters %}
+<div class="filter-bar" aria-label="Фильтры">
   <div class="filter-bar__top">
-    <p class="filter-bar__count">Найдено: {{ result_count }}</p>
     <a
-      class="filter-bar__reset{% if not has_active_filters %} is-hidden{% endif %}"
+      class="filter-bar__reset"
       href="{% catalog_clear_filters %}"
       data-catalog-nav
-      {% if not has_active_filters %}aria-hidden="true" tabindex="-1"{% endif %}
     >Сбросить фильтры</a>
   </div>
-  <div class="filter-bar__chips">
-    {% if filters.in_stock %}
-      <a class="filter-chip is-active" href="{% catalog_query in_stock='' %}" aria-pressed="true" data-catalog-nav>В наличии</a>
-    {% else %}
-      <a class="filter-chip" href="{% catalog_query in_stock='1' %}" aria-pressed="false" data-catalog-nav>В наличии</a>
-    {% endif %}
-
-    {% if filters.promo %}
-      <a class="filter-chip is-active" href="{% catalog_query promo='' %}" aria-pressed="true" data-catalog-nav>Акции</a>
-    {% else %}
-      <a class="filter-chip" href="{% catalog_query promo='1' %}" aria-pressed="false" data-catalog-nav>Акции</a>
-    {% endif %}
-
-    {% for preset in price_presets %}
-      {% if filters.price == preset.key %}
-        <a class="filter-chip is-active" href="{% catalog_query price='' %}" aria-pressed="true" data-catalog-nav>{{ preset.label }}</a>
-      {% else %}
-        <a class="filter-chip" href="{% catalog_query price=preset.key %}" aria-pressed="false" data-catalog-nav>{{ preset.label }}</a>
-      {% endif %}
-    {% endfor %}
-  </div>
 </div>
+{% endif %}

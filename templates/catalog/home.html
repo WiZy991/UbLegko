@@ -10,7 +10,7 @@
     {% include "includes/filter_bar.html" %}
     {% if grouped_products %}
       {% for category, items in grouped_products.items %}
-        <section class="category-block">
+        <section class="category-block" id="category-{{ category.slug }}" data-category-section="category-{{ category.slug }}">
           <h2 class="category-block__title">{{ category.name }}</h2>
           <div class="category-block__line"></div>
           <div class="product-grid">

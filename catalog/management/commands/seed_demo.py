@@ -91,6 +91,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         SiteSettings.load()
+        site = SiteSettings.load()
+        if not site.max_channel_url:
+            site.max_channel_url = 'https://max.ru/join/5n4w4WgqNIhX-fh4J5fjF5-NeJ_q728An7crUD3gF08'
+            site.save(update_fields=['max_channel_url'])
         # Города России — отдельной командой seed_cities; здесь только default
         City.objects.filter(name='Уссурийск').update(is_default=True)
         City.objects.exclude(name='Уссурийск').update(is_default=False)

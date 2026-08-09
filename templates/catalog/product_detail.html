@@ -25,7 +25,7 @@
             <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
           {% endif %}
           {% if product.is_promo %}<span class="badge-promo">Акция</span>{% endif %}
-          <span class="rating">★ {{ product.rating }}</span>
+          <span class="rating">★ {{ product.rating }}{% if reviews_count %} <span class="rating__count">({{ reviews_count }})</span>{% endif %}</span>
           <span class="status-pill">{{ product.get_status_display }}</span>
         </div>
         <div class="product-card__meta" style="justify-content:flex-start;gap:10px;margin-bottom:12px;">
@@ -65,6 +65,84 @@
         {% endif %}
       </div>
     </article>
+
+    <section class="product-reviews" id="reviews">
+      <h2 class="section-title">Отзывы{% if reviews_count %} ({{ reviews_count }}){% endif %}</h2>
+
+      {% if user.is_authenticated %}
+        <form method="post" class="review-form" novalidate>
+          {% csrf_token %}
+          <p class="review-form__title">
+            {% if user_review %}Изменить ваш отзыв{% else %}Оцените товар{% endif %}
+          </p>
+
+          {% if review_form.non_field_errors %}
+            <div class="messages"><li class="error">{{ review_form.non_field_errors|striptags }}</li></div>
+          {% endif %}
+
+          <fieldset class="star-rating">
+            <legend class="star-rating__legend">Оценка</legend>
+            <div class="star-rating__stars" role="radiogroup" aria-label="Оценка от 1 до 5">
+              {% for star in "54321" %}
+                <input
+                  type="radio"
+                  name="rating"
+                  id="id_rating_{{ star }}"
+                  value="{{ star }}"
+                  class="star-rating__input"
+                  {% if review_form.rating.value|stringformat:"s" == star %}checked{% endif %}
+                  required
+                >
+                <label class="star-rating__label" for="id_rating_{{ star }}" title="{{ star }} из 5">★</label>
+              {% endfor %}
+            </div>
+            {% if review_form.rating.errors %}
+              <div class="messages"><li class="error">{{ review_form.rating.errors|striptags }}</li></div>
+            {% endif %}
+          </fieldset>
+
+          <div class="form-group">
+            <label for="id_comment">{{ review_form.comment.label }}</label>
+            {{ review_form.comment }}
+            {% if review_form.comment.errors %}
+              <div class="messages"><li class="error">{{ review_form.comment.errors|striptags }}</li></div>
+            {% endif %}
+          </div>
+
+          <button class="btn btn-primary review-form__submit" type="submit">
+            {% if user_review %}Сохранить отзыв{% else %}Отправить отзыв{% endif %}
+          </button>
+        </form>
+      {% else %}
+        <p class="review-login-hint">
+          Чтобы поставить оценку и написать комментарий,
+          <a class="link-accent" href="{% url 'accounts:login' %}?next={{ request.path }}%23reviews">войдите</a>
+          или
+          <a class="link-accent" href="{% url 'accounts:register' %}?next={{ request.path }}%23reviews">зарегистрируйтесь</a>.
+        </p>
+      {% endif %}
+
+      {% if reviews %}
+        <ul class="review-list">
+          {% for review in reviews %}
+            <li class="review-card">
+              <div class="review-card__head">
+                <span class="review-card__author">{{ review.user.get_username }}</span>
+                <span class="review-card__stars" aria-label="Оценка {{ review.rating }} из 5">
+                  {% for i in "12345" %}
+                    <span class="review-card__star{% if forloop.counter <= review.rating %} is-on{% endif %}">★</span>
+                  {% endfor %}
+                </span>
+                <time class="review-card__date" datetime="{{ review.created_at|date:'c' }}">{{ review.created_at|date:"d.m.Y" }}</time>
+              </div>
+              <p class="review-card__text">{{ review.comment }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="review-empty">Пока нет отзывов — будьте первым.</p>
+      {% endif %}
+    </section>
 
     {% if similar_products %}
       <h2 class="section-title">Похожие товары</h2>

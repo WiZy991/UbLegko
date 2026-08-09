@@ -122,7 +122,6 @@ def checkout(request):
         profile, _ = Profile.objects.get_or_create(user=request.user)
         if profile.phone:
             initial['phone'] = profile.phone
-        # Подставить адрес из последней заявки, если есть
         last_order = (
             Order.objects.filter(user=request.user)
             .exclude(address='')
@@ -133,16 +132,18 @@ def checkout(request):
             if not initial.get('phone') and last_order.phone:
                 initial['phone'] = last_order.phone
             initial['address'] = last_order.address
+            initial['delivery_method'] = last_order.delivery_method
 
     if request.method == 'POST':
-        form = CheckoutForm(request.POST)
+        form = CheckoutForm(request.POST, user=request.user)
         if form.is_valid():
             order = Order.objects.create(
                 user=request.user if request.user.is_authenticated else None,
                 full_name=form.cleaned_data['full_name'],
                 phone=form.cleaned_data['phone'],
-                email=form.cleaned_data['email'],
-                address=form.cleaned_data['address'],
+                email=form.cleaned_data.get('email', ''),
+                delivery_method=form.cleaned_data['delivery_method'],
+                address=form.cleaned_data.get('address', ''),
                 comment=form.cleaned_data['comment'],
             )
             if request.user.is_authenticated:
@@ -151,8 +152,9 @@ def checkout(request):
                 if form.cleaned_data['phone'] and profile.phone != form.cleaned_data['phone']:
                     profile.phone = form.cleaned_data['phone']
                     updated.append('phone')
-                if form.cleaned_data['email'] and request.user.email != form.cleaned_data['email']:
-                    request.user.email = form.cleaned_data['email']
+                email_value = form.cleaned_data.get('email') or ''
+                if email_value and request.user.email != email_value:
+                    request.user.email = email_value
                     request.user.save(update_fields=['email'])
                 if updated:
                     profile.save(update_fields=updated)
@@ -176,7 +178,7 @@ def checkout(request):
                 )
             return redirect('cart:order_success', order_id=order.pk)
     else:
-        form = CheckoutForm(initial=initial)
+        form = CheckoutForm(initial=initial, user=request.user)
 
     return render(
         request,

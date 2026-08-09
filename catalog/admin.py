@@ -10,7 +10,7 @@ from django.utils.html import format_html
 from openpyxl import load_workbook
 
 from .categorize import resolve_category
-from .models import Category, Product, ProductRecommendation
+from .models import Category, Product, ProductRecommendation, ProductReview
 
 HEADER_ALIASES = {
     'name': {
@@ -353,3 +353,12 @@ class ProductAdmin(admin.ModelAdmin):
 class ProductRecommendationAdmin(admin.ModelAdmin):
     list_display = ('product', 'recommended_product', 'sort_order')
     autocomplete_fields = ['product', 'recommended_product']
+
+
+@admin.register(ProductReview)
+class ProductReviewAdmin(admin.ModelAdmin):
+    list_display = ('product', 'user', 'rating', 'created_at')
+    list_filter = ('rating', 'created_at')
+    search_fields = ('product__name', 'user__username', 'comment')
+    autocomplete_fields = ['product', 'user']
+    readonly_fields = ('created_at', 'updated_at')

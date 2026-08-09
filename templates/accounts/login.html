@@ -5,6 +5,15 @@
 {% block content %}
 <div class="form-card auth-wrap">
   <h1>Вход</h1>
+  {% if '/favorites' in request.GET.next or request.GET.next == '/favorites/' %}
+    <div class="auth-hint">
+      <p><strong>Избранное доступно только зарегистрированным пользователям.</strong></p>
+      <p>
+        Регистрация позволяет сохранить ваше имя, номер телефона и адреса доставки,
+        а также оценивать товары и писать комментарии.
+      </p>
+    </div>
+  {% endif %}
   <form method="post" novalidate>
     {% csrf_token %}
     {% if form.non_field_errors %}
@@ -19,6 +28,6 @@
     {% endfor %}
     <button class="btn btn-primary" type="submit">Войти</button>
   </form>
-  <p style="margin-top:16px;">Нет аккаунта? <a class="link-accent" href="{% url 'accounts:register' %}">Регистрация</a></p>
+  <p style="margin-top:16px;">Нет аккаунта? <a class="link-accent" href="{% url 'accounts:register' %}?next={{ request.GET.next|default:'/'|urlencode }}">Регистрация</a></p>
 </div>
 {% endblock %}

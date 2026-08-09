@@ -158,6 +158,91 @@
   });
 
   let catalogAbort = null;
+  let categorySpyScrollHandler = null;
+  let categorySpyLockUntil = 0;
+
+  function initCategoryScrollSpy() {
+    if (categorySpyScrollHandler) {
+      window.removeEventListener("scroll", categorySpyScrollHandler);
+      categorySpyScrollHandler = null;
+    }
+    const sections = Array.from(document.querySelectorAll("[data-category-section]"));
+    const links = Array.from(document.querySelectorAll("[data-scroll-spy-link]"));
+    const homeLink = document.querySelector("[data-scroll-spy-home]");
+    if (!sections.length || !links.length) return;
+
+    function setActive(id) {
+      links.forEach((link) => {
+        link.classList.toggle("is-active", Boolean(id) && link.getAttribute("data-scroll-spy-link") === id);
+      });
+      if (homeLink) homeLink.classList.toggle("is-active", !id);
+    }
+
+    function headerOffset() {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue("--header-sticky-height");
+      const parsed = parseFloat(raw);
+      return Number.isFinite(parsed) ? parsed : 130;
+    }
+
+    function updateActiveFromScroll() {
+      if (Date.now() < categorySpyLockUntil) return;
+
+      // Линия активации = низ липкой шапки (как scroll-padding), по заголовку секции.
+      const sticky = document.querySelector(".header-sticky");
+      const line = (sticky ? sticky.getBoundingClientRect().bottom : headerOffset()) + 8;
+
+      let currentId = null;
+      for (const section of sections) {
+        const title = section.querySelector(".category-block__title") || section;
+        if (title.getBoundingClientRect().top <= line) {
+          currentId = section.getAttribute("data-category-section");
+        } else {
+          break;
+        }
+      }
+      setActive(currentId);
+    }
+
+    let ticking = false;
+    categorySpyScrollHandler = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        updateActiveFromScroll();
+      });
+    };
+    window.addEventListener("scroll", categorySpyScrollHandler, { passive: true });
+    updateActiveFromScroll();
+
+    links.forEach((link) => {
+      if (link.dataset.scrollBound === "1") return;
+      link.dataset.scrollBound = "1";
+      link.addEventListener("click", (event) => {
+        const id = link.getAttribute("data-scroll-spy-link");
+        const target = id ? document.getElementById(id) : null;
+        if (!target) return;
+        event.preventDefault();
+        categorySpyLockUntil = Date.now() + 900;
+        setActive(id);
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        history.replaceState(null, "", `#${id}`);
+      });
+    });
+
+    if (location.hash) {
+      const id = location.hash.slice(1);
+      const target = document.getElementById(id);
+      if (target) {
+        categorySpyLockUntil = Date.now() + 900;
+        setTimeout(() => {
+          target.scrollIntoView({ behavior: "smooth", block: "start" });
+          setActive(id);
+        }, 50);
+      }
+    }
+  }
+
   async function loadCatalog(url, push) {
     const root = document.querySelector("[data-catalog-root]");
     if (!root) {
@@ -184,6 +269,7 @@
       if (title) document.title = title.textContent;
       if (push) history.pushState({ catalogAjax: true }, "", url);
       syncStickyHeaderHeight();
+      initCategoryScrollSpy();
     } catch (err) {
       if (err && err.name === "AbortError") return;
       window.location.href = url;
@@ -329,17 +415,55 @@
     }
   });
 
-  // Автоподсказки поиска по началу названия (RU/EN)
+  // Автоподсказки поиска + история запросов
   document.querySelectorAll("[data-search-form]").forEach((form) => {
     const input = form.querySelector("[data-search-input]");
     const box = form.querySelector("[data-search-suggest]");
     const url = form.getAttribute("data-suggest-url");
+    const homeUrl = form.getAttribute("data-home-url") || "/";
     if (!input || !box || !url) return;
 
+    const HISTORY_KEY = "ublegko_search_history";
+    const HISTORY_LIMIT = 5;
     let timer = null;
     let activeIndex = -1;
     let items = [];
     let lastQuery = "";
+
+    function escapeHtml(text) {
+      return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function getHistory() {
+      try {
+        const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        if (!Array.isArray(raw)) return [];
+        return raw
+          .filter((item) => typeof item === "string" && item.trim())
+          .map((item) => item.trim())
+          .slice(0, HISTORY_LIMIT);
+      } catch (err) {
+        return [];
+      }
+    }
+
+    function pushHistory(q) {
+      const query = String(q || "").trim();
+      if (!query) return;
+      const next = [
+        query,
+        ...getHistory().filter((item) => item.toLowerCase() !== query.toLowerCase()),
+      ].slice(0, HISTORY_LIMIT);
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+      } catch (err) {
+        /* ignore quota */
+      }
+    }
 
     function hide() {
       box.hidden = true;
@@ -353,6 +477,42 @@
       box.querySelectorAll(".search-suggest__item").forEach((el, i) => {
         el.classList.toggle("is-active", i === activeIndex);
       });
+    }
+
+    function bindHistoryClicks() {
+      box.querySelectorAll("[data-history-q]").forEach((btn) => {
+        btn.addEventListener("mousedown", (event) => event.preventDefault());
+        btn.addEventListener("click", () => {
+          const q = btn.getAttribute("data-history-q") || "";
+          input.value = q;
+          hide();
+          form.requestSubmit();
+        });
+      });
+    }
+
+    function renderHistory() {
+      const history = getHistory();
+      if (!history.length) {
+        hide();
+        return;
+      }
+      box.innerHTML =
+        '<div class="search-suggest__label">Недавние запросы</div>' +
+        history
+          .map(
+            (q, i) =>
+              `<button type="button" class="search-suggest__item search-suggest__item--history" role="option" data-history-q="${escapeHtml(q)}" data-index="${i}">` +
+              `<span class="search-suggest__name">${escapeHtml(q)}</span>` +
+              `<span class="search-suggest__meta">История</span>` +
+              `</button>`
+          )
+          .join("");
+      box.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      items = Array.from(box.querySelectorAll(".search-suggest__item"));
+      activeIndex = -1;
+      bindHistoryClicks();
     }
 
     function render(results) {
@@ -379,14 +539,6 @@
       activeIndex = -1;
     }
 
-    function escapeHtml(text) {
-      return String(text)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
-    }
-
     async function fetchSuggest(q) {
       lastQuery = q;
       try {
@@ -401,17 +553,59 @@
       }
     }
 
+    async function goToCatalog() {
+      hide();
+      input.value = "";
+      const onSearchPage = /\/search\/?$/.test(window.location.pathname);
+      const hadQuery = Boolean(new URLSearchParams(window.location.search).get("q"));
+      if (onSearchPage || hadQuery) {
+        if (document.querySelector("[data-catalog-root]")) {
+          await loadCatalog(homeUrl, true);
+        } else {
+          window.location.href = homeUrl;
+          return;
+        }
+      }
+      // После крестика focus не срабатывает повторно — открываем историю сразу.
+      if (document.activeElement === input) renderHistory();
+    }
+
+    function openHistoryOrSuggest() {
+      const q = input.value.trim();
+      if (!q) {
+        renderHistory();
+        return;
+      }
+      fetchSuggest(q);
+    }
+
+    form.addEventListener("submit", () => {
+      pushHistory(input.value);
+    });
+
+    input.addEventListener("search", () => {
+      if (!input.value.trim()) goToCatalog();
+    });
+
     input.addEventListener("input", () => {
       const q = input.value.trim();
       clearTimeout(timer);
       if (!q) {
-        hide();
+        renderHistory();
         return;
       }
       timer = setTimeout(() => fetchSuggest(q), 180);
     });
 
+    // click — даже если поле уже в фокусе (после поиска/крестика)
+    input.addEventListener("focus", openHistoryOrSuggest);
+    input.addEventListener("click", openHistoryOrSuggest);
+
     input.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        hide();
+        return;
+      }
       if (box.hidden || !items.length) return;
       if (event.key === "ArrowDown") {
         event.preventDefault();
@@ -424,8 +618,6 @@
       } else if (event.key === "Enter" && activeIndex >= 0) {
         event.preventDefault();
         items[activeIndex].click();
-      } else if (event.key === "Escape") {
-        hide();
       }
     });
 
@@ -435,6 +627,11 @@
 
     document.addEventListener("click", (event) => {
       if (!form.contains(event.target)) hide();
+    });
+
+    box.addEventListener("click", (event) => {
+      const productLink = event.target.closest(".search-suggest__item[href]");
+      if (productLink && input.value.trim()) pushHistory(input.value);
     });
   });
 
@@ -562,4 +759,29 @@
       btn.innerHTML = show ? eyeOff : eyeOpen;
     });
   });
+
+  function syncCheckoutDelivery() {
+    const form = document.querySelector("[data-checkout-form]");
+    if (!form) return;
+    const selected = form.querySelector("[data-delivery-method]:checked");
+    const method = selected ? selected.value : "courier";
+    const addressGroup = form.querySelector("[data-checkout-address]");
+    if (!addressGroup) return;
+    const isPickup = method === "pickup";
+    addressGroup.hidden = isPickup;
+    const addressInput = addressGroup.querySelector("input, textarea");
+    if (addressInput) {
+      addressInput.required = !isPickup;
+      if (isPickup) addressInput.value = "";
+    }
+  }
+
+  document.addEventListener("change", (event) => {
+    if (event.target.matches("[data-delivery-method]")) {
+      syncCheckoutDelivery();
+    }
+  });
+  syncCheckoutDelivery();
+
+  initCategoryScrollSpy();
 })();

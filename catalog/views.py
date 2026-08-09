@@ -1,15 +1,17 @@
+from django.contrib import messages
+from django.contrib.auth.views import redirect_to_login
 from django.db.models import Case, IntegerField, When
 from django.http import JsonResponse
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView, ListView
 
 from .filters import (
-    PRICE_PRESETS,
     apply_catalog_filters,
     has_active_filters,
     parse_catalog_filters,
 )
-from .models import Category, Product
+from .forms import ProductReviewForm
+from .models import Category, Product, ProductReview
 from .recommendations import get_recommendations_for_product
 from .search_utils import filter_products_by_query, rank_prefix_first
 
@@ -47,8 +49,8 @@ class CatalogMixin:
         context['sort'] = get_sort(self.request)
         context['sort_options'] = SORT_OPTIONS
         context['filters'] = filters
-        context['price_presets'] = PRICE_PRESETS
         context['has_active_filters'] = has_active_filters(filters)
+        context['scroll_spy_categories'] = False
         paginator = context.get('paginator')
         page_obj = context.get('page_obj')
         if paginator is not None:
@@ -73,15 +75,32 @@ class HomeView(CatalogMixin, ListView):
     context_object_name = 'products'
     paginate_by = 48
 
+    def get_paginate_by(self, queryset):
+        # «По категориям» — все разделы целиком, без обрезки первой категорией.
+        sort = get_sort(self.request)
+        if sort == 'category' and not has_active_filters(self.get_filters()):
+            return None
+        return self.paginate_by
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         sort = context['sort']
         products = list(context['products'])
         if sort == 'category' and not context['has_active_filters']:
+            # Сохраняем порядок категорий из сайдбара
             grouped = {}
+            for category in context['categories']:
+                grouped[category] = []
             for product in products:
-                grouped.setdefault(product.category, []).append(product)
-            context['grouped_products'] = grouped
+                if product.category_id and product.category in grouped:
+                    grouped[product.category].append(product)
+                elif product.category_id:
+                    grouped.setdefault(product.category, []).append(product)
+            context['grouped_products'] = {
+                category: items for category, items in grouped.items() if items
+            }
+            context['scroll_spy_categories'] = bool(context['grouped_products'])
+            context['result_count'] = len(products)
         else:
             context['grouped_products'] = None
         return context
@@ -113,12 +132,24 @@ class ProductDetailView(DetailView):
     def get_queryset(self):
         return Product.objects.filter(is_visible=True).select_related('category')
 
+    def get_user_review(self):
+        if not self.request.user.is_authenticated:
+            return None
+        return ProductReview.objects.filter(
+            product=self.object, user=self.request.user
+        ).first()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['categories'] = Category.objects.filter(is_visible=True)
         context['recommendations'] = get_recommendations_for_product(self.object, limit=8)
         context['similar_products'] = context['recommendations'].similar
         context['bought_together'] = context['recommendations'].bought_together
+        context['reviews'] = (
+            self.object.reviews.select_related('user').order_by('-created_at')
+        )
+        context['reviews_count'] = self.object.reviews.count()
+        context['user_review'] = self.get_user_review()
         context['is_favorite'] = False
         if self.request.user.is_authenticated:
             from cart.models import Favorite
@@ -129,9 +160,45 @@ class ProductDetailView(DetailView):
             context['favorite_ids'] = set(
                 Favorite.objects.filter(user=self.request.user).values_list('product_id', flat=True)
             )
+            initial = {}
+            if context['user_review']:
+                initial = {
+                    'rating': context['user_review'].rating,
+                    'comment': context['user_review'].comment,
+                }
+            context['review_form'] = kwargs.get('review_form') or ProductReviewForm(initial=initial)
         else:
             context['favorite_ids'] = set()
+            context['review_form'] = None
         return context
+
+    def post(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        if not request.user.is_authenticated:
+            return redirect_to_login(self.object.get_absolute_url())
+
+        form = ProductReviewForm(request.POST)
+        if form.is_valid():
+            review, created = ProductReview.objects.update_or_create(
+                product=self.object,
+                user=request.user,
+                defaults={
+                    'rating': form.cleaned_data['rating'],
+                    'comment': form.cleaned_data['comment'],
+                },
+            )
+            # update_or_create may skip Model.save() path nuances — force rating recalc
+            from .models import update_product_rating
+
+            update_product_rating(self.object.pk)
+            messages.success(
+                request,
+                'Отзыв обновлён' if not created else 'Спасибо! Ваш отзыв опубликован',
+            )
+            return redirect(self.object.get_absolute_url() + '#reviews')
+
+        context = self.get_context_data(object=self.object, review_form=form)
+        return self.render_to_response(context)
 
 
 class SearchView(CatalogMixin, ListView):
