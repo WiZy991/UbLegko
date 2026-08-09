@@ -18,11 +18,17 @@
       </thead>
       <tbody>
         {% for item in items %}
-          <tr>
+          <tr data-cart-product-id="{{ item.product.id }}">
             <td><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></td>
             <td>{{ item.price|floatformat:0 }} руб</td>
             <td>
-              <form class="cart-qty-form" action="{% url 'cart:update' item.product.id %}" method="post" data-cart-qty-form>
+              <form
+                class="cart-qty-form"
+                action="{% url 'cart:update' item.product.id %}"
+                method="post"
+                data-cart-qty-form
+                data-product-id="{{ item.product.id }}"
+              >
                 {% csrf_token %}
                 <div class="qty" data-qty-group>
                   <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>

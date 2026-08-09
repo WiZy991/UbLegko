@@ -81,6 +81,25 @@
     }
   }
 
+  async function refreshCartTable() {
+    const wrap = document.querySelector(".cart-table-wrap");
+    if (!wrap) return false;
+    try {
+      const response = await fetch(window.location.pathname + window.location.search, {
+        credentials: "same-origin",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      const html = await response.text();
+      const doc = new DOMParser().parseFromString(html, "text/html");
+      const next = doc.querySelector(".cart-table-wrap");
+      if (!next) return false;
+      wrap.replaceWith(next);
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+
   async function submitCartQty(form, input) {
     const state = ensureCartQtyState(input);
     const min = Number.isFinite(parseInt(input.min, 10)) ? parseInt(input.min, 10) : 0;
@@ -122,6 +141,17 @@
       updateCartTotals(data);
 
       const row = form.closest("tr");
+      const fromRecommendations = !row && Boolean(document.querySelector(".cart-table-wrap"));
+
+      if (fromRecommendations) {
+        // Добавление/изменение из блока «обычно берут» — обновляем таблицу корзины
+        const ok = await refreshCartTable();
+        if (!ok) window.location.reload();
+        else if (data.removed || qty === 0) showToast("Удалено из корзины");
+        else showToast(`В корзине: ${qty}`);
+        return;
+      }
+
       const lineTotal = row ? row.querySelector("[data-cart-line-total]") : null;
       if (lineTotal && data.line_total !== undefined) {
         lineTotal.textContent = `${data.line_total} руб`;
