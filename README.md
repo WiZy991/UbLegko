@@ -114,25 +114,101 @@ Email для заявок также можно изменить в админк
 
 Ошибка SMTP пишется в лог; заявка в БД сохраняется в любом случае.
 
-## Деплой на Beget (Ubuntu)
+## Деплой на VPS (Ubuntu 24.04, Timeweb и аналоги)
 
-1. Загрузить код на VPS.
-2. Создать venv, установить зависимости.
-3. Выставить `DJANGO_ENV=prod` и переменные выше (`DJANGO_SECRET_KEY` и `ALLOWED_HOSTS` обязательны).
-4. `python manage.py migrate`
-5. `python manage.py collectstatic`
-6. `python manage.py createsuperuser`
-7. Запуск через gunicorn, например:
+Готовые файлы в папке [`deploy/`](deploy/): Nginx, systemd (Gunicorn), пример `.env`, скрипт `setup.sh`.
+
+### 1. Создайте сервер
+
+- ОС: **Ubuntu 24.04**
+- Рекомендуемый минимум: **1 CPU / 2 GB RAM / 15 GB NVMe** (как у вас)
+- Обязательно: **публичный IPv4**
+- Доступ: пароль root **или** SSH-ключ
+
+### 2. Подключитесь по SSH (с вашего ПК)
 
 ```bash
-gunicorn config.wsgi:application --bind 127.0.0.1:8000
+ssh root@ВАШ_IP
 ```
 
-Проксировать через Nginx/Apache Beget на этот порт.  
-БД: файл `db.sqlite3` (убедиться, что каталог доступен на запись).  
-Медиа: каталог `media/`.
+### 3. Установите сайт одной командой
 
-## Передача заказчику (§8 ТЗ)
+```bash
+curl -fsSL https://raw.githubusercontent.com/WiZy991/UbLegko/main/deploy/setup.sh -o setup.sh
+bash setup.sh ВАШ_IP
+```
+
+Или вручную:
+
+```bash
+apt update && apt install -y git
+git clone https://github.com/WiZy991/UbLegko.git /var/www/ublegko
+cd /var/www/ublegko
+bash deploy/setup.sh ВАШ_IP
+```
+
+Скрипт поставит Python, Nginx, Gunicorn, клонирует репозиторий, сделает migrate/collectstatic и запустит сервисы.
+
+### 4. Создайте админа
+
+```bash
+cd /var/www/ublegko
+sudo -u www-data bash -c 'set -a; source .env; set +a; .venv/bin/python manage.py createsuperuser'
+```
+
+Сайт: `http://ВАШ_IP/`  
+Админка: `http://ВАШ_IP/admin/`
+
+### 5. Перенос вашей локальной базы и фото (если нужно)
+
+С ПК (PowerShell), подставьте IP:
+
+```powershell
+scp db.sqlite3 root@ВАШ_IP:/var/www/ublegko/db.sqlite3
+scp -r media root@ВАШ_IP:/var/www/ublegko/
+```
+
+На сервере:
+
+```bash
+chown -R www-data:www-data /var/www/ublegko/db.sqlite3 /var/www/ublegko/media
+systemctl restart ublegko
+```
+
+### 6. Домен и HTTPS (когда появится домен)
+
+1. В DNS домена укажите A-запись на IP сервера.
+2. В `/var/www/ublegko/.env` добавьте домен в `ALLOWED_HOSTS`, выставьте `SESSION_COOKIE_SECURE=1`, `CSRF_COOKIE_SECURE=1`, `CSRF_TRUSTED_ORIGINS=https://домен.ru`.
+3. В Nginx замените `server_name _;` на ваш домен.
+4. Установите сертификат:
+
+```bash
+apt install -y certbot python3-certbot-nginx
+certbot --nginx -d ваш-домен.ru -d www.ваш-домен.ru
+systemctl restart ublegko nginx
+```
+
+### Полезные команды на сервере
+
+```bash
+systemctl status ublegko
+systemctl restart ublegko
+journalctl -u ublegko -f
+nginx -t && systemctl reload nginx
+```
+
+### Обновление кода с GitHub
+
+```bash
+cd /var/www/ublegko
+git pull
+.venv/bin/pip install -r requirements.txt
+sudo -u www-data bash -c 'set -a; source .env; set +a; .venv/bin/python manage.py migrate --noinput'
+sudo -u www-data bash -c 'set -a; source .env; set +a; .venv/bin/python manage.py collectstatic --noinput'
+systemctl restart ublegko
+```
+
+## Email заявок
 
 Чеклист артефактов:
 

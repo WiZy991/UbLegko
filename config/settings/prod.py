@@ -18,6 +18,9 @@ ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS if h.strip()]
 if not ALLOWED_HOSTS:
     raise ImproperlyConfigured('Задайте ALLOWED_HOSTS (через запятую) для продакшена.')
 
+_csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
+
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 # По умолчанию включено для HTTPS; отключить явно: SESSION_COOKIE_SECURE=0
