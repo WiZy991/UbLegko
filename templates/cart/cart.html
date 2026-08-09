@@ -55,9 +55,6 @@
                     {% if not item.product.can_add_to_cart %}disabled{% endif %}
                   >+</button>
                 </div>
-                {% if not item.product.can_add_to_cart %}
-                  <p class="product-card__unavailable" style="margin-top:6px;">Недоступен для заказа</p>
-                {% endif %}
               </form>
             </td>
             <td data-cart-line-total>{{ item.total|floatformat:0 }} руб</td>

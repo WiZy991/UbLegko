@@ -1653,6 +1653,7 @@ input[type="number"] {
   background: #eef3f7;
   color: var(--text-muted);
   border: 1px solid var(--line);
+  white-space: nowrap;
 }
 
 .status-pill--in-stock {

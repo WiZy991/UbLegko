@@ -112,8 +112,5 @@
         <span class="rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
       {% endif %}
     </div>
-    {% if not product.can_add_to_cart %}
-      <p class="product-card__unavailable">Сейчас недоступен для заказа</p>
-    {% endif %}
   </form>
 </article>
