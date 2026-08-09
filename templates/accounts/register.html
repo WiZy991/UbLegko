@@ -11,8 +11,8 @@
       <div class="form-group">
         <label for="{{ field.id_for_label }}">{{ field.label }}</label>
         {{ field }}
+        {% if field.help_text %}<p class="form-hint">{{ field.help_text }}</p>{% endif %}
         {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
-        {% if field.help_text %}<span class="field-help">{{ field.help_text|striptags }}</span>{% endif %}
       </div>
     {% endfor %}
     <button class="btn btn-primary" type="submit">Зарегистрироваться</button>

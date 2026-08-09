@@ -5,22 +5,81 @@
 {% block content %}
 <h1>Личный кабинет</h1>
 <div class="contacts-grid">
-  <div class="form-card">
-    <h2 style="margin-top:0;">Профиль</h2>
-    <p style="color:var(--text-muted);">Логин: {{ user.username }}</p>
-    <form method="post" novalidate>
-      {% csrf_token %}
-      {% for field in form %}
-        <div class="form-group">
-          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-          {{ field }}
-          {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
-        </div>
-      {% endfor %}
-      <button class="btn btn-primary" type="submit">Сохранить</button>
-    </form>
-    <p style="margin-top:16px;"><a class="link-accent" href="{% url 'favorites' %}">Перейти в избранное</a></p>
+  <div>
+    <div class="form-card">
+      <h2 style="margin-top:0;">Профиль</h2>
+      <p style="color:var(--text-muted);">Логин: {{ user.username }}</p>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_profile">
+        {% for field in form %}
+          <div class="form-group">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p class="form-hint">{{ field.help_text }}</p>{% endif %}
+            {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
+          </div>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+      </form>
+      <p style="margin-top:16px;"><a class="link-accent" href="{% url 'favorites' %}">Перейти в избранное</a></p>
+    </div>
+
+    <div class="form-card" style="margin-top:20px;">
+      <h2 style="margin-top:0;">Адреса доставки</h2>
+      {% if addresses %}
+        <ul class="address-list">
+          {% for addr in addresses %}
+            <li class="address-list__item">
+              <div>
+                <strong>{{ addr.name }}</strong>
+                {% if addr.is_default %}<span class="status-pill">По умолчанию</span>{% endif %}
+                <div class="address-list__text">{{ addr.address }}</div>
+              </div>
+              <div class="address-list__actions">
+                {% if not addr.is_default %}
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="set_default_address">
+                    <input type="hidden" name="address_id" value="{{ addr.id }}">
+                    <button type="submit" class="link-accent address-list__btn">Сделать основным</button>
+                  </form>
+                {% endif %}
+                <form method="post" onsubmit="return confirm('Удалить этот адрес?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_address">
+                  <input type="hidden" name="address_id" value="{{ addr.id }}">
+                  <button type="submit" class="address-list__btn address-list__btn--danger">Удалить</button>
+                </form>
+              </div>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="form-hint" style="margin-top:0;">Добавьте адрес — при оформлении заказа он появится в списке доставки.</p>
+      {% endif %}
+
+      <h3 style="margin:20px 0 12px;font-size:1.05rem;">Добавить адрес</h3>
+      <form method="post" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="action" value="add_address">
+        {% for field in address_form %}
+          <div class="form-group{% if field.name == 'is_default' %} form-group--checkbox{% endif %}">
+            {% if field.name == 'is_default' %}
+              <label class="checkbox-label">{{ field }} {{ field.label }}</label>
+            {% else %}
+              <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+              {{ field }}
+              {% if field.help_text %}<p class="form-hint">{{ field.help_text }}</p>{% endif %}
+            {% endif %}
+            {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
+          </div>
+        {% endfor %}
+        <button class="btn btn-primary" type="submit">Добавить адрес</button>
+      </form>
+    </div>
   </div>
+
   <div class="content-card">
     <h2 style="margin-top:0;">Мои заявки</h2>
     {% for order in orders %}
@@ -29,6 +88,9 @@
         <div style="color:var(--text-muted);font-size:0.9rem;">
           {{ order.created_at|date:"d.m.Y H:i" }} · {{ order.get_status_display }} · {{ order.total|floatformat:0 }} руб
         </div>
+        {% if order.address %}
+          <div style="color:var(--text-muted);font-size:0.9rem;margin-top:4px;">Адрес: {{ order.address }}</div>
+        {% endif %}
         <ul style="margin:8px 0 0;padding-left:18px;color:var(--text-muted);">
           {% for item in order.items.all %}
             <li>{{ item.product_name }} × {{ item.quantity }}</li>

@@ -4,9 +4,11 @@ from django.contrib.auth.models import User
 
 from core.validators import clean_ru_phone, clean_user_email
 
-from .models import Profile
+from .models import DeliveryAddress, Profile
 
 PASSWORD_HELP = 'Ваш пароль должен содержать как минимум 8 символов.'
+PHONE_HELP = 'Для уточнения заказа и для связи с курьером'
+NAME_HELP = 'Как к вам обращаться'
 
 
 class RegisterForm(UserCreationForm):
@@ -23,6 +25,7 @@ class RegisterForm(UserCreationForm):
     phone = forms.CharField(
         label='Телефон',
         max_length=40,
+        help_text=PHONE_HELP,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
             'placeholder': '+7 (999) 000-00-00',
@@ -34,17 +37,17 @@ class RegisterForm(UserCreationForm):
     first_name = forms.CharField(
         label='Имя',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'given-name'}),
-    )
-    last_name = forms.CharField(
-        label='Фамилия',
-        required=False,
-        widget=forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'family-name'}),
+        help_text=NAME_HELP,
+        widget=forms.TextInput(attrs={
+            'class': 'form-input',
+            'autocomplete': 'given-name',
+            'placeholder': 'Иван',
+        }),
     )
 
     class Meta:
         model = User
-        fields = ('username', 'first_name', 'last_name', 'email', 'phone', 'password1', 'password2')
+        fields = ('username', 'first_name', 'email', 'phone', 'password1', 'password2')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -93,6 +96,7 @@ class ProfileForm(forms.ModelForm):
     phone = forms.CharField(
         label='Телефон',
         max_length=40,
+        help_text=PHONE_HELP,
         widget=forms.TextInput(attrs={
             'class': 'form-input',
             'placeholder': '+7 (999) 000-00-00',
@@ -104,15 +108,20 @@ class ProfileForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('first_name', 'last_name', 'email', 'phone')
+        fields = ('first_name', 'email', 'phone')
         labels = {
             'first_name': 'Имя',
-            'last_name': 'Фамилия',
             'email': 'Email',
         }
+        help_texts = {
+            'first_name': NAME_HELP,
+        }
         widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'given-name'}),
-            'last_name': forms.TextInput(attrs={'class': 'form-input', 'autocomplete': 'family-name'}),
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'autocomplete': 'given-name',
+                'placeholder': 'Иван',
+            }),
             'email': forms.EmailInput(attrs={
                 'class': 'form-input',
                 'autocomplete': 'email',
@@ -140,3 +149,26 @@ class ProfileForm(forms.ModelForm):
         if commit:
             profile.save(update_fields=['phone'])
         return user
+
+
+class DeliveryAddressForm(forms.ModelForm):
+    class Meta:
+        model = DeliveryAddress
+        fields = ('name', 'address', 'is_default')
+        labels = {
+            'name': 'Название адреса',
+            'address': 'Адрес',
+            'is_default': 'Использовать по умолчанию',
+        }
+        widgets = {
+            'name': forms.TextInput(attrs={
+                'class': 'form-input',
+                'autocomplete': 'off',
+            }),
+            'address': forms.TextInput(attrs={
+                'class': 'form-input',
+                'placeholder': 'Город, улица, дом, квартира',
+                'autocomplete': 'street-address',
+            }),
+            'is_default': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+        }

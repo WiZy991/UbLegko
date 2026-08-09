@@ -21,9 +21,34 @@ class Profile(models.Model):
         return f'Профиль {self.user.username}'
 
 
+class DeliveryAddress(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='delivery_addresses',
+        verbose_name='Пользователь',
+    )
+    name = models.CharField('Название', max_length=100)
+    address = models.CharField('Адрес', max_length=400)
+    is_default = models.BooleanField('По умолчанию', default=False)
+    created_at = models.DateTimeField('Создан', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Адрес доставки'
+        verbose_name_plural = 'Адреса доставки'
+        ordering = ['-is_default', 'name', 'id']
+
+    def __str__(self):
+        return f'{self.name}: {self.address}'
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_default:
+            DeliveryAddress.objects.filter(user_id=self.user_id).exclude(pk=self.pk).update(
+                is_default=False
+            )
+
+
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def ensure_user_profile(sender, instance, created, **kwargs):
-    if created:
-        Profile.objects.get_or_create(user=instance)
-    else:
-        Profile.objects.get_or_create(user=instance)
+    Profile.objects.get_or_create(user=instance)

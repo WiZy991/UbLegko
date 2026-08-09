@@ -117,7 +117,7 @@ def checkout(request):
 
     initial = {}
     if request.user.is_authenticated:
-        full_name = request.user.get_full_name().strip()
+        full_name = (request.user.first_name or '').strip()
         initial['full_name'] = full_name or request.user.username
         initial['email'] = request.user.email or ''
         profile, _ = Profile.objects.get_or_create(user=request.user)
@@ -125,15 +125,19 @@ def checkout(request):
             initial['phone'] = profile.phone
         last_order = (
             Order.objects.filter(user=request.user)
-            .exclude(address='')
             .order_by('-created_at')
             .first()
         )
         if last_order:
             if not initial.get('phone') and last_order.phone:
                 initial['phone'] = last_order.phone
-            initial['address'] = last_order.address
-            initial['delivery_method'] = last_order.delivery_method
+            if last_order.delivery_method:
+                initial['delivery_method'] = last_order.delivery_method
+            # текстовый адрес — только если нет сохранённых адресов
+            from accounts.models import DeliveryAddress
+
+            if not DeliveryAddress.objects.filter(user=request.user).exists() and last_order.address:
+                initial['address'] = last_order.address
 
     if request.method == 'POST':
         form = CheckoutForm(request.POST, user=request.user)
@@ -157,6 +161,10 @@ def checkout(request):
                 if email_value and request.user.email != email_value:
                     request.user.email = email_value
                     request.user.save(update_fields=['email'])
+                name_value = (form.cleaned_data.get('full_name') or '').strip()
+                if name_value and request.user.first_name != name_value:
+                    request.user.first_name = name_value
+                    request.user.save(update_fields=['first_name'])
                 if updated:
                     profile.save(update_fields=updated)
             for item in items:

@@ -995,10 +995,12 @@
     if (!addressGroup) return;
     const isPickup = method === "pickup";
     addressGroup.hidden = isPickup;
-    const addressInput = addressGroup.querySelector("input, textarea");
-    if (addressInput) {
-      addressInput.required = !isPickup;
-      if (isPickup) addressInput.value = "";
+    const addressField = addressGroup.querySelector("input, textarea, select");
+    if (addressField) {
+      addressField.required = !isPickup;
+      if (isPickup && addressField.tagName !== "SELECT") {
+        addressField.value = "";
+      }
     }
   }
 
@@ -1008,6 +1010,94 @@
     }
   });
   syncCheckoutDelivery();
+
+  function enhanceSelect(select) {
+    if (!select || select.dataset.customSelect === "1") return;
+    select.dataset.customSelect = "1";
+    select.classList.add("visually-hidden");
+    select.setAttribute("tabindex", "-1");
+    select.setAttribute("aria-hidden", "true");
+
+    const wrap = document.createElement("div");
+    wrap.className = "custom-select";
+    select.parentNode.insertBefore(wrap, select);
+    wrap.appendChild(select);
+
+    const trigger = document.createElement("button");
+    trigger.type = "button";
+    trigger.className = "custom-select__trigger";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+
+    const label = document.createElement("span");
+    label.className = "custom-select__label";
+    const chevron = document.createElement("span");
+    chevron.className = "custom-select__chevron";
+    chevron.setAttribute("aria-hidden", "true");
+    chevron.innerHTML =
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    trigger.append(label, chevron);
+
+    const menu = document.createElement("ul");
+    menu.className = "custom-select__menu";
+    menu.hidden = true;
+    menu.setAttribute("role", "listbox");
+
+    wrap.append(trigger, menu);
+
+    function syncLabel() {
+      const option = select.options[select.selectedIndex];
+      label.textContent = option ? option.textContent : "";
+    }
+
+    function renderOptions() {
+      menu.innerHTML = "";
+      Array.from(select.options).forEach((option, index) => {
+        const item = document.createElement("li");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "custom-select__option";
+        btn.textContent = option.textContent;
+        btn.dataset.value = option.value;
+        if (index === select.selectedIndex) btn.classList.add("is-active");
+        btn.addEventListener("click", () => {
+          select.value = option.value;
+          select.dispatchEvent(new Event("change", { bubbles: true }));
+          syncLabel();
+          close();
+        });
+        item.appendChild(btn);
+        menu.appendChild(item);
+      });
+    }
+
+    function open() {
+      renderOptions();
+      wrap.classList.add("is-open");
+      menu.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+    }
+
+    function close() {
+      wrap.classList.remove("is-open");
+      menu.hidden = true;
+      trigger.setAttribute("aria-expanded", "false");
+    }
+
+    trigger.addEventListener("click", () => {
+      if (wrap.classList.contains("is-open")) close();
+      else open();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!wrap.contains(event.target)) close();
+    });
+
+    select.addEventListener("change", syncLabel);
+    syncLabel();
+  }
+
+  document.querySelectorAll("select.form-input").forEach(enhanceSelect);
 
   initCategoryScrollSpy();
 })();
