@@ -68,3 +68,6 @@ class Cart:
 
     def quantities_map(self):
         return {int(pid): int(data['quantity']) for pid, data in self.cart.items()}
+
+    def product_ids(self):
+        return [int(pid) for pid in self.cart.keys()]
