@@ -1144,7 +1144,7 @@ select {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: clamp(14px, 1.5vw, 22px);
   width: 100%;
 }
@@ -1295,13 +1295,25 @@ select {
 
 .product-card__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
+}
+
+.product-card__meta--status {
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+
+.product-card__meta--status .status-pill {
+  flex: 0 0 auto;
 }
 
 .product-card__meta--price {
   align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: nowrap;
   min-height: 72px;
   margin-top: auto;
 }
@@ -1646,14 +1658,18 @@ input[type="number"] {
 }
 
 .status-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  max-width: none;
   font-size: 0.95rem;
   padding: 4px 10px;
   border-radius: 999px;
   background: #eef3f7;
-  color: var(--text-muted);
+  color: #111;
   border: 1px solid var(--line);
   white-space: nowrap;
+  word-break: keep-all;
 }
 
 .status-pill--in-stock {

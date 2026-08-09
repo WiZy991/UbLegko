@@ -71,7 +71,7 @@
       >
     {% endif %}
   </div>
-  <div class="product-card__meta">
+  <div class="product-card__meta product-card__meta--status">
     <span class="status-pill{% if product.status_modifier %} status-pill--{{ product.status_modifier }}{% endif %}">{{ product.get_status_display }}</span>
     {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
   </div>

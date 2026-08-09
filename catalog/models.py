@@ -39,10 +39,10 @@ class Category(models.Model):
 
 class Product(models.Model):
     class Status(models.TextChoices):
-        IN_STOCK = 'in_stock', 'В наличии'
-        IN_TRANSIT = 'in_transit', 'В пути'
-        OUT_OF_STOCK = 'out_of_stock', 'Нет в наличии'
-        ON_ORDER = 'on_order', 'Под заказ'
+        IN_STOCK = 'in_stock', 'В\u00a0наличии'
+        IN_TRANSIT = 'in_transit', 'В\u00a0пути'
+        OUT_OF_STOCK = 'out_of_stock', 'Нет\u00a0в\u00a0наличии'
+        ON_ORDER = 'on_order', 'Под\u00a0заказ'
 
     name = models.CharField('Название', max_length=255)
     slug = models.SlugField('Слаг', max_length=280, unique=True, blank=True)
@@ -130,10 +130,7 @@ class Product(models.Model):
     @property
     def can_add_to_cart(self):
         """Можно ли увеличивать количество в корзине."""
-        return self.status not in {
-            self.Status.IN_TRANSIT,
-            self.Status.OUT_OF_STOCK,
-        }
+        return self.status == self.Status.IN_STOCK
 
     @property
     def status_modifier(self):
