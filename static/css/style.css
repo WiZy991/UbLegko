@@ -1652,27 +1652,27 @@ input[type="number"] {
 }
 
 .status-pill--in-stock {
-  background: rgba(46, 125, 50, 0.12);
-  color: #1b5e20;
-  border-color: rgba(46, 125, 50, 0.35);
+  background: #c8e6c9;
+  color: #111;
+  border-color: #a5d6a7;
 }
 
 .status-pill--in-transit {
-  background: rgba(245, 158, 11, 0.16);
-  color: #9a6700;
-  border-color: rgba(245, 158, 11, 0.4);
+  background: #ffe082;
+  color: #111;
+  border-color: #ffd54f;
 }
 
 .status-pill--out-of-stock {
-  background: rgba(211, 47, 47, 0.12);
-  color: #b71c1c;
-  border-color: rgba(211, 47, 47, 0.35);
+  background: #ffcdd2;
+  color: #111;
+  border-color: #ef9a9a;
 }
 
 .status-pill--on-order {
-  background: rgba(25, 118, 210, 0.1);
-  color: #0d47a1;
-  border-color: rgba(25, 118, 210, 0.3);
+  background: #b3e5fc;
+  color: #111;
+  border-color: #81d4fa;
 }
 
 .qty.is-disabled,

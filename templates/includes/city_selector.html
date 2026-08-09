@@ -38,7 +38,9 @@
           </li>
         {% endfor %}
       </ul>
-      <p class="city-selector__hint">Выбранный город будет указан в заявке при заказе.</p>
+      <p class="city-selector__hint">
+        Пока магазин один, поэтому в другие города организована доставка из г. Уссурийск
+      </p>
     </div>
   </div>
   <form id="city-set-form" class="visually-hidden" action="{% url 'core:set_city' %}" method="post">

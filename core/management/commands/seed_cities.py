@@ -4,12 +4,12 @@ from core.models import City
 
 
 class Command(BaseCommand):
-    help = 'Настраивает города: Уссурийск и «Другие города (доставка)»'
+    help = 'Оставляет активным только г. Уссурийск'
 
     def handle(self, *args, **options):
         City.objects.update(is_default=False, is_active=False)
 
-        ussuriysk, _ = City.objects.update_or_create(
+        ussuriysk, created = City.objects.update_or_create(
             name='Уссурийск',
             defaults={
                 'region': 'Приморский край',
@@ -19,19 +19,10 @@ class Command(BaseCommand):
                 'sort_order': 0,
             },
         )
-        other, _ = City.objects.update_or_create(
-            name='Другие города',
-            defaults={
-                'region': '',
-                'note': 'Доставка в другие города',
-                'is_default': False,
-                'is_active': True,
-                'sort_order': 10,
-            },
-        )
-        # Старые лишние города остаются неактивными
+        # На всякий случай отключаем «Другие города» и прочие записи
+        City.objects.exclude(pk=ussuriysk.pk).update(is_active=False, is_default=False)
+
+        action = 'создан' if created else 'обновлён'
         self.stdout.write(
-            self.style.SUCCESS(
-                f'Активны: {ussuriysk.display_name}, {other.display_name}'
-            )
+            self.style.SUCCESS(f'Активен только {ussuriysk.display_name} ({action})')
         )
