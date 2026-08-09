@@ -1062,22 +1062,17 @@ select {
 }
 
 .badge-promo-img {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  z-index: 2;
-  width: 64px;
-  height: 64px;
+  display: block;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
   object-fit: contain;
   pointer-events: none;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.25));
 }
 
 .badge-promo-img--detail {
-  top: 8px;
-  left: 8px;
-  width: 88px;
-  height: 88px;
+  width: 64px;
+  height: 64px;
 }
 
 .fav-heart {
@@ -1154,6 +1149,13 @@ select {
 .price {
   font-weight: 800;
   font-size: 1.1rem;
+}
+
+.price-with-promo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .badge-promo {
@@ -1501,7 +1503,7 @@ input[type="number"] {
   overflow: hidden;
 }
 
-.product-detail__image > img:not(.badge-promo-img) {
+.product-detail__image img {
   width: 100%;
   height: 100%;
   object-fit: cover;

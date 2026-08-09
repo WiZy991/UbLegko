@@ -14,15 +14,6 @@
         {% else %}
           Фото
         {% endif %}
-        {% if product.is_promo %}
-          <img
-            class="badge-promo-img badge-promo-img--detail"
-            src="{% static 'img/badge-akciya.png' %}?v=3"
-            alt="Акция"
-            width="96"
-            height="96"
-          >
-        {% endif %}
         {% if user.is_authenticated %}
           <form
             class="product-card__fav"
@@ -74,7 +65,18 @@
         </p>
         <h1 style="margin:0 0 10px;">{{ product.name }}</h1>
         <div class="product-card__meta" style="justify-content:flex-start;gap:12px;margin-bottom:12px;">
-          <span class="price">{{ product.price|floatformat:0 }} руб</span>
+          <span class="price-with-promo">
+            <span class="price">{{ product.price|floatformat:0 }} руб</span>
+            {% if product.is_promo %}
+              <img
+                class="badge-promo-img badge-promo-img--detail"
+                src="{% static 'img/badge-akciya.png' %}?v=3"
+                alt="Акция"
+                width="64"
+                height="64"
+              >
+            {% endif %}
+          </span>
           {% if product.old_price %}
             <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
           {% endif %}

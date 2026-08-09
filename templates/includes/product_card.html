@@ -8,15 +8,6 @@
         Фото
       {% endif %}
     </a>
-    {% if product.is_promo %}
-      <img
-        class="badge-promo-img"
-        src="{% static 'img/badge-akciya.png' %}?v=3"
-        alt="Акция"
-        width="72"
-        height="72"
-      >
-    {% endif %}
     {% if user.is_authenticated %}
       <form
         class="product-card__fav"
@@ -66,7 +57,18 @@
   <h3 class="product-card__name"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>
   <p class="product-card__desc">{{ product.short_description|default:product.description|truncatechars:70 }}</p>
   <div class="product-card__meta">
-    <span class="price">{{ product.price|floatformat:0 }} руб</span>
+    <span class="price-with-promo">
+      <span class="price">{{ product.price|floatformat:0 }} руб</span>
+      {% if product.is_promo %}
+        <img
+          class="badge-promo-img"
+          src="{% static 'img/badge-akciya.png' %}?v=3"
+          alt="Акция"
+          width="56"
+          height="56"
+        >
+      {% endif %}
+    </span>
     {% if product.unit %}<span class="status-pill">{{ product.unit }}</span>{% endif %}
   </div>
   {% if product.old_price %}
