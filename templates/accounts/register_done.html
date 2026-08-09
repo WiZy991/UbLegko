@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Подтвердите email — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="form-card auth-wrap">
+  <h1>Проверьте почту</h1>
+  <p>
+    Мы отправили письмо{% if email %} на <strong>{{ email }}</strong>{% endif %}
+    со ссылкой для подтверждения регистрации.
+  </p>
+  <p>После перехода по ссылке аккаунт будет активирован, и вы сможете войти.</p>
+  <p class="form-hint">Не пришло письмо? Проверьте папку «Спам» или запросите повторную отправку.</p>
+  <p style="margin-top:16px;">
+    <a class="link-accent" href="{% url 'accounts:resend_email_confirm' %}">Отправить письмо ещё раз</a>
+  </p>
+  <p style="margin-top:12px;">
+    <a class="link-accent" href="{% url 'accounts:login' %}">Перейти ко входу</a>
+  </p>
+</div>
+{% endblock %}

@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib.auth.views import (
     LoginView,
     LogoutView,
@@ -10,6 +11,8 @@ from django.contrib.auth.views import (
 )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 
 from cart.models import Order
 
@@ -20,8 +23,11 @@ from .forms import (
     PasswordResetRequestForm,
     ProfileForm,
     RegisterForm,
+    ResendEmailConfirmForm,
 )
 from .models import DeliveryAddress, Profile
+from .tokens import email_confirm_token
+from .utils import send_email_confirmation
 
 
 class UserLoginView(LoginView):
@@ -74,12 +80,89 @@ def register(request):
         form = RegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            messages.success(request, 'Регистрация прошла успешно')
-            return redirect('accounts:profile')
+            request.session['pending_verify_email'] = user.email
+            try:
+                send_email_confirmation(request, user)
+            except Exception:
+                messages.warning(
+                    request,
+                    'Аккаунт создан, но письмо не удалось отправить. '
+                    'Запросите повторную отправку ниже.',
+                )
+                return redirect('accounts:resend_email_confirm')
+            messages.success(
+                request,
+                'Аккаунт создан. Подтвердите email — письмо уже отправлено.',
+            )
+            return redirect('accounts:register_done')
     else:
         form = RegisterForm()
     return render(request, 'accounts/register.html', {'form': form})
+
+
+def register_done(request):
+    email = request.session.get('pending_verify_email', '')
+    return render(request, 'accounts/register_done.html', {'email': email})
+
+
+def confirm_email(request, uidb64, token):
+    user = _get_user_from_uid(uidb64)
+    if user is None or not email_confirm_token.check_token(user, token):
+        messages.error(
+            request,
+            'Ссылка подтверждения недействительна или устарела. Запросите письмо ещё раз.',
+        )
+        return redirect('accounts:resend_email_confirm')
+
+    if user.is_active:
+        messages.info(request, 'Email уже подтверждён. Можно войти.')
+        return redirect('accounts:login')
+
+    user.is_active = True
+    user.save(update_fields=['is_active'])
+    request.session.pop('pending_verify_email', None)
+    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+    messages.success(request, 'Email подтверждён. Добро пожаловать!')
+    return redirect('accounts:profile')
+
+
+def resend_email_confirm(request):
+    if request.user.is_authenticated:
+        return redirect('accounts:profile')
+
+    initial = {}
+    pending = request.session.get('pending_verify_email')
+    if pending:
+        initial['email'] = pending
+
+    if request.method == 'POST':
+        form = ResendEmailConfirmForm(request.POST)
+        if form.is_valid():
+            email = form.cleaned_data['email']
+            user = (
+                User.objects.filter(email__iexact=email, is_active=False)
+                .exclude(email='')
+                .first()
+            )
+            if user is not None:
+                send_email_confirmation(request, user)
+                request.session['pending_verify_email'] = user.email
+            messages.success(
+                request,
+                'Если аккаунт с этим email ожидает подтверждения, мы отправили письмо ещё раз.',
+            )
+            return redirect('accounts:register_done')
+    else:
+        form = ResendEmailConfirmForm(initial=initial)
+    return render(request, 'accounts/resend_email_confirm.html', {'form': form})
+
+
+def _get_user_from_uid(uidb64):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        return User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        return None
 
 
 @login_required

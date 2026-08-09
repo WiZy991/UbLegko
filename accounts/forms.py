@@ -15,13 +15,14 @@ PASSWORD_HELP = 'Ваш пароль должен содержать как ми
 PHONE_HELP = 'Для уточнения заказа и для связи с курьером'
 NAME_HELP = 'Как к вам обращаться'
 EMAIL_HELP = 'Для восстановления пароля'
+REGISTER_EMAIL_HELP = 'На этот адрес придёт письмо для подтверждения регистрации'
 
 
 class RegisterForm(UserCreationForm):
     email = forms.EmailField(
         label='Email',
         required=True,
-        help_text=EMAIL_HELP,
+        help_text=REGISTER_EMAIL_HELP,
         widget=forms.EmailInput(attrs={
             'class': 'form-input',
             'autocomplete': 'email',
@@ -74,11 +75,15 @@ class RegisterForm(UserCreationForm):
         return clean_ru_phone(self.cleaned_data.get('phone', ''))
 
     def clean_email(self):
-        return clean_user_email(self.cleaned_data.get('email', ''))
+        email = clean_user_email(self.cleaned_data.get('email', ''))
+        if User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError('Пользователь с таким email уже зарегистрирован')
+        return email
 
     def save(self, commit=True):
         user = super().save(commit=False)
         user.email = self.cleaned_data['email']
+        user.is_active = False
         if commit:
             user.save()
             profile, _ = Profile.objects.get_or_create(user=user)
@@ -97,6 +102,37 @@ class LoginForm(AuthenticationForm):
             if name == 'password':
                 field.widget.attrs['data-password-toggle'] = '1'
                 field.widget.attrs['autocomplete'] = 'current-password'
+
+    def clean(self):
+        username = self.cleaned_data.get('username')
+        password = self.cleaned_data.get('password')
+        if username and password:
+            try:
+                user = User.objects.get(username=username)
+            except User.DoesNotExist:
+                user = None
+            if user is not None and not user.is_active and user.check_password(password):
+                raise forms.ValidationError(
+                    'Аккаунт ещё не подтверждён. Проверьте почту и перейдите по ссылке из письма.',
+                    code='inactive',
+                )
+        return super().clean()
+
+
+class ResendEmailConfirmForm(forms.Form):
+    email = forms.EmailField(
+        label='Email',
+        help_text='Укажите email, с которым вы регистрировались',
+        widget=forms.EmailInput(attrs={
+            'class': 'form-input',
+            'autocomplete': 'email',
+            'placeholder': 'email@example.com',
+            'data-email-validate': '1',
+        }),
+    )
+
+    def clean_email(self):
+        return clean_user_email(self.cleaned_data.get('email', ''))
 
 
 class PasswordResetRequestForm(PasswordResetForm):

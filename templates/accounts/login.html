@@ -29,6 +29,9 @@
   <p style="margin-top:16px;">
     <a class="link-accent" href="{% url 'accounts:password_reset' %}">Забыли пароль?</a>
   </p>
+  <p style="margin-top:12px;">
+    <a class="link-accent" href="{% url 'accounts:resend_email_confirm' %}">Не пришло письмо подтверждения?</a>
+  </p>
   <p style="margin-top:12px;">Нет аккаунта? <a class="link-accent" href="{% url 'accounts:register' %}?next={{ request.GET.next|default:'/'|urlencode }}">Регистрация</a></p>
 </div>
 {% endblock %}

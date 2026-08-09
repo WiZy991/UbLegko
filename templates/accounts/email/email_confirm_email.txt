@@ -1,0 +1,13 @@
+{% autoescape off %}
+Здравствуйте{% if user.first_name %}, {{ user.first_name }}{% endif %}!
+
+Вы зарегистрировались на сайте {{ site_name }}.
+
+Чтобы активировать аккаунт, перейдите по ссылке:
+{{ protocol }}://{{ domain }}{% url 'accounts:confirm_email' uidb64=uid token=token %}
+
+Если вы не регистрировались, просто проигнорируйте это письмо.
+
+С уважением,
+{{ site_name }}
+{% endautoescape %}

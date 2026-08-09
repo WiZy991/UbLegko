@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Повторная отправка письма — {{ site_settings.brand_name }}{% endblock %}
+
+{% block content %}
+<div class="form-card auth-wrap">
+  <h1>Письмо не пришло?</h1>
+  <p>Укажите email, указанный при регистрации — мы отправим ссылку подтверждения ещё раз.</p>
+  <form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+      <div class="form-group">
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="form-hint">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
+      </div>
+    {% endfor %}
+    <button class="btn btn-primary" type="submit">Отправить снова</button>
+  </form>
+  <p style="margin-top:16px;"><a class="link-accent" href="{% url 'accounts:login' %}">Вернуться ко входу</a></p>
+</div>
+{% endblock %}
