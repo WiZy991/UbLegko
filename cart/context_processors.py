@@ -12,5 +12,6 @@ def cart(request):
         'cart': c,
         'cart_total': c.total_price,
         'cart_count': len(c),
+        'cart_quantities': c.quantities_map(),
         'favorites_count': favorites_count,
     }

@@ -45,23 +45,38 @@
     if (!group) return;
     const input = group.querySelector("input");
     if (!input) return;
-    const current = parseInt(input.value || "1", 10) || 1;
-    input.value = String(minus ? Math.max(1, current - 1) : Math.max(1, current + 1));
+    const min = Number.isFinite(parseInt(input.min, 10)) ? parseInt(input.min, 10) : 0;
+    const current = parseInt(input.value || String(min), 10);
+    const safeCurrent = Number.isFinite(current) ? current : min;
+    input.value = String(minus ? Math.max(min, safeCurrent - 1) : safeCurrent + 1);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
 
   const cartQtyState = new WeakMap();
 
+  function syncProductQtyInputs(productId, quantity) {
+    if (!productId) return;
+    document.querySelectorAll(`[data-cart-qty-form][data-product-id="${productId}"] input[name="quantity"]`).forEach((el) => {
+      el.value = String(quantity);
+      const state = cartQtyState.get(el);
+      if (state) state.lastSent = String(quantity);
+    });
+  }
+
   async function submitCartQty(form, input) {
     const state = cartQtyState.get(input) || { lastSent: input.defaultValue || input.value, inflight: null };
     cartQtyState.set(input, state);
-    const value = Math.max(1, parseInt(input.value || "1", 10) || 1);
+    const min = Number.isFinite(parseInt(input.min, 10)) ? parseInt(input.min, 10) : 0;
+    let value = parseInt(input.value || String(min), 10);
+    if (!Number.isFinite(value)) value = min;
+    value = Math.max(min, value);
     input.value = String(value);
     if (String(value) === String(state.lastSent)) return;
     state.lastSent = String(value);
 
     const formData = new FormData(form);
+    formData.set("quantity", String(value));
     try {
       if (state.inflight) state.inflight.abort();
       state.inflight = new AbortController();
@@ -79,6 +94,11 @@
         form.submit();
         return;
       }
+      const qty = data.removed ? 0 : data.quantity;
+      input.value = String(qty);
+      state.lastSent = String(qty);
+      syncProductQtyInputs(form.getAttribute("data-product-id"), qty);
+
       const row = form.closest("tr");
       const lineTotal = row ? row.querySelector("[data-cart-line-total]") : null;
       if (lineTotal && data.line_total !== undefined) {
@@ -94,6 +114,15 @@
       }
       if (data.removed && row) {
         row.remove();
+        if (!document.querySelector(".cart-table tbody tr")) {
+          window.location.reload();
+        }
+      } else if (!row) {
+        if (data.removed || qty === 0) {
+          showToast("Удалено из корзины");
+        } else {
+          showToast(`В корзине: ${qty}`);
+        }
       }
     } catch (err) {
       if (err && err.name === "AbortError") return;

@@ -1,3 +1,4 @@
+{% load catalog_extras %}
 <article class="product-card">
   <a href="{{ product.get_absolute_url }}" class="product-card__image">
     {% if product.image %}
@@ -22,18 +23,29 @@
     <span class="status-pill">{{ product.get_status_display }}</span>
     {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
   </div>
-  <form class="product-card__actions" action="{% url 'cart:add' product.id %}" method="post" data-ajax-cart>
+  <form
+    class="product-card__actions"
+    action="{% url 'cart:update' product.id %}"
+    method="post"
+    data-cart-qty-form
+    data-product-id="{{ product.id }}"
+  >
     {% csrf_token %}
-    <input type="hidden" name="next" value="{{ request.get_full_path }}">
     <div class="product-card__buy">
       <div class="qty" data-qty-group>
         <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
-        <input type="number" name="quantity" value="1" min="1" aria-label="Количество">
+        <input
+          type="number"
+          name="quantity"
+          value="{{ cart_quantities|cart_qty:product.id }}"
+          min="0"
+          inputmode="numeric"
+          aria-label="Количество в корзине"
+        >
         <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
       </div>
       <span class="rating">★ {{ product.rating }}</span>
     </div>
-    <button class="btn btn-primary" type="submit">В корзину</button>
   </form>
   {% if user.is_authenticated %}
     <form action="{% url 'cart:favorite_toggle' product.id %}" method="post" data-ajax-favorite style="margin-top:6px;">

@@ -102,6 +102,7 @@ def cart_update(request, product_id):
                 'line_total': f'{line_total:.0f}',
                 'cart_total': f'{cart.total_price:.0f}',
                 'cart_count': len(cart),
+                'product_id': int(product_id),
             }
         )
     return redirect('cart:detail')

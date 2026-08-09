@@ -62,5 +62,9 @@ class Cart:
     def total_price(self):
         return sum((item['total'] for item in self), Decimal('0'))
 
-    def product_ids(self):
-        return [int(pid) for pid in self.cart.keys()]
+    def quantity_of(self, product_id):
+        item = self.cart.get(str(product_id))
+        return int(item['quantity']) if item else 0
+
+    def quantities_map(self):
+        return {int(pid): int(data['quantity']) for pid, data in self.cart.items()}

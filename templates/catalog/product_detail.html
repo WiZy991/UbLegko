@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load catalog_extras %}
 
 {% block title %}{{ product.name }} — {{ site_settings.brand_name }}{% endblock %}
 
@@ -40,14 +41,26 @@
         {% elif product.description and not product.short_description %}
           <div style="white-space:pre-line;margin:16px 0;">{{ product.description }}</div>
         {% endif %}
-        <form action="{% url 'cart:add' product.id %}" method="post" data-ajax-cart class="product-buy-row">
+        <form
+          action="{% url 'cart:update' product.id %}"
+          method="post"
+          data-cart-qty-form
+          data-product-id="{{ product.id }}"
+          class="product-buy-row"
+        >
           {% csrf_token %}
           <div class="qty" data-qty-group>
             <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
-            <input type="number" name="quantity" value="1" min="1" aria-label="Количество">
+            <input
+              type="number"
+              name="quantity"
+              value="{{ cart_quantities|cart_qty:product.id }}"
+              min="0"
+              inputmode="numeric"
+              aria-label="Количество в корзине"
+            >
             <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
           </div>
-          <button class="btn btn-primary product-buy-row__cart" type="submit">В корзину</button>
         </form>
         {% if user.is_authenticated %}
           <form action="{% url 'cart:favorite_toggle' product.id %}" method="post" data-ajax-favorite style="margin-top:12px;">

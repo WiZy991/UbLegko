@@ -46,3 +46,15 @@ def catalog_clear_filters(context):
             params['q'] = q
     query = urlencode(params)
     return f'?{query}' if query else '?'
+
+
+@register.filter
+def cart_qty(quantities, product_id):
+    """Количество товара в корзине (dict product_id → qty)."""
+    if not quantities:
+        return 0
+    try:
+        key = int(product_id)
+    except (TypeError, ValueError):
+        return 0
+    return int(quantities.get(key) or 0)
