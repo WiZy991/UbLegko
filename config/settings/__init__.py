@@ -1,4 +1,10 @@
 import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# Загрузка .env из корня проекта (локально и на сервере)
+load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env')
 
 env = os.environ.get('DJANGO_ENV', 'local')
 

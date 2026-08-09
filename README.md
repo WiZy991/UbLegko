@@ -89,28 +89,25 @@ python -m venv .venv
 
 ## Email заявок
 
-По умолчанию письма выводятся в консоль (`EMAIL_BACKEND=console`).
+Заявки с кнопки «Отправить заявку» уходят на email через SMTP.
 
-Для продакшена задайте переменные окружения:
+1. Скопируйте `.env.example` → `.env` (локально) или заполните `/var/www/ublegko/.env` на сервере.
+2. Укажите SMTP-данные почтового ящика:
 
 ```bash
-DJANGO_ENV=prod
-DJANGO_SECRET_KEY=сгенерируйте-длинный-случайный-ключ
-ALLOWED_HOSTS=your-domain.ru,www.your-domain.ru
-# При HTTPS (по умолчанию уже 1). Если HTTP без SSL — выставьте 0:
-# SESSION_COOKIE_SECURE=1
-# CSRF_COOKIE_SECURE=1
 EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
-EMAIL_HOST=smtp.beget.com
+EMAIL_HOST=smtp.mail.ru
 EMAIL_PORT=587
-EMAIL_HOST_USER=...
-EMAIL_HOST_PASSWORD=...
 EMAIL_USE_TLS=1
-DEFAULT_FROM_EMAIL=noreply@your-domain.ru
+EMAIL_HOST_USER=ваш@mail.ru
+EMAIL_HOST_PASSWORD=пароль_приложения
+DEFAULT_FROM_EMAIL=ваш@mail.ru
 ORDER_EMAIL_TO=pro-brite_uss@mail.ru
 ```
 
-Email для заявок также можно изменить в админке: **Настройки сайта**.
+3. Перезапустите сервер (`runserver` или `systemctl restart ublegko`).
+
+Email для заявок также можно изменить в админке: **Настройки сайта → Email для заявок**.
 
 Ошибка SMTP пишется в лог; заявка в БД сохраняется в любом случае.
 
