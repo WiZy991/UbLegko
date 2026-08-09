@@ -30,16 +30,18 @@
         </button>
       </form>
     {% else %}
-      <a
-        class="fav-heart"
-        href="{% url 'accounts:login' %}?next={% url 'favorites' %}"
-        aria-label="Войдите, чтобы добавить в избранное"
-        title="Войдите, чтобы добавить в избранное"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/>
-        </svg>
-      </a>
+      <span class="product-card__fav">
+        <a
+          class="fav-heart"
+          href="{% url 'accounts:login' %}?next={% url 'favorites' %}"
+          aria-label="Войдите, чтобы добавить в избранное"
+          title="Войдите, чтобы добавить в избранное"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/>
+          </svg>
+        </a>
+      </span>
     {% endif %}
   </div>
   <h3 class="product-card__name"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>

@@ -1032,6 +1032,7 @@ select {
 
 .product-card__media {
   position: relative;
+  display: block;
 }
 
 .product-card__image {
@@ -1052,25 +1053,28 @@ select {
   object-fit: cover;
 }
 
-.product-card__fav {
+.product-card__fav,
+.product-card__media > .fav-heart {
   position: absolute;
   top: 8px;
   right: 8px;
-  z-index: 2;
+  z-index: 3;
   margin: 0;
+  padding: 0;
+  line-height: 0;
 }
 
 .fav-heart {
-  display: inline-flex;
+  display: inline-flex !important;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 2px 10px rgba(15, 30, 40, 0.16);
-  color: #9aa3ab;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 10px rgba(15, 30, 40, 0.18);
+  color: #8b949c;
   cursor: pointer;
   text-decoration: none;
   transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
@@ -1079,10 +1083,9 @@ select {
 .fav-heart svg {
   width: 22px;
   height: 22px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linejoin: round;
+  display: block;
+  fill: currentColor;
+  opacity: 0.35;
 }
 
 .fav-heart:hover {
@@ -1091,13 +1094,16 @@ select {
   background: #fff;
 }
 
+.fav-heart:hover svg {
+  opacity: 1;
+}
+
 .fav-heart.is-active {
   color: #c62828;
 }
 
 .fav-heart.is-active svg {
-  fill: currentColor;
-  stroke: currentColor;
+  opacity: 1;
 }
 
 .product-detail__image .product-card__fav,
