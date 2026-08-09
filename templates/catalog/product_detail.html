@@ -65,18 +65,16 @@
         </p>
         <h1 style="margin:0 0 10px;">{{ product.name }}</h1>
         <div class="product-card__meta" style="justify-content:flex-start;gap:12px;margin-bottom:12px;">
-          <span class="price-with-promo">
-            <span class="price">{{ product.price|floatformat:0 }} руб</span>
-            {% if product.is_promo %}
-              <img
-                class="badge-promo-img badge-promo-img--detail"
-                src="{% static 'img/badge-akciya.png' %}?v=3"
-                alt="Акция"
-                width="64"
-                height="64"
-              >
-            {% endif %}
-          </span>
+          <span class="price">{{ product.price|floatformat:0 }} руб</span>
+          {% if product.is_promo %}
+            <img
+              class="badge-promo-img badge-promo-img--detail"
+              src="{% static 'img/badge-akciya.png' %}?v=3"
+              alt="Акция"
+              width="80"
+              height="80"
+            >
+          {% endif %}
           {% if product.old_price %}
             <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
           {% endif %}
@@ -86,7 +84,6 @@
           <span class="status-pill">{{ product.get_status_display }}</span>
         </div>
         <div class="product-card__meta" style="justify-content:flex-start;gap:10px;margin-bottom:12px;">
-          {% if product.unit %}<span class="status-pill">Ед.: {{ product.unit }}</span>{% endif %}
           {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
         </div>
         {% if product.short_description %}

@@ -54,7 +54,7 @@ class Product(models.Model):
     )
     short_description = models.CharField('Краткое описание', max_length=300, blank=True)
     description = models.TextField('Описание', blank=True)
-    unit = models.CharField('Ед. измерения', max_length=50, blank=True, default='шт')
+    unit = models.CharField('Ед. измерения', max_length=50, blank=True, default='')
     country = models.CharField('Страна производитель', max_length=100, blank=True)
     sku = models.CharField('Код товара', max_length=100, blank=True, db_index=True)
     barcode = models.CharField('Штрихкод', max_length=64, blank=True)
