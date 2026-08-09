@@ -57,7 +57,10 @@
   <h3 class="product-card__name"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>
   <p class="product-card__desc">{{ product.short_description|default:product.description|truncatechars:70 }}</p>
   <div class="product-card__meta product-card__meta--price">
-    <span class="price">{{ product.price|floatformat:0 }} руб</span>
+    <div class="price-block">
+      <span class="price">{{ product.price|floatformat:0 }} руб</span>
+      <span class="price-old">{% if product.old_price %}{{ product.old_price|floatformat:0 }} руб{% endif %}</span>
+    </div>
     {% if product.is_promo %}
       <img
         class="badge-promo-img"
@@ -68,11 +71,6 @@
       >
     {% endif %}
   </div>
-  {% if product.old_price %}
-    <div class="product-card__meta">
-      <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|floatformat:0 }} руб</span>
-    </div>
-  {% endif %}
   <div class="product-card__meta">
     <span class="status-pill">{{ product.get_status_display }}</span>
     {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}

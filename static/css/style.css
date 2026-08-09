@@ -1131,13 +1131,24 @@ select {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: 2.5em;
 }
 
 .product-card__desc {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.95rem;
-  min-height: 2.6em;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  min-height: 3.2em;
 }
 
 .product-card__meta {
@@ -1145,12 +1156,39 @@ select {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.product-card__meta--price {
+  align-items: flex-start;
+  min-height: 72px;
   margin-top: auto;
+}
+
+.price-block {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding-top: 4px;
 }
 
 .price {
   font-weight: 800;
   font-size: 1.1rem;
+  line-height: 1.15;
+  min-height: 1.15em;
+}
+
+.price-old {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.2;
+  min-height: 1.2em;
+}
+
+.price-old:not(:empty) {
+  text-decoration: line-through;
 }
 
 .badge-promo {
