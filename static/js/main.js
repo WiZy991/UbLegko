@@ -145,6 +145,7 @@
       if (requestId !== state.requestId) return;
       if (!response.ok || !data.ok) {
         input.value = String(state.lastSent);
+        if (data && data.error) showToast(data.error);
         return;
       }
 
@@ -193,10 +194,11 @@
     const minus = event.target.closest("[data-qty-minus]");
     const plus = event.target.closest("[data-qty-plus]");
     if (!minus && !plus) return;
+    if ((minus && minus.disabled) || (plus && plus.disabled)) return;
     const group = event.target.closest("[data-qty-group]");
-    if (!group) return;
+    if (!group || group.classList.contains("is-disabled")) return;
     const input = group.querySelector('input[name="quantity"], input');
-    if (!input) return;
+    if (!input || input.disabled) return;
     event.preventDefault();
 
     const min = Number.isFinite(parseInt(input.min, 10)) ? parseInt(input.min, 10) : 0;
@@ -543,51 +545,60 @@
     }
 
     function filterCities(query) {
+      if (!list) return;
       const q = (query || "").trim().toLowerCase();
       let visible = 0;
       list.querySelectorAll("[data-city-filter]").forEach((btn) => {
-        const match = !q || btn.dataset.cityFilter.includes(q);
-        btn.parentElement.hidden = !match;
+        const match = !q || (btn.dataset.cityFilter || "").includes(q);
+        if (btn.parentElement) btn.parentElement.hidden = !match;
         if (match) visible += 1;
       });
       if (empty) empty.hidden = visible !== 0;
     }
 
-    toggle.addEventListener("click", (event) => {
-      event.stopPropagation();
-      if (citySelector.classList.contains("is-open")) closeCity();
-      else openCity();
-    });
+    if (toggle) {
+      toggle.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (citySelector.classList.contains("is-open")) closeCity();
+        else openCity();
+      });
+    }
 
-    search.addEventListener("input", () => filterCities(search.value));
+    if (search) {
+      search.addEventListener("input", () => filterCities(search.value));
+    }
 
-    list.addEventListener("click", async (event) => {
-      const btn = event.target.closest("[data-city-id]");
-      if (!btn || !form || !input) return;
-      input.value = btn.dataset.cityId;
-      const formData = new FormData(form);
-      try {
-        const response = await fetch(form.action, {
-          method: "POST",
-          body: formData,
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-            "X-CSRFToken": getCookie("csrftoken"),
-          },
-        });
-        const data = await response.json();
-        if (data.ok) {
-          label.textContent = data.city;
-          list.querySelectorAll(".city-selector__item").forEach((item) => {
-            item.classList.toggle("is-active", item.dataset.cityId === String(data.id));
+    if (list) {
+      list.addEventListener("click", async (event) => {
+        const btn = event.target.closest("[data-city-id]");
+        if (!btn || !form || !input) return;
+        input.value = btn.dataset.cityId;
+        const formData = new FormData(form);
+        try {
+          const response = await fetch(form.action, {
+            method: "POST",
+            body: formData,
+            headers: {
+              "X-Requested-With": "XMLHttpRequest",
+              "X-CSRFToken": getCookie("csrftoken"),
+            },
           });
-          closeCity();
-          showToast(`Выбран город: ${data.city}`);
+          const data = await response.json();
+          if (data.ok) {
+            if (label) label.textContent = data.city;
+            list.querySelectorAll(".city-selector__item").forEach((item) => {
+              const active = item.dataset.cityId === String(data.id);
+              item.classList.toggle("is-active", active);
+              item.setAttribute("aria-selected", active ? "true" : "false");
+            });
+            closeCity();
+            showToast(`Выбран город: ${data.city}`);
+          }
+        } catch (err) {
+          form.submit();
         }
-      } catch (err) {
-        form.submit();
-      }
-    });
+      });
+    }
 
     document.addEventListener("click", (event) => {
       if (!citySelector.contains(event.target)) closeCity();
@@ -1100,4 +1111,79 @@
   document.querySelectorAll("select.form-input").forEach(enhanceSelect);
 
   initCategoryScrollSpy();
+  initProductGallery();
+
+  function initProductGallery() {
+    const root = document.querySelector("[data-product-gallery]");
+    const lightbox = document.querySelector("[data-gallery-lightbox]");
+    const dataEl = document.getElementById("product-gallery-data");
+    if (!root || !lightbox || !dataEl) return;
+
+    let images = [];
+    try {
+      images = JSON.parse(dataEl.textContent || "[]");
+    } catch (_err) {
+      return;
+    }
+    if (!images.length) return;
+
+    let index = 0;
+    const mainImg = root.querySelector("[data-gallery-main-img]");
+    const thumbs = Array.from(root.querySelectorAll(".product-gallery__thumb"));
+    const lightboxImg = lightbox.querySelector("[data-gallery-lightbox-img]");
+    const currentEl = lightbox.querySelector("[data-gallery-current]");
+
+    function setActiveThumb(i) {
+      thumbs.forEach((thumb, idx) => {
+        thumb.classList.toggle("is-active", idx === i);
+      });
+    }
+
+    function show(i) {
+      index = (i + images.length) % images.length;
+      if (mainImg) mainImg.src = images[index];
+      if (lightboxImg) lightboxImg.src = images[index];
+      if (currentEl) currentEl.textContent = String(index + 1);
+      setActiveThumb(index);
+    }
+
+    function open(i) {
+      show(i);
+      lightbox.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+
+    function close() {
+      lightbox.hidden = true;
+      document.body.style.overflow = "";
+    }
+
+    root.addEventListener("click", (event) => {
+      const btn = event.target.closest("[data-gallery-open]");
+      if (!btn || !root.contains(btn)) return;
+      const i = Number(btn.dataset.index || 0);
+      open(Number.isFinite(i) ? i : 0);
+    });
+
+    lightbox.addEventListener("click", (event) => {
+      if (event.target.closest("[data-gallery-close]")) {
+        close();
+        return;
+      }
+      if (event.target.closest("[data-gallery-prev]")) {
+        show(index - 1);
+        return;
+      }
+      if (event.target.closest("[data-gallery-next]")) {
+        show(index + 1);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (lightbox.hidden) return;
+      if (event.key === "Escape") close();
+      else if (event.key === "ArrowLeft") show(index - 1);
+      else if (event.key === "ArrowRight") show(index + 1);
+    });
+  }
 })();

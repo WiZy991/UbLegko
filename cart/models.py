@@ -56,6 +56,7 @@ class Order(models.Model):
     )
     address = models.CharField('Адрес доставки', max_length=400, blank=True)
     address_name = models.CharField('Название адреса', max_length=100, blank=True)
+    city = models.CharField('Город', max_length=120, blank=True)
     comment = models.TextField('Комментарий', blank=True)
     status = models.CharField(
         'Статус',

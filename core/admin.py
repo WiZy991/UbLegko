@@ -5,10 +5,10 @@ from .models import City, SiteSettings
 
 @admin.register(City)
 class CityAdmin(admin.ModelAdmin):
-    list_display = ('name', 'region', 'is_default', 'is_active', 'sort_order')
+    list_display = ('name', 'note', 'region', 'is_default', 'is_active', 'sort_order')
     list_editable = ('is_default', 'is_active', 'sort_order')
     list_filter = ('is_active', 'region', 'is_default')
-    search_fields = ('name', 'region')
+    search_fields = ('name', 'region', 'note')
 
 
 @admin.register(SiteSettings)

@@ -1,1 +1,51 @@
-<span class="city-static" title="Город доставки">г. Уссурийск</span>
+{% if cities %}
+  <div class="city-selector" data-city-selector>
+    <button
+      type="button"
+      class="city-selector__toggle"
+      data-city-toggle
+      aria-haspopup="listbox"
+      aria-expanded="false"
+      aria-controls="city-selector-dropdown"
+    >
+      <span data-city-label>{{ selected_city_name }}</span>
+      <span class="city-selector__arrow" aria-hidden="true">▾</span>
+    </button>
+    <div
+      class="city-selector__dropdown"
+      id="city-selector-dropdown"
+      data-city-dropdown
+      hidden
+      role="listbox"
+      aria-label="Выбор города"
+    >
+      <ul class="city-selector__list" data-city-list>
+        {% for city in cities %}
+          <li>
+            <button
+              type="button"
+              class="city-selector__item{% if selected_city and selected_city.id == city.id %} is-active{% endif %}"
+              data-city-id="{{ city.id }}"
+              data-city-filter="{{ city.name|lower }} {{ city.note|lower }}"
+              role="option"
+              aria-selected="{% if selected_city and selected_city.id == city.id %}true{% else %}false{% endif %}"
+            >
+              <span class="city-selector__item-name">{{ city.display_name }}</span>
+              {% if city.note %}
+                <span class="city-selector__item-note">{{ city.note }}</span>
+              {% endif %}
+            </button>
+          </li>
+        {% endfor %}
+      </ul>
+      <p class="city-selector__hint">Выбранный город будет указан в заявке при заказе.</p>
+    </div>
+  </div>
+  <form id="city-set-form" class="visually-hidden" action="{% url 'core:set_city' %}" method="post">
+    {% csrf_token %}
+    <input type="hidden" name="city_id" value="" data-city-input>
+    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+  </form>
+{% else %}
+  <span class="city-static" title="Город доставки">{{ selected_city_name|default:"г. Уссурийск" }}</span>
+{% endif %}

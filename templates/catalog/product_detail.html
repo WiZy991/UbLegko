@@ -8,11 +8,36 @@
   {% include "includes/sidebar.html" %}
   <div>
     <article class="product-detail">
-      <div class="product-detail__image">
-        {% if product.image %}
-          <img src="{{ product.image.url }}" alt="{{ product.name }}">
+      <div class="product-detail__media">
+        {% if gallery %}
+          <div class="product-gallery" data-product-gallery>
+            <button
+              type="button"
+              class="product-gallery__main"
+              data-gallery-open
+              data-index="0"
+              aria-label="Открыть фото"
+            >
+              <img src="{{ gallery.0 }}" alt="{{ product.name }}" data-gallery-main-img>
+            </button>
+            {% if gallery|length > 1 %}
+              <div class="product-gallery__thumbs" role="list">
+                {% for url in gallery %}
+                  <button
+                    type="button"
+                    class="product-gallery__thumb{% if forloop.first %} is-active{% endif %}"
+                    data-gallery-open
+                    data-index="{{ forloop.counter0 }}"
+                    aria-label="Фото {{ forloop.counter }}"
+                  >
+                    <img src="{{ url }}" alt="">
+                  </button>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
         {% else %}
-          Фото
+          <div class="product-detail__image product-detail__image--empty">Фото</div>
         {% endif %}
         {% if user.is_authenticated %}
           <form
@@ -81,7 +106,7 @@
           {% if product.reviews_count %}
             <span class="rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
           {% endif %}
-          <span class="status-pill">{{ product.get_status_display }}</span>
+          <span class="status-pill{% if product.status_modifier %} status-pill--{{ product.status_modifier }}{% endif %}">{{ product.get_status_display }}</span>
         </div>
         <div class="product-card__meta" style="justify-content:flex-start;gap:10px;margin-bottom:12px;">
           {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
@@ -100,10 +125,16 @@
           data-cart-qty-form
           data-product-id="{{ product.id }}"
           class="product-buy-row"
+          {% if not product.can_add_to_cart %}data-cart-locked="1"{% endif %}
         >
           {% csrf_token %}
-          <div class="qty" data-qty-group>
-            <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
+          <div class="qty{% if not product.can_add_to_cart %} is-disabled{% endif %}" data-qty-group>
+            <button
+              type="button"
+              data-qty-minus
+              aria-label="Уменьшить количество"
+              {% if not product.can_add_to_cart %}disabled{% endif %}
+            >−</button>
             <input
               type="number"
               name="quantity"
@@ -111,9 +142,18 @@
               min="0"
               inputmode="numeric"
               aria-label="Количество в корзине"
+              {% if not product.can_add_to_cart %}disabled{% endif %}
             >
-            <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
+            <button
+              type="button"
+              data-qty-plus
+              aria-label="Увеличить количество"
+              {% if not product.can_add_to_cart %}disabled{% endif %}
+            >+</button>
           </div>
+          {% if not product.can_add_to_cart %}
+            <p class="product-card__unavailable" style="margin:0;">Сейчас недоступен для заказа</p>
+          {% endif %}
         </form>
       </div>
     </article>
@@ -245,4 +285,22 @@
     {% endif %}
   </div>
 </div>
+
+{% if gallery %}
+  {{ gallery|json_script:"product-gallery-data" }}
+  <div class="gallery-lightbox" data-gallery-lightbox hidden>
+    <div class="gallery-lightbox__backdrop" data-gallery-close tabindex="-1"></div>
+    <div class="gallery-lightbox__dialog" role="dialog" aria-modal="true" aria-label="Просмотр фото">
+      <button type="button" class="gallery-lightbox__close" data-gallery-close aria-label="Закрыть">×</button>
+      {% if gallery|length > 1 %}
+        <button type="button" class="gallery-lightbox__nav gallery-lightbox__nav--prev" data-gallery-prev aria-label="Предыдущее фото">‹</button>
+        <button type="button" class="gallery-lightbox__nav gallery-lightbox__nav--next" data-gallery-next aria-label="Следующее фото">›</button>
+      {% endif %}
+      <img class="gallery-lightbox__img" src="{{ gallery.0 }}" alt="{{ product.name }}" data-gallery-lightbox-img>
+      <p class="gallery-lightbox__counter" data-gallery-counter {% if gallery|length < 2 %}hidden{% endif %}>
+        <span data-gallery-current>1</span> / {{ gallery|length }}
+      </p>
+    </div>
+  </div>
+{% endif %}
 {% endblock %}

@@ -1,0 +1,16 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/category_sortable.css' %}?v=1">
+  <script>
+    window.CATEGORY_REORDER_URL = "{% url 'admin:catalog_category_reorder' %}";
+  </script>
+  <script defer src="{% static 'admin/js/category_sortable.js' %}?v=1"></script>
+{% endblock %}
+
+{% block result_list %}
+  <p class="category-sortable-hint">Перетащите строки за ручку ⠿, чтобы изменить порядок категорий на сайте. Порядок сохраняется сразу.</p>
+  {{ block.super }}
+{% endblock %}

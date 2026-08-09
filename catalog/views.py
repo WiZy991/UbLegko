@@ -130,7 +130,11 @@ class ProductDetailView(DetailView):
     slug_url_kwarg = 'slug'
 
     def get_queryset(self):
-        return Product.objects.filter(is_visible=True).select_related('category')
+        return (
+            Product.objects.filter(is_visible=True)
+            .select_related('category')
+            .prefetch_related('images')
+        )
 
     def get_user_review(self):
         if not self.request.user.is_authenticated:
@@ -141,6 +145,7 @@ class ProductDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['gallery'] = self.object.gallery_urls()
         context['categories'] = Category.objects.filter(is_visible=True)
         context['recommendations'] = get_recommendations_for_product(self.object, limit=8)
         context['similar_products'] = context['recommendations'].similar

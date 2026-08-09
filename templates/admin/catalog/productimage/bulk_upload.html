@@ -1,0 +1,57 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<h1>{{ title }}</h1>
+
+<div style="max-width:720px;line-height:1.5;">
+  <p>
+    Загрузите <strong>ZIP-архив</strong> или сразу несколько файлов / целую папку.
+    Фото автоматически привяжутся к товарам по <strong>имени файла</strong>.
+  </p>
+
+  <p><strong>Как назвать файлы</strong> (без учёта регистра):</p>
+  <ul>
+    <li>код товара — <code>ALFA-20.jpg</code></li>
+    <li>штрихкод — <code>4601234567890.png</code></li>
+    <li>название товара — <code>Средство для посуды.webp</code></li>
+    <li>несколько фото одного товара — <code>ALFA-20.jpg</code>, <code>ALFA-20_2.jpg</code>, <code>ALFA-20_3.png</code></li>
+  </ul>
+  <p>
+    Первое фото становится <strong>главным</strong> (если у товара ещё нет фото),
+    остальные попадают в галерею карточки.
+  </p>
+  <p>Форматы: JPG, JPEG, PNG, WEBP, GIF, BMP, TIFF.</p>
+
+  <form method="post" enctype="multipart/form-data" style="margin-top:20px;">
+    {% csrf_token %}
+
+    <fieldset style="border:1px solid #444;border-radius:8px;padding:16px;margin-bottom:16px;">
+      <legend style="padding:0 8px;">ZIP-архив</legend>
+      <input type="file" name="zip_file" accept=".zip,application/zip">
+    </fieldset>
+
+    <fieldset style="border:1px solid #444;border-radius:8px;padding:16px;margin-bottom:16px;">
+      <legend style="padding:0 8px;">Файлы или папка</legend>
+      <p style="margin-top:0;color:#9aa;">Можно выбрать несколько файлов или папку целиком.</p>
+      <div style="margin-bottom:10px;">
+        <label><strong>Файлы</strong></label><br>
+        <input type="file" name="images" accept="image/*" multiple>
+      </div>
+      <div>
+        <label><strong>Папка</strong></label><br>
+        <input type="file" name="folder_images" accept="image/*" multiple webkitdirectory directory>
+      </div>
+    </fieldset>
+
+    <div style="margin-bottom:16px;">
+      <label>
+        <input type="checkbox" name="replace_main" value="1">
+        Заменить главное фото, если оно уже есть
+      </label>
+    </div>
+
+    <input type="submit" value="Загрузить и распределить" class="default">
+    <a href="{% url 'admin:catalog_productimage_changelist' %}" style="margin-left:12px;">Отмена</a>
+  </form>
+</div>
+{% endblock %}

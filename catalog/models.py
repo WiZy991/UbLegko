@@ -66,7 +66,12 @@ class Product(models.Model):
         null=True,
         blank=True,
     )
-    image = models.ImageField('Изображение', upload_to='products/', blank=True)
+    image = models.ImageField(
+        'Главное фото',
+        upload_to='products/',
+        blank=True,
+        help_text='Показывается в каталоге и первым в галерее на странице товара',
+    )
     rating = models.DecimalField('Рейтинг', max_digits=3, decimal_places=1, default=Decimal('0'))
     reviews_count = models.PositiveIntegerField('Число оценок', default=0)
     status = models.CharField(
@@ -105,6 +110,58 @@ class Product(models.Model):
     @property
     def price_display(self):
         return f'{self.price:.0f} руб'
+
+    def gallery_urls(self):
+        """URL всех фото товара: главное + дополнительные, без дублей."""
+        urls = []
+        seen = set()
+        if self.image:
+            urls.append(self.image.url)
+            seen.add(self.image.name)
+        for item in self.images.all():
+            if not item.image:
+                continue
+            if item.image.name in seen:
+                continue
+            urls.append(item.image.url)
+            seen.add(item.image.name)
+        return urls
+
+    @property
+    def can_add_to_cart(self):
+        """Можно ли увеличивать количество в корзине."""
+        return self.status not in {
+            self.Status.IN_TRANSIT,
+            self.Status.OUT_OF_STOCK,
+        }
+
+    @property
+    def status_modifier(self):
+        return {
+            self.Status.IN_STOCK: 'in-stock',
+            self.Status.IN_TRANSIT: 'in-transit',
+            self.Status.OUT_OF_STOCK: 'out-of-stock',
+            self.Status.ON_ORDER: 'on-order',
+        }.get(self.status, '')
+
+
+class ProductImage(models.Model):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='images',
+        verbose_name='Товар',
+    )
+    image = models.ImageField('Фото', upload_to='products/gallery/')
+    sort_order = models.PositiveIntegerField('Порядок', default=0)
+
+    class Meta:
+        verbose_name = 'Фото'
+        verbose_name_plural = 'Фото'
+        ordering = ['sort_order', 'id']
+
+    def __str__(self):
+        return f'Фото {self.pk} — {self.product}'
 
 
 class ProductRecommendation(models.Model):

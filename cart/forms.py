@@ -1,6 +1,7 @@
 from django import forms
 
 from accounts.models import DeliveryAddress
+from core.models import City
 from core.validators import clean_ru_phone, clean_user_email
 
 NAME_HELP = 'Как к вам обращаться'
@@ -20,6 +21,12 @@ class CheckoutForm(forms.Form):
         choices=DELIVERY_CHOICES,
         initial=DELIVERY_COURIER,
         widget=forms.RadioSelect,
+    )
+    city = forms.ModelChoiceField(
+        label='Город',
+        queryset=City.objects.none(),
+        empty_label=None,
+        widget=forms.Select(attrs={'class': 'form-input'}),
     )
     full_name = forms.CharField(
         label='Имя',
@@ -80,9 +87,18 @@ class CheckoutForm(forms.Form):
         }),
     )
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, selected_city=None, **kwargs):
         self.user = user
         super().__init__(*args, **kwargs)
+        cities = City.objects.filter(is_active=True).order_by('sort_order', 'name')
+        self.fields['city'].queryset = cities
+        self.fields['city'].label_from_instance = self._city_label
+        if selected_city and not self.is_bound:
+            self.fields['city'].initial = selected_city
+        elif cities.exists() and not self.is_bound and not self.fields['city'].initial:
+            default = cities.filter(is_default=True).first() or cities.first()
+            self.fields['city'].initial = default
+
         if not user or not user.is_authenticated:
             self.fields.pop('email', None)
             self.fields.pop('saved_address', None)
@@ -101,6 +117,12 @@ class CheckoutForm(forms.Form):
                 self.fields['saved_address'].initial = default
         else:
             self.fields.pop('saved_address')
+
+    @staticmethod
+    def _city_label(city):
+        if city.note:
+            return f'{city.display_name} — {city.note}'
+        return city.display_name
 
     def clean_phone(self):
         return clean_ru_phone(self.cleaned_data.get('phone', ''))

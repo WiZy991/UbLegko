@@ -27,7 +27,7 @@ def site_settings(request):
         )
 
     try:
-        cities = list(City.objects.filter(is_active=True).order_by('name'))
+        cities = list(City.objects.filter(is_active=True).order_by('sort_order', 'name'))
         selected_city = get_selected_city(request)
     except Exception:  # noqa: BLE001
         cities = []

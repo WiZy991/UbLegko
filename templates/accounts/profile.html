@@ -88,6 +88,9 @@
         <div style="color:var(--text-muted);font-size:0.9rem;">
           {{ order.created_at|date:"d.m.Y H:i" }} · {{ order.get_status_display }} · {{ order.total|floatformat:0 }} руб
         </div>
+        {% if order.city %}
+          <div style="color:var(--text-muted);font-size:0.9rem;margin-top:4px;">Город: {{ order.city }}</div>
+        {% endif %}
         {% if order.address %}
           <div style="color:var(--text-muted);font-size:0.9rem;margin-top:4px;">
             Адрес{% if order.address_name %} ({{ order.address_name }}){% endif %}: {{ order.address }}

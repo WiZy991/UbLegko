@@ -72,7 +72,7 @@
     {% endif %}
   </div>
   <div class="product-card__meta">
-    <span class="status-pill">{{ product.get_status_display }}</span>
+    <span class="status-pill{% if product.status_modifier %} status-pill--{{ product.status_modifier }}{% endif %}">{{ product.get_status_display }}</span>
     {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
   </div>
   <form
@@ -81,11 +81,17 @@
     method="post"
     data-cart-qty-form
     data-product-id="{{ product.id }}"
+    {% if not product.can_add_to_cart %}data-cart-locked="1"{% endif %}
   >
     {% csrf_token %}
     <div class="product-card__buy">
-      <div class="qty" data-qty-group>
-        <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
+      <div class="qty{% if not product.can_add_to_cart %} is-disabled{% endif %}" data-qty-group>
+        <button
+          type="button"
+          data-qty-minus
+          aria-label="Уменьшить количество"
+          {% if not product.can_add_to_cart %}disabled{% endif %}
+        >−</button>
         <input
           type="number"
           name="quantity"
@@ -93,12 +99,21 @@
           min="0"
           inputmode="numeric"
           aria-label="Количество в корзине"
+          {% if not product.can_add_to_cart %}disabled{% endif %}
         >
-        <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
+        <button
+          type="button"
+          data-qty-plus
+          aria-label="Увеличить количество"
+          {% if not product.can_add_to_cart %}disabled{% endif %}
+        >+</button>
       </div>
       {% if product.reviews_count %}
         <span class="rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
       {% endif %}
     </div>
+    {% if not product.can_add_to_cart %}
+      <p class="product-card__unavailable">Сейчас недоступен для заказа</p>
+    {% endif %}
   </form>
 </article>

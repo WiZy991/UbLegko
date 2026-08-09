@@ -51,8 +51,9 @@ JAZZMIN_SETTINGS = {
     'hide_models': [],
     'order_with_respect_to': [
         'catalog',
-        'catalog.Category',
         'catalog.Product',
+        'catalog.Category',
+        'catalog.ProductImage',
         'catalog.ProductRecommendation',
         'cart',
         'cart.Order',
@@ -68,6 +69,7 @@ JAZZMIN_SETTINGS = {
         'auth.Group': 'fas fa-users',
         'catalog.Category': 'fas fa-folder',
         'catalog.Product': 'fas fa-box-open',
+        'catalog.ProductImage': 'fas fa-images',
         'catalog.ProductRecommendation': 'fas fa-thumbs-up',
         'cart.Order': 'fas fa-file-invoice',
         'cart.Favorite': 'fas fa-heart',

@@ -3,6 +3,7 @@
 Клиент: {{ order.full_name }}
 Телефон: {{ order.phone }}
 Email: {{ order.email|default:"—" }}
+Город: {{ order.city|default:"—" }}
 Способ получения: {{ order.get_delivery_method_display }}
 {% if order.address_name %}Название адреса: {{ order.address_name }}
 {% endif %}Адрес доставки: {{ order.address|default:"—" }}

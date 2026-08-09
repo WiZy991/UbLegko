@@ -12,12 +12,22 @@ import logging
 from catalog.models import Category, Product
 from catalog.recommendations import get_recommendations_for_products
 from accounts.models import Profile
+from core.context_processors import get_selected_city
 
 from .cart import Cart
 from .forms import CheckoutForm
 from .models import Favorite, Order, OrderItem
 
 logger = logging.getLogger(__name__)
+
+
+def _cart_unavailable_response(request, product):
+    message = f'«{product.name}» сейчас недоступен для заказа'
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'ok': False, 'error': message}, status=400)
+    messages.warning(request, message)
+    next_url = request.POST.get('next') or request.META.get('HTTP_REFERER') or reverse('catalog:home')
+    return redirect(next_url)
 
 
 def cart_detail(request):
@@ -49,6 +59,8 @@ def cart_detail(request):
 @require_POST
 def cart_add(request, product_id):
     product = get_object_or_404(Product, id=product_id, is_visible=True)
+    if not product.can_add_to_cart:
+        return _cart_unavailable_response(request, product)
     cart = Cart(request)
     quantity = int(request.POST.get('quantity', 1) or 1)
     update = request.POST.get('update') == '1'
@@ -77,6 +89,7 @@ def cart_remove(request, product_id):
 
 @require_POST
 def cart_update(request, product_id):
+    product = get_object_or_404(Product, id=product_id, is_visible=True)
     cart = Cart(request)
     quantity = int(request.POST.get('quantity', 1) or 1)
     if quantity < 1:
@@ -84,6 +97,8 @@ def cart_update(request, product_id):
         line_total = 0
         removed = True
     else:
+        if not product.can_add_to_cart:
+            return _cart_unavailable_response(request, product)
         cart.add(product_id, quantity=quantity, update=True)
         removed = False
         line_total = 0
@@ -115,6 +130,7 @@ def checkout(request):
         messages.warning(request, 'Корзина пуста')
         return redirect('cart:detail')
 
+    selected_city = get_selected_city(request)
     initial = {}
     if request.user.is_authenticated:
         full_name = (request.user.first_name or '').strip()
@@ -133,15 +149,20 @@ def checkout(request):
                 initial['phone'] = last_order.phone
             if last_order.delivery_method:
                 initial['delivery_method'] = last_order.delivery_method
-            # текстовый адрес — только если нет сохранённых адресов
             from accounts.models import DeliveryAddress
 
             if not DeliveryAddress.objects.filter(user=request.user).exists() and last_order.address:
                 initial['address'] = last_order.address
 
     if request.method == 'POST':
-        form = CheckoutForm(request.POST, user=request.user)
+        form = CheckoutForm(
+            request.POST,
+            user=request.user,
+            selected_city=selected_city,
+        )
         if form.is_valid():
+            city = form.cleaned_data['city']
+            city_label = CheckoutForm._city_label(city)
             order = Order.objects.create(
                 user=request.user if request.user.is_authenticated else None,
                 full_name=form.cleaned_data['full_name'],
@@ -150,8 +171,10 @@ def checkout(request):
                 delivery_method=form.cleaned_data['delivery_method'],
                 address=form.cleaned_data.get('address', ''),
                 address_name=form.cleaned_data.get('address_name', ''),
+                city=city_label,
                 comment=form.cleaned_data['comment'],
             )
+            request.session['selected_city_id'] = city.pk
             if request.user.is_authenticated:
                 profile, _ = Profile.objects.get_or_create(user=request.user)
                 updated = []
@@ -188,7 +211,11 @@ def checkout(request):
                 )
             return redirect('cart:order_success', order_id=order.pk)
     else:
-        form = CheckoutForm(initial=initial, user=request.user)
+        form = CheckoutForm(
+            initial=initial,
+            user=request.user,
+            selected_city=selected_city,
+        )
 
     return render(
         request,

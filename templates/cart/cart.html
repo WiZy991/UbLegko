@@ -28,13 +28,36 @@
                 method="post"
                 data-cart-qty-form
                 data-product-id="{{ item.product.id }}"
+                {% if not item.product.can_add_to_cart %}data-cart-locked="1"{% endif %}
               >
                 {% csrf_token %}
-                <div class="qty" data-qty-group>
-                  <button type="button" data-qty-minus aria-label="Уменьшить количество">−</button>
-                  <input class="cart-qty-input" type="number" name="quantity" value="{{ item.quantity }}" min="1" inputmode="numeric" aria-label="Количество">
-                  <button type="button" data-qty-plus aria-label="Увеличить количество">+</button>
+                <div class="qty{% if not item.product.can_add_to_cart %} is-disabled{% endif %}" data-qty-group>
+                  <button
+                    type="button"
+                    data-qty-minus
+                    aria-label="Уменьшить количество"
+                    {% if not item.product.can_add_to_cart %}disabled{% endif %}
+                  >−</button>
+                  <input
+                    class="cart-qty-input"
+                    type="number"
+                    name="quantity"
+                    value="{{ item.quantity }}"
+                    min="1"
+                    inputmode="numeric"
+                    aria-label="Количество"
+                    {% if not item.product.can_add_to_cart %}disabled{% endif %}
+                  >
+                  <button
+                    type="button"
+                    data-qty-plus
+                    aria-label="Увеличить количество"
+                    {% if not item.product.can_add_to_cart %}disabled{% endif %}
+                  >+</button>
                 </div>
+                {% if not item.product.can_add_to_cart %}
+                  <p class="product-card__unavailable" style="margin-top:6px;">Недоступен для заказа</p>
+                {% endif %}
               </form>
             </td>
             <td data-cart-line-total>{{ item.total|floatformat:0 }} руб</td>

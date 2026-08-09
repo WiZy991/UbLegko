@@ -1,16 +1,19 @@
 import csv
 import io
+import json
 import re
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import admin, messages
+from django.db.models import Count
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import path
-from django.utils.html import format_html
+from django.utils.html import format_html, mark_safe
 from openpyxl import load_workbook
 
 from .categorize import resolve_category
-from .models import Category, Product, ProductRecommendation, ProductReview
+from .models import Category, Product, ProductImage, ProductRecommendation, ProductReview
 
 HEADER_ALIASES = {
     'name': {
@@ -100,6 +103,26 @@ def parse_price(value):
     return Decimal(text)
 
 
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+    fields = ('image', 'sort_order', 'preview')
+    readonly_fields = ('preview',)
+    ordering = ('sort_order', 'id')
+    verbose_name = 'Фото'
+    verbose_name_plural = 'Дополнительные фотографии (можно добавить сколько угодно)'
+
+    def preview(self, obj):
+        if obj.pk and obj.image:
+            return format_html(
+                '<img src="{}" style="height:64px;width:64px;object-fit:cover;border-radius:6px;" />',
+                obj.image.url,
+            )
+        return '—'
+
+    preview.short_description = 'Превью'
+
+
 class ProductRecommendationInline(admin.TabularInline):
     model = ProductRecommendation
     fk_name = 'product'
@@ -111,11 +134,71 @@ class ProductRecommendationInline(admin.TabularInline):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'sort_order', 'is_visible')
-    list_editable = ('sort_order', 'is_visible')
+    list_display = ('drag_handle', 'name', 'is_visible', 'products_count')
+    list_display_links = ('name',)
+    list_editable = ('is_visible',)
     list_filter = ('is_visible',)
     search_fields = ('name',)
+    ordering = ('sort_order', 'name')
     prepopulated_fields = {'slug': ('name',)}
+    change_list_template = 'admin/catalog/category/change_list.html'
+
+    class Media:
+        css = {'all': ('admin/css/category_sortable.css',)}
+
+    @admin.display(description='')
+    def drag_handle(self, obj):
+        return mark_safe(
+            '<span class="category-drag-handle" title="Перетащите для изменения порядка" aria-hidden="true">⠿</span>'
+        )
+
+    @admin.display(description='Товаров', ordering='products_count')
+    def products_count(self, obj):
+        return getattr(obj, 'products_count', obj.products.count())
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(products_count=Count('products'))
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                'reorder/',
+                self.admin_site.admin_view(self.reorder_view),
+                name='catalog_category_reorder',
+            ),
+        ]
+        return custom + urls
+
+    def reorder_view(self, request):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+            order = payload.get('order') or []
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        ids = []
+        for raw in order:
+            try:
+                ids.append(int(raw))
+            except (TypeError, ValueError):
+                continue
+
+        existing = set(
+            Category.objects.filter(pk__in=ids).values_list('pk', flat=True)
+        )
+        updates = []
+        for index, pk in enumerate(ids):
+            if pk not in existing:
+                continue
+            updates.append(Category(pk=pk, sort_order=index))
+        if updates:
+            Category.objects.bulk_update(updates, ['sort_order'])
+        return JsonResponse({'ok': True, 'count': len(updates)})
 
 
 @admin.register(Product)
@@ -124,19 +207,28 @@ class ProductAdmin(admin.ModelAdmin):
         'name',
         'category',
         'price',
-        'unit',
-        'country',
+        'old_price',
         'status',
         'is_promo',
         'is_visible',
         'thumb',
     )
-    list_filter = ('category', 'status', 'is_promo', 'is_visible', 'is_featured', 'country', 'unit')
-    list_editable = ('status', 'is_promo', 'is_visible')
+    list_display_links = ('name',)
+    list_filter = ('category', 'status', 'is_promo', 'is_visible', 'is_featured', 'country')
+    list_editable = (
+        'category',
+        'price',
+        'old_price',
+        'status',
+        'is_promo',
+        'is_visible',
+    )
+    list_select_related = ('category',)
+    list_per_page = 50
     search_fields = ('name', 'sku', 'barcode', 'short_description', 'description', 'country')
     prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ['category']
-    inlines = [ProductRecommendationInline]
+    inlines = [ProductImageInline, ProductRecommendationInline]
     change_list_template = 'admin/catalog/product/change_list.html'
     readonly_fields = ('rating', 'reviews_count')
     fieldsets = (
@@ -148,9 +240,25 @@ class ProductAdmin(admin.ModelAdmin):
             ),
         }),
         ('Цены и статус', {
-            'fields': ('price', 'old_price', 'status', 'rating', 'reviews_count', 'is_promo', 'is_featured', 'is_visible'),
+            'fields': (
+                'price',
+                'old_price',
+                'status',
+                'rating',
+                'reviews_count',
+                'is_promo',
+                'is_featured',
+                'is_visible',
+            ),
+            'description': (
+                'Для акционных товаров отметьте «Акция», укажите текущую цену в «Цена» '
+                'и прежнюю — в «Старая цена» (зачёркнутая на сайте).'
+            ),
         }),
     )
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('category')
 
     def thumb(self, obj):
         if obj.image:
@@ -338,6 +446,89 @@ class ProductAdmin(admin.ModelAdmin):
             for r in range(1, sheet.nrows)
         ]
         return self._import_mapped_rows(headers, data_rows)
+
+
+@admin.register(ProductImage)
+class ProductImageAdmin(admin.ModelAdmin):
+    list_display = ('thumb', 'product', 'sort_order', 'image')
+    list_editable = ('sort_order',)
+    list_filter = ('product__category',)
+    search_fields = ('product__name', 'product__sku', 'product__barcode', 'image')
+    autocomplete_fields = ['product']
+    list_select_related = ('product',)
+    list_per_page = 50
+    change_list_template = 'admin/catalog/productimage/change_list.html'
+
+    @admin.display(description='Превью')
+    def thumb(self, obj):
+        if obj.image:
+            return format_html(
+                '<img src="{}" style="height:48px;width:48px;object-fit:cover;border-radius:6px;" />',
+                obj.image.url,
+            )
+        return '—'
+
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                'bulk-upload/',
+                self.admin_site.admin_view(self.bulk_upload_view),
+                name='catalog_productimage_bulk_upload',
+            ),
+        ]
+        return custom + urls
+
+    def bulk_upload_view(self, request):
+        from .photo_import import assign_photos, iter_upload_files
+
+        if request.method == 'POST':
+            zip_file = request.FILES.get('zip_file')
+            files = request.FILES.getlist('images') + request.FILES.getlist('folder_images')
+            replace_main = request.POST.get('replace_main') == '1'
+
+            if not zip_file and not files:
+                messages.error(request, 'Выберите ZIP-архив или файлы/папку с фото.')
+                return redirect('admin:catalog_productimage_bulk_upload')
+
+            try:
+                items = list(iter_upload_files(files, zip_file=zip_file))
+            except Exception as exc:  # noqa: BLE001
+                messages.error(request, f'Не удалось прочитать файлы: {exc}')
+                return redirect('admin:catalog_productimage_bulk_upload')
+
+            if not items:
+                messages.error(
+                    request,
+                    'Не найдено изображений. Поддерживаются JPG, PNG, WEBP, GIF, BMP, TIFF.',
+                )
+                return redirect('admin:catalog_productimage_bulk_upload')
+
+            result = assign_photos(items, replace_main=replace_main)
+            messages.success(
+                request,
+                f'Готово: главных фото — {result.assigned_main}, '
+                f'в галерею — {result.assigned_gallery}.',
+            )
+            for name in result.unmatched[:40]:
+                messages.warning(request, f'Не найден товар для файла: {name}')
+            if len(result.unmatched) > 40:
+                messages.warning(
+                    request,
+                    f'…и ещё {len(result.unmatched) - 40} файлов без совпадения.',
+                )
+            for err in result.errors[:20]:
+                messages.error(request, err)
+            for skip in result.skipped[:10]:
+                messages.info(request, skip)
+            return redirect('admin:catalog_productimage_changelist')
+
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Массовая загрузка фото',
+            'opts': self.model._meta,
+        }
+        return render(request, 'admin/catalog/productimage/bulk_upload.html', context)
 
 
 @admin.register(ProductRecommendation)

@@ -4,6 +4,12 @@ from django.db import models
 class City(models.Model):
     name = models.CharField('Город', max_length=120)
     region = models.CharField('Регион', max_length=120, blank=True, default='Приморский край')
+    note = models.CharField(
+        'Подпись',
+        max_length=200,
+        blank=True,
+        help_text='Например: «Доставка в другие города»',
+    )
     is_default = models.BooleanField('По умолчанию', default=False)
     is_active = models.BooleanField('Активен', default=True)
     sort_order = models.PositiveIntegerField('Порядок', default=0)
@@ -19,6 +25,8 @@ class City(models.Model):
     @property
     def display_name(self):
         if self.name.startswith('г.') or self.name.startswith('г '):
+            return self.name
+        if self.note or 'друг' in self.name.lower():
             return self.name
         return f'г. {self.name}'
 
