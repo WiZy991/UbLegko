@@ -76,9 +76,9 @@ class HomeView(CatalogMixin, ListView):
     paginate_by = 48
 
     def get_paginate_by(self, queryset):
-        # «По категориям» — все разделы целиком, без обрезки первой категорией.
+        # «По категориям» — все разделы целиком, в т.ч. с фильтрами «Акции» / «В наличии».
         sort = get_sort(self.request)
-        if sort == 'category' and not has_active_filters(self.get_filters()):
+        if sort == 'category':
             return None
         return self.paginate_by
 
@@ -86,8 +86,8 @@ class HomeView(CatalogMixin, ListView):
         context = super().get_context_data(**kwargs)
         sort = context['sort']
         products = list(context['products'])
-        if sort == 'category' and not context['has_active_filters']:
-            # Сохраняем порядок категорий из сайдбара
+        if sort == 'category':
+            # Сохраняем порядок категорий из сайдбара (и при активных фильтрах)
             grouped = {}
             for category in context['categories']:
                 grouped[category] = []

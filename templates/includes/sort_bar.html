@@ -17,4 +17,12 @@
   {% else %}
     <a class="sort-bar__filter" href="{% catalog_query promo='1' %}" aria-pressed="false" data-catalog-nav>Акции</a>
   {% endif %}
+
+  {% if has_active_filters %}
+    <a
+      class="sort-bar__reset"
+      href="{% catalog_clear_filters %}"
+      data-catalog-nav
+    >Сбросить фильтры</a>
+  {% endif %}
 </nav>

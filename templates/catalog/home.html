@@ -6,8 +6,7 @@
 <div class="layout" data-catalog-root>
   {% include "includes/sidebar.html" %}
   <div>
-    {% include "includes/sort_bar.html" %}
-    {% include "includes/filter_bar.html" %}
+    {% include "includes/catalog_toolbar.html" %}
     {% if grouped_products %}
       {% for category, items in grouped_products.items %}
         <section class="category-block" id="category-{{ category.slug }}" data-category-section="category-{{ category.slug }}">
@@ -20,14 +19,28 @@
           </div>
         </section>
       {% empty %}
-        <div class="empty-state">Товары пока не добавлены</div>
+        <div class="empty-state">
+          {% if filters.promo %}
+            Акционные товары не найдены
+          {% elif filters.in_stock %}
+            Товары в наличии не найдены
+          {% else %}
+            Товары пока не добавлены
+          {% endif %}
+        </div>
       {% endfor %}
     {% else %}
       <div class="product-grid">
         {% for product in products %}
           {% include "includes/product_card.html" %}
         {% empty %}
-          <div class="empty-state">Товары не найдены</div>
+          <div class="empty-state">
+            {% if filters.promo %}
+              Акционные товары не найдены
+            {% else %}
+              Товары не найдены
+            {% endif %}
+          </div>
         {% endfor %}
       </div>
     {% endif %}

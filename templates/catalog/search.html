@@ -8,8 +8,7 @@
   <div>
     <h2 class="category-block__title">Результаты поиска{% if query %}: «{{ query }}»{% endif %}</h2>
     <div class="category-block__line"></div>
-    {% include "includes/sort_bar.html" %}
-    {% include "includes/filter_bar.html" %}
+    {% include "includes/catalog_toolbar.html" %}
     <div class="product-grid">
       {% for product in products %}
         {% include "includes/product_card.html" %}

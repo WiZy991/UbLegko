@@ -8,13 +8,22 @@
   <div>
     <h2 class="category-block__title">{{ current_category.name }}</h2>
     <div class="category-block__line"></div>
-    {% include "includes/sort_bar.html" %}
-    {% include "includes/filter_bar.html" %}
+    {% include "includes/catalog_toolbar.html" %}
     <div class="product-grid">
       {% for product in products %}
         {% include "includes/product_card.html" %}
       {% empty %}
-        <div class="empty-state">В этой категории пока нет товаров</div>
+        <div class="empty-state">
+          {% if filters.promo and filters.in_stock %}
+            В категории «{{ current_category.name }}» нет акционных товаров в наличии
+          {% elif filters.promo %}
+            В категории «{{ current_category.name }}» нет акционных товаров
+          {% elif filters.in_stock %}
+            В категории «{{ current_category.name }}» нет товаров в наличии
+          {% else %}
+            В этой категории пока нет товаров
+          {% endif %}
+        </div>
       {% endfor %}
     </div>
     {% include "includes/pagination.html" %}
