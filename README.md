@@ -174,16 +174,49 @@ systemctl restart ublegko
 
 ### 6. Домен и HTTPS (когда появится домен)
 
-1. В DNS домена укажите A-запись на IP сервера.
-2. В `/var/www/ublegko/.env` добавьте домен в `ALLOWED_HOSTS`, выставьте `SESSION_COOKIE_SECURE=1`, `CSRF_COOKIE_SECURE=1`, `CSRF_TRUSTED_ORIGINS=https://домен.ru`.
-3. В Nginx замените `server_name _;` на ваш домен.
-4. Установите сертификат:
+DNS уже «дошёл», если в браузере видно **Bad Request (400)** — это не ожидание DNS,
+а настройка сервера: Django не знает домен в `ALLOWED_HOSTS` / Nginx.
+
+Для кириллического домена (`ублегко.рф`) браузер шлёт Host в виде punycode:
+`xn--90aefvcv3a.xn--p1ai`. В `.env` можно указать обычный вид — код сам добавит punycode.
+
+1. В `/var/www/ublegko/.env` (подставьте свой IP и домен):
+
+```bash
+ALLOWED_HOSTS=159.194.215.61,ублегко.рф,www.ублегко.рф,xn--90aefvcv3a.xn--p1ai,www.xn--90aefvcv3a.xn--p1ai
+SESSION_COOKIE_SECURE=0
+CSRF_COOKIE_SECURE=0
+```
+
+2. В Nginx (`/etc/nginx/sites-available/ublegko` или аналог) замените `server_name`:
+
+```nginx
+server_name ублегко.рф www.ублегко.рф xn--90aefvcv3a.xn--p1ai www.xn--90aefvcv3a.xn--p1ai;
+```
+
+3. Примените и перезапустите:
+
+```bash
+nginx -t && systemctl reload nginx
+systemctl restart ublegko
+```
+
+4. Когда сайт откроется по HTTP — поставьте HTTPS:
 
 ```bash
 apt install -y certbot python3-certbot-nginx
-certbot --nginx -d ваш-домен.ru -d www.ваш-домен.ru
-systemctl restart ublegko nginx
+certbot --nginx -d xn--90aefvcv3a.xn--p1ai -d www.xn--90aefvcv3a.xn--p1ai
 ```
+
+После HTTPS в `.env`:
+
+```bash
+SESSION_COOKIE_SECURE=1
+CSRF_COOKIE_SECURE=1
+CSRF_TRUSTED_ORIGINS=https://ублегко.рф,https://www.ублегко.рф,https://xn--90aefvcv3a.xn--p1ai,https://www.xn--90aefvcv3a.xn--p1ai
+```
+
+и снова `systemctl restart ublegko`.
 
 ### Полезные команды на сервере
 

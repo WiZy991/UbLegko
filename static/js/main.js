@@ -89,9 +89,11 @@
     if (pageTotal && data.cart_total !== undefined) {
       pageTotal.textContent = `Итого: ${data.cart_total} руб`;
     }
-    const headerTotal = document.querySelector("[data-cart-total]");
-    if (headerTotal && data.cart_total !== undefined) {
-      headerTotal.textContent = `${data.cart_total} руб`;
+    const headerTotals = document.querySelectorAll("[data-cart-total]");
+    if (headerTotals.length && data.cart_total !== undefined) {
+      headerTotals.forEach((el) => {
+        el.textContent = `${data.cart_total} руб`;
+      });
     }
   }
 
@@ -264,9 +266,11 @@
       });
       const data = await response.json();
       if (data.ok) {
-        const totalEl = document.querySelector("[data-cart-total]");
-        if (totalEl && data.cart_total !== undefined) {
-          totalEl.textContent = `${data.cart_total} руб`;
+        const totalEls = document.querySelectorAll("[data-cart-total]");
+        if (totalEls.length && data.cart_total !== undefined) {
+          totalEls.forEach((el) => {
+            el.textContent = `${data.cart_total} руб`;
+          });
         }
         showToast(data.message || "Добавлено в корзину");
       }

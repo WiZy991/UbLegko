@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260809pill2">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260810brand2">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -68,7 +68,7 @@
           <div class="topbar__slogan">{{ site_settings.slogan }}</div>
           <a class="topbar__phone" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">тел. {{ site_settings.phone }}</a>
         </div>
-        <div class="topbar__right">
+        <div class="topbar__right topbar__right--desktop">
           <a class="cart-link" href="{% url 'cart:detail' %}">
             <span class="cart-link__icon" aria-hidden="true">
               <svg class="cart-link__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -121,16 +121,45 @@
         {% if user.is_authenticated %}
           <a class="favorites-link" href="{% url 'favorites' %}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
-            Избранное
+            <span class="favorites-link__text">Избранное</span>
             <span class="favorites-count" data-favorites-count>{{ favorites_count }}</span>
           </a>
         {% else %}
           <a class="favorites-link" href="{% url 'accounts:login' %}?next={% url 'favorites' %}">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
-            Избранное
+            <span class="favorites-link__text">Избранное</span>
             <span class="favorites-count" data-favorites-count>0</span>
           </a>
         {% endif %}
+      </div>
+    </div>
+    <div class="account-bar">
+      <div class="container account-bar__inner">
+        <div class="account-bar__contact">
+          <div class="account-bar__slogan">{{ site_settings.slogan }}</div>
+          <a class="account-bar__phone" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">тел. {{ site_settings.phone }}</a>
+        </div>
+        <div class="account-bar__actions">
+          <a class="cart-link" href="{% url 'cart:detail' %}">
+            <span class="cart-link__icon" aria-hidden="true">
+              <svg class="cart-link__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M3.5 5h1.6l1.3 9.2a1.5 1.5 0 0 0 1.5 1.3h8.7a1.5 1.5 0 0 0 1.5-1.2l1.1-6.3H7.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <circle cx="9.2" cy="19" r="1.4" fill="currentColor"/>
+                <circle cx="16.3" cy="19" r="1.4" fill="currentColor"/>
+              </svg>
+            </span>
+            <span data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
+          </a>
+          {% if user.is_authenticated %}
+            <a class="pill-link" href="{% url 'accounts:profile' %}">Кабинет</a>
+            <form action="{% url 'accounts:logout' %}" method="post" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" class="pill-link pill-link--button">Выход</button>
+            </form>
+          {% else %}
+            <a class="auth-link" href="{% url 'accounts:login' %}">Вход</a>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
@@ -228,7 +257,7 @@
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="{% static 'js/main.js' %}?v=20260809city"></script>
+  <script src="{% static 'js/main.js' %}?v=20260810header2"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

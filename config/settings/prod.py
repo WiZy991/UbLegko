@@ -18,6 +18,29 @@ ALLOWED_HOSTS = [h.strip() for h in ALLOWED_HOSTS if h.strip()]
 if not ALLOWED_HOSTS:
     raise ImproperlyConfigured('Задайте ALLOWED_HOSTS (через запятую) для продакшена.')
 
+
+def _expand_allowed_hosts(hosts: list[str]) -> list[str]:
+    """Добавляет punycode/unicode-варианты для кириллических доменов (.рф и т.п.)."""
+    expanded: list[str] = []
+    for host in hosts:
+        expanded.append(host)
+        try:
+            puny = host.encode('idna').decode('ascii')
+            if puny and puny not in expanded:
+                expanded.append(puny)
+        except (UnicodeError, ValueError):
+            pass
+        try:
+            uni = host.encode('ascii').decode('idna')
+            if uni and uni not in expanded:
+                expanded.append(uni)
+        except (UnicodeError, ValueError, UnicodeDecodeError):
+            pass
+    return expanded
+
+
+ALLOWED_HOSTS = _expand_allowed_hosts(ALLOWED_HOSTS)
+
 _csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
 
