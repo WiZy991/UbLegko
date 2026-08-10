@@ -1,6 +1,8 @@
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 
+from catalog.models import Category, Product
 from catalog.search_utils import (
+    build_product_search_text,
     filter_products_by_query,
     query_variants,
     rank_prefix_first,
@@ -18,9 +20,15 @@ class SearchUtilsTests(SimpleTestCase):
     def test_text_search_q_matches_description_stem(self):
         q_obj = text_search_q('пятновыводитель')
         sql = str(q_obj)
-        self.assertIn('description', sql)
-        self.assertIn('short_description', sql)
+        self.assertIn('search_text', sql)
         self.assertIn('пятновыводител', sql)
+
+    def test_build_product_search_text_casefold(self):
+        text = build_product_search_text(
+            name='Пятновыводитель Pro',
+            description='Для КОВРОВ',
+        )
+        self.assertEqual(text, 'пятновыводитель pro для ковров')
 
     def test_query_variants_layout(self):
         variants = query_variants('vfkm')
@@ -39,3 +47,24 @@ class SearchUtilsTests(SimpleTestCase):
         ]
         ranked = rank_prefix_first(products, 'пятновыводитель')
         self.assertEqual(ranked[0].name, 'Пятновыводитель Pro')
+
+
+class SearchCaseInsensitivityTests(TestCase):
+    def setUp(self):
+        category = Category.objects.create(name='Чистящие', slug='cleaners')
+        self.product = Product.objects.create(
+            name='CLF 1л',
+            category=category,
+            price='100.00',
+            description='Эффективные пятновыводители для ковров',
+        )
+
+    def test_uppercase_query_finds_product(self):
+        qs = Product.objects.filter(is_visible=True)
+        found = filter_products_by_query(qs, 'ПЯТНОВЫВОДИТЕЛЬ')
+        self.assertIn(self.product, list(found))
+
+    def test_capitalized_query_finds_product(self):
+        qs = Product.objects.filter(is_visible=True)
+        found = filter_products_by_query(qs, 'Пятновыводитель')
+        self.assertIn(self.product, list(found))

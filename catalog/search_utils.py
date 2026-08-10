@@ -30,7 +30,20 @@ _LATIN_TO_RU = [
     ('u', 'у'), ('f', 'ф'), ('h', 'х'),
 ]
 
-_TEXT_FIELDS = ('name', 'short_description', 'description')
+_SEARCH_FIELD = 'search_text'
+
+
+def build_product_search_text(
+    *,
+    name: str = '',
+    short_description: str = '',
+    description: str = '',
+    sku: str = '',
+    country: str = '',
+) -> str:
+    """Нормализованный текст для поиска без учёта регистра (SQLite + кириллица)."""
+    parts = (name, short_description, description, sku, country)
+    return ' '.join(p.strip() for p in parts if p and p.strip()).casefold()
 
 
 def _transliterate_ru_to_en(text: str) -> str:
@@ -125,10 +138,13 @@ def name_prefix_q(variants: list[str]) -> Q:
     """Совпадение с началом названия или началом слова в названии."""
     filt = Q()
     for v in variants:
-        filt |= Q(name__istartswith=v)
-        filt |= Q(name__icontains=f' {v}')
-        filt |= Q(name__icontains=f'({v}')
-        filt |= Q(name__icontains=f'-{v}')
+        fold = v.casefold()
+        if not fold:
+            continue
+        filt |= Q(**{f'{_SEARCH_FIELD}__startswith': fold})
+        filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {fold}'})
+        filt |= Q(**{f'{_SEARCH_FIELD}__contains': f'({fold}'})
+        filt |= Q(**{f'{_SEARCH_FIELD}__contains': f'-{fold}'})
     return filt
 
 
@@ -137,8 +153,9 @@ def _term_in_text_q(term: str) -> Q:
     filt = Q()
     for variant in query_variants(term):
         for stem in stem_variants(variant):
-            for field in _TEXT_FIELDS:
-                filt |= Q(**{f'{field}__icontains': stem})
+            fold = stem.casefold()
+            if fold:
+                filt |= Q(**{f'{_SEARCH_FIELD}__contains': fold})
     return filt
 
 
@@ -161,12 +178,14 @@ def text_search_q(q: str) -> Q:
 
 
 def description_search_q(q: str) -> Q:
-    """Вхождение запроса только в описании (для подсказок)."""
+    """Вхождение запроса в описании или других полях (для подсказок)."""
     filt = Q()
     for token in query_tokens(q) or [q.strip()]:
         for variant in query_variants(token):
             for stem in stem_variants(variant):
-                filt |= Q(short_description__icontains=stem) | Q(description__icontains=stem)
+                fold = stem.casefold()
+                if fold:
+                    filt |= Q(**{f'{_SEARCH_FIELD}__contains': fold})
     return filt
 
 

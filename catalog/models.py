@@ -7,6 +7,8 @@ from django.db.models import Avg, Count
 from django.urls import reverse
 from django.utils.text import slugify
 
+from catalog.search_utils import build_product_search_text
+
 
 class Category(models.Model):
     name = models.CharField('Название', max_length=200)
@@ -83,6 +85,7 @@ class Product(models.Model):
     is_promo = models.BooleanField('Акция', default=False)
     is_visible = models.BooleanField('Показывать в каталоге', default=True)
     is_featured = models.BooleanField('Популярный', default=False)
+    search_text = models.TextField('Поисковый индекс', blank=True, editable=False)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
 
     class Meta:
@@ -105,6 +108,13 @@ class Product(models.Model):
         # Старая цена → товар автоматически акционный (бэйдж на сайте)
         if self.old_price is not None and self.old_price > 0:
             self.is_promo = True
+        self.search_text = build_product_search_text(
+            name=self.name,
+            short_description=self.short_description,
+            description=self.description,
+            sku=self.sku,
+            country=self.country,
+        )
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
