@@ -2873,32 +2873,32 @@ select.form-input {
     display: block !important;
   }
 
-  /* Dense stars close around the letters */
-  .brand-stars--left .brand-stars__item:nth-child(1)  { left: 2%;  top: 8px; }
-  .brand-stars--left .brand-stars__item:nth-child(2)  { left: 14%; top: 2px; }
-  .brand-stars--left .brand-stars__item:nth-child(3)  { left: 28%; top: 12px; }
-  .brand-stars--left .brand-stars__item:nth-child(4)  { left: 42%; top: 3px; }
-  .brand-stars--left .brand-stars__item:nth-child(5)  { left: 8%;  top: 28%; }
-  .brand-stars--left .brand-stars__item:nth-child(6)  { left: 3%;  top: 46%; }
-  .brand-stars--left .brand-stars__item:nth-child(7)  { left: 12%; top: 62%; }
-  .brand-stars--left .brand-stars__item:nth-child(8)  { left: 5%;  top: 78%; }
-  .brand-stars--left .brand-stars__item:nth-child(9)  { left: 20%; top: 82%; }
-  .brand-stars--left .brand-stars__item:nth-child(10) { left: 36%; top: 86%; }
-  .brand-stars--left .brand-stars__item:nth-child(11) { left: 18%; top: 38%; }
-  .brand-stars--left .brand-stars__item:nth-child(12) { left: 30%; top: 70%; }
+  /* Dense stars around letters, clear of title + tagline text */
+  .brand-stars--left .brand-stars__item:nth-child(1)  { left: 3%;  top: 6px; }
+  .brand-stars--left .brand-stars__item:nth-child(2)  { left: 16%; top: 2px; }
+  .brand-stars--left .brand-stars__item:nth-child(3)  { left: 32%; top: 8px; }
+  .brand-stars--left .brand-stars__item:nth-child(4)  { left: 48%; top: 3px; }
+  .brand-stars--left .brand-stars__item:nth-child(5)  { left: 2%;  top: 30%; }
+  .brand-stars--left .brand-stars__item:nth-child(6)  { left: 2%;  top: 52%; }
+  .brand-stars--left .brand-stars__item:nth-child(7)  { left: 3%;  top: 72%; }
+  .brand-stars--left .brand-stars__item:nth-child(8)  { left: 10%; bottom: 5px; top: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(9)  { left: 28%; bottom: 3px; top: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(10) { left: 46%; bottom: 6px; top: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(11) { left: 4%;  top: 18%; }
+  .brand-stars--left .brand-stars__item:nth-child(12) { left: 64%; bottom: 4px; top: auto; }
 
-  .brand-stars--right .brand-stars__item:nth-child(1)  { left: auto; right: 2%;  top: 10px; }
-  .brand-stars--right .brand-stars__item:nth-child(2)  { left: auto; right: 14%; top: 3px; }
-  .brand-stars--right .brand-stars__item:nth-child(3)  { left: auto; right: 28%; top: 14px; }
-  .brand-stars--right .brand-stars__item:nth-child(4)  { left: auto; right: 42%; top: 4px; }
-  .brand-stars--right .brand-stars__item:nth-child(5)  { left: auto; right: 8%;  top: 30%; }
-  .brand-stars--right .brand-stars__item:nth-child(6)  { left: auto; right: 3%;  top: 48%; }
-  .brand-stars--right .brand-stars__item:nth-child(7)  { left: auto; right: 12%; top: 64%; }
-  .brand-stars--right .brand-stars__item:nth-child(8)  { left: auto; right: 5%;  top: 78%; }
-  .brand-stars--right .brand-stars__item:nth-child(9)  { left: auto; right: 20%; top: 84%; }
-  .brand-stars--right .brand-stars__item:nth-child(10) { left: auto; right: 36%; top: 87%; }
-  .brand-stars--right .brand-stars__item:nth-child(11) { left: auto; right: 18%; top: 40%; }
-  .brand-stars--right .brand-stars__item:nth-child(12) { left: auto; right: 30%; top: 72%; }
+  .brand-stars--right .brand-stars__item:nth-child(1)  { left: auto; right: 3%;  top: 7px; }
+  .brand-stars--right .brand-stars__item:nth-child(2)  { left: auto; right: 16%; top: 2px; }
+  .brand-stars--right .brand-stars__item:nth-child(3)  { left: auto; right: 32%; top: 9px; }
+  .brand-stars--right .brand-stars__item:nth-child(4)  { left: auto; right: 48%; top: 3px; }
+  .brand-stars--right .brand-stars__item:nth-child(5)  { left: auto; right: 2%;  top: 32%; }
+  .brand-stars--right .brand-stars__item:nth-child(6)  { left: auto; right: 2%;  top: 54%; }
+  .brand-stars--right .brand-stars__item:nth-child(7)  { left: auto; right: 3%;  top: 74%; }
+  .brand-stars--right .brand-stars__item:nth-child(8)  { left: auto; right: 10%; bottom: 5px; top: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(9)  { left: auto; right: 28%; bottom: 3px; top: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(10) { left: auto; right: 46%; bottom: 6px; top: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(11) { left: auto; right: 4%;  top: 20%; }
+  .brand-stars--right .brand-stars__item:nth-child(12) { left: auto; right: 64%; bottom: 4px; top: auto; }
 
   .brand-stars--left .brand-stars__item--lg,
   .brand-stars--right .brand-stars__item--lg { font-size: 1.15rem; }
@@ -2958,11 +2958,24 @@ select.form-input {
   .topbar__right .pill-link,
   .topbar__right .pill-link--button,
   .topbar__right .auth-link {
-    padding: 3px 6px;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 6px;
     font-size: 0.68rem;
-    min-height: 26px;
+    line-height: 1;
     white-space: nowrap;
     flex-shrink: 0;
+    box-sizing: border-box;
+    border-width: 1.5px;
+  }
+
+  .topbar__right form {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    padding: 0;
+    vertical-align: middle;
   }
 
   .account-bar {
@@ -3004,14 +3017,17 @@ select.form-input {
   .city-selector__toggle,
   .topbar__left .pill-link,
   .topbar__left .pill-link--button {
-    padding: 3px 6px;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 6px;
     font-size: 0.68rem;
     font-weight: 600;
-    min-height: 26px;
     border-width: 1.5px;
-    line-height: 1.15;
+    line-height: 1;
     white-space: nowrap;
     flex-shrink: 0;
+    box-sizing: border-box;
   }
 
   .city-selector__toggle {
@@ -3020,16 +3036,23 @@ select.form-input {
 
   .city-selector__toggle [data-city-label] {
     white-space: nowrap;
+    line-height: 1;
   }
 
   .city-selector__arrow {
     font-size: 0.55rem;
     flex-shrink: 0;
+    line-height: 1;
   }
 
   .pill-link--max {
     display: inline-flex;
     white-space: nowrap;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 6px;
+    box-sizing: border-box;
   }
 
   .pill-link--max__full {
@@ -3043,6 +3066,11 @@ select.form-input {
   .pill-link--gis {
     display: inline-flex;
     white-space: nowrap;
+    height: 28px;
+    min-height: 28px;
+    max-height: 28px;
+    padding: 0 6px;
+    box-sizing: border-box;
   }
 
   .account-bar__inner .pill-link,
@@ -3162,14 +3190,18 @@ select.form-input {
   .topbar__left .pill-link--button,
   .topbar__right .pill-link,
   .topbar__right .pill-link--button,
-  .topbar__right .auth-link {
-    padding: 2px 5px;
+  .topbar__right .auth-link,
+  .pill-link--max,
+  .pill-link--gis {
+    height: 26px;
+    min-height: 26px;
+    max-height: 26px;
+    padding: 0 5px;
     font-size: 0.65rem;
-    min-height: 24px;
   }
 
   .pill-link--max {
-    padding: 2px 5px;
+    padding: 0 5px;
     font-size: 0.65rem;
   }
 
