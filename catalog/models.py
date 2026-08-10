@@ -102,6 +102,9 @@ class Product(models.Model):
                 slug = f'{base}-{n}'
                 n += 1
             self.slug = slug
+        # Старая цена → товар автоматически акционный (бэйдж на сайте)
+        if self.old_price is not None and self.old_price > 0:
+            self.is_promo = True
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
