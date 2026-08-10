@@ -131,6 +131,16 @@ class Product(models.Model):
         return urls
 
     @property
+    def display_image_url(self):
+        """URL для превью в каталоге: главное фото или первое из галереи."""
+        if self.image:
+            return self.image.url
+        for item in self.images.all():
+            if item.image:
+                return item.image.url
+        return ''
+
+    @property
     def can_add_to_cart(self):
         """Можно ли увеличивать количество в корзине."""
         return self.status == self.Status.IN_STOCK

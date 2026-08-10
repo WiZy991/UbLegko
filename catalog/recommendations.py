@@ -234,7 +234,7 @@ def product_role(product: Product) -> str:
 
 
 def _visible_qs() -> QuerySet[Product]:
-    return Product.objects.filter(is_visible=True).select_related('category')
+    return Product.objects.filter(is_visible=True).select_related('category').prefetch_related('images')
 
 
 def _take_unique(

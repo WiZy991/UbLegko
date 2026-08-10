@@ -41,7 +41,7 @@ class Cart:
 
     def __iter__(self):
         product_ids = self.cart.keys()
-        products = Product.objects.filter(id__in=product_ids, is_visible=True)
+        products = Product.objects.filter(id__in=product_ids, is_visible=True).prefetch_related('images')
         product_map = {str(p.id): p for p in products}
         for product_id, item in self.cart.items():
             product = product_map.get(product_id)

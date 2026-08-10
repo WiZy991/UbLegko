@@ -37,7 +37,7 @@ class CatalogMixin:
         return parse_catalog_filters(self.request.GET)
 
     def get_queryset(self):
-        qs = Product.objects.filter(is_visible=True).select_related('category')
+        qs = Product.objects.filter(is_visible=True).select_related('category').prefetch_related('images')
         qs = apply_catalog_filters(qs, self.get_filters())
         sort = get_sort(self.request)
         return qs.order_by(*SORT_OPTIONS[sort][1])
@@ -224,7 +224,7 @@ class SearchView(CatalogMixin, ListView):
     paginate_by = 48
 
     def get_queryset(self):
-        qs = Product.objects.filter(is_visible=True).select_related('category')
+        qs = Product.objects.filter(is_visible=True).select_related('category').prefetch_related('images')
         q = self.request.GET.get('q', '').strip()
         self.query = q
         filters = self.get_filters()
@@ -246,7 +246,7 @@ class SearchView(CatalogMixin, ListView):
             *[When(pk=pk, then=pos) for pos, pk in enumerate(ids)],
             output_field=IntegerField(),
         )
-        return Product.objects.filter(id__in=ids).select_related('category').order_by(order)
+        return Product.objects.filter(id__in=ids).select_related('category').prefetch_related('images').order_by(order)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -260,7 +260,7 @@ def search_suggest(request):
     if len(q) < 1:
         return JsonResponse({'results': []})
 
-    qs = Product.objects.filter(is_visible=True).select_related('category')
+    qs = Product.objects.filter(is_visible=True).select_related('category').prefetch_related('images')
     qs = filter_products_by_query(qs, q, prefix_only=True)
     ranked = rank_prefix_first(list(qs[:40]), q)[:10]
     results = [

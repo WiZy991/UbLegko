@@ -255,6 +255,7 @@ def favorites(request):
     favs = (
         Favorite.objects.filter(user=request.user)
         .select_related('product', 'product__category')
+        .prefetch_related('product__images')
         .order_by('-created_at')
     )
     products = [f.product for f in favs if f.product.is_visible]

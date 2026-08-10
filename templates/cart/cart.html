@@ -18,8 +18,8 @@
       {% for item in items %}
         <article class="cart-item" data-cart-product-id="{{ item.product.id }}">
           <a class="cart-item__thumb" href="{{ item.product.get_absolute_url }}">
-            {% if item.product.image %}
-              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+            {% if item.product.display_image_url %}
+              <img src="{{ item.product.display_image_url }}" alt="{{ item.product.name }}">
             {% else %}
               <span class="cart-item__thumb-placeholder">Фото</span>
             {% endif %}
