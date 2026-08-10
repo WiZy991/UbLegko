@@ -31,8 +31,8 @@ html[data-bs-theme="dark"] .app-main #changelist .small,
 html[data-bs-theme="dark"] .app-main #changelist label,
 html[data-bs-theme="dark"] .app-main #changelist .help,
 html[data-bs-theme="dark"] .app-main #changelist .helptext,
-html[data-bs-theme="dark"] .app-main #changelist p:not(.product-expandable-hint),
-html[data-bs-theme="dark"] .app-main #changelist span:not(.product-expandable-hint *) {
+html[data-bs-theme="dark"] .app-main #changelist p:not(.product-expandable-hint):not(.category-sortable-hint),
+html[data-bs-theme="dark"] .app-main #changelist span:not(.product-expandable-hint *):not(.category-sortable-hint *) {
   color: #fff !important;
 }
 
@@ -48,13 +48,19 @@ html[data-bs-theme="dark"] .app-main #changelist textarea {
   color: #fff !important;
 }
 
-/* Подсказка над таблицей — всегда тёмный текст на светлом фоне */
+/* Подсказки над таблицей — всегда тёмный текст на светлом фоне */
 .product-expandable-hint,
 .product-expandable-hint strong,
+.category-sortable-hint,
+.category-sortable-hint strong,
 html[data-bs-theme="dark"] .product-expandable-hint,
 html[data-bs-theme="dark"] .product-expandable-hint strong,
+html[data-bs-theme="dark"] .category-sortable-hint,
+html[data-bs-theme="dark"] .category-sortable-hint strong,
 html[data-bs-theme="light"] .product-expandable-hint,
-html[data-bs-theme="light"] .product-expandable-hint strong {
+html[data-bs-theme="light"] .product-expandable-hint strong,
+html[data-bs-theme="light"] .category-sortable-hint,
+html[data-bs-theme="light"] .category-sortable-hint strong {
   background: #e8f6fb !important;
   border: 1px solid #b6e2ef !important;
   color: #0a4b5c !important;

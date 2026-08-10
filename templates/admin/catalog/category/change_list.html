@@ -3,11 +3,11 @@
 
 {% block extrahead %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/category_sortable.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'admin/css/category_sortable.css' %}?v=2">
   <script>
     window.CATEGORY_REORDER_URL = "{% url 'admin:catalog_category_reorder' %}";
   </script>
-  <script defer src="{% static 'admin/js/category_sortable.js' %}?v=1"></script>
+  <script defer src="{% static 'admin/js/category_sortable.js' %}?v=2"></script>
 {% endblock %}
 
 {% block result_list %}
