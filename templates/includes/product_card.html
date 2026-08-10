@@ -1,51 +1,52 @@
 {% load catalog_extras static %}
 <article class="product-card">
-  <div class="product-card__media">
-    {% if user.is_authenticated %}
-      <form
-        class="product-card__fav"
-        action="{% url 'cart:favorite_toggle' product.id %}"
-        method="post"
-        data-ajax-favorite
+  {% if user.is_authenticated %}
+    <form
+      class="product-card__fav"
+      action="{% url 'cart:favorite_toggle' product.id %}"
+      method="post"
+      data-ajax-favorite
+    >
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.get_full_path }}">
+      <button
+        type="submit"
+        class="fav-heart{% if product.id in favorite_ids %} is-active{% endif %}"
+        aria-label="{% if product.id in favorite_ids %}Убрать из избранного{% else %}В избранное{% endif %}"
+        data-fav-label-on="Убрать из избранного"
+        data-fav-label-off="В избранное"
       >
-        {% csrf_token %}
-        <input type="hidden" name="next" value="{{ request.get_full_path }}">
-        <button
-          type="submit"
-          class="fav-heart{% if product.id in favorite_ids %} is-active{% endif %}"
-          aria-label="{% if product.id in favorite_ids %}Убрать из избранного{% else %}В избранное{% endif %}"
-          data-fav-label-on="Убрать из избранного"
-          data-fav-label-off="В избранное"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M12.1 21.35l-1.1-1C6.1 15.36 2.5 12.28 2.5 8.5 2.5 5.42 4.92 3 8 3c1.74 0 3.41.81 4.5 2.09C13.59 3.81 15.26 3 17 3c3.08 0 5.5 2.42 5.5 5.5 0 3.78-3.6 6.86-8.5 11.86l-1.9 1.99z"
-              stroke="currentColor"
-              stroke-width="1.7"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </button>
-      </form>
-    {% else %}
-      <div class="product-card__fav">
-        <a
-          class="fav-heart"
-          href="{% url 'accounts:login' %}?next={% url 'favorites' %}"
-          aria-label="Войдите, чтобы добавить в избранное"
-          title="Войдите, чтобы добавить в избранное"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M12.1 21.35l-1.1-1C6.1 15.36 2.5 12.28 2.5 8.5 2.5 5.42 4.92 3 8 3c1.74 0 3.41.81 4.5 2.09C13.59 3.81 15.26 3 17 3c3.08 0 5.5 2.42 5.5 5.5 0 3.78-3.6 6.86-8.5 11.86l-1.9 1.99z"
-              stroke="currentColor"
-              stroke-width="1.7"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </a>
-      </div>
-    {% endif %}
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12.1 21.35l-1.1-1C6.1 15.36 2.5 12.28 2.5 8.5 2.5 5.42 4.92 3 8 3c1.74 0 3.41.81 4.5 2.09C13.59 3.81 15.26 3 17 3c3.08 0 5.5 2.42 5.5 5.5 0 3.78-3.6 6.86-8.5 11.86l-1.9 1.99z"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+    </form>
+  {% else %}
+    <div class="product-card__fav">
+      <a
+        class="fav-heart"
+        href="{% url 'accounts:login' %}?next={% url 'favorites' %}"
+        aria-label="Войдите, чтобы добавить в избранное"
+        title="Войдите, чтобы добавить в избранное"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path
+            d="M12.1 21.35l-1.1-1C6.1 15.36 2.5 12.28 2.5 8.5 2.5 5.42 4.92 3 8 3c1.74 0 3.41.81 4.5 2.09C13.59 3.81 15.26 3 17 3c3.08 0 5.5 2.42 5.5 5.5 0 3.78-3.6 6.86-8.5 11.86l-1.9 1.99z"
+            stroke="currentColor"
+            stroke-width="1.7"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </a>
+    </div>
+  {% endif %}
+
+  <div class="product-card__media">
     <a href="{{ product.get_absolute_url }}" class="product-card__image">
       {% if product.display_image_url %}
         <img src="{{ product.display_image_url }}" alt="{{ product.name }}">
