@@ -2890,7 +2890,8 @@ select.form-input {
     grid-template-columns: none;
     align-items: center;
     justify-content: space-between;
-    gap: 6px 8px;
+    flex-wrap: nowrap;
+    gap: 4px;
     min-height: 0;
     padding-block: 6px;
   }
@@ -2901,7 +2902,7 @@ select.form-input {
     flex-wrap: nowrap;
     justify-content: flex-start;
     align-items: center;
-    gap: 5px;
+    gap: 3px;
     min-width: 0;
   }
 
@@ -2916,8 +2917,8 @@ select.form-input {
     flex: 0 0 auto;
     align-items: center;
     justify-content: flex-end;
-    gap: 5px;
-    margin-left: auto;
+    gap: 3px;
+    margin-left: 4px;
   }
 
   .topbar__cart {
@@ -2927,10 +2928,11 @@ select.form-input {
   .topbar__right .pill-link,
   .topbar__right .pill-link--button,
   .topbar__right .auth-link {
-    padding: 4px 8px;
-    font-size: 0.72rem;
-    min-height: 28px;
+    padding: 3px 6px;
+    font-size: 0.68rem;
+    min-height: 26px;
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .account-bar {
@@ -2979,19 +2981,34 @@ select.form-input {
     height: 28px;
   }
 
+  .city-selector {
+    flex-shrink: 0;
+  }
+
   .city-selector__toggle,
   .topbar__left .pill-link,
   .topbar__left .pill-link--button {
-    padding: 2px 8px;
+    padding: 3px 6px;
     font-size: 0.68rem;
     font-weight: 600;
     min-height: 26px;
     border-width: 1.5px;
-    line-height: 1.1;
+    line-height: 1.15;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .city-selector__toggle {
+    gap: 4px;
+  }
+
+  .city-selector__toggle [data-city-label] {
+    white-space: nowrap;
   }
 
   .city-selector__arrow {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
+    flex-shrink: 0;
   }
 
   .pill-link--max {
@@ -3000,15 +3017,16 @@ select.form-input {
   }
 
   .pill-link--max__full {
-    display: inline;
+    display: none;
   }
 
   .pill-link--max__short {
-    display: none;
+    display: inline;
   }
 
   .pill-link--gis {
     display: inline-flex;
+    white-space: nowrap;
   }
 
   .account-bar__inner .pill-link,
@@ -3107,15 +3125,27 @@ select.form-input {
 
   .topbar__inner {
     padding-block: 6px;
+    gap: 3px;
   }
 
   .topbar__phone {
     font-size: 0.85rem;
   }
 
+  .city-selector__toggle,
+  .topbar__left .pill-link,
+  .topbar__left .pill-link--button,
+  .topbar__right .pill-link,
+  .topbar__right .pill-link--button,
+  .topbar__right .auth-link {
+    padding: 2px 5px;
+    font-size: 0.65rem;
+    min-height: 24px;
+  }
+
   .pill-link--max {
-    padding: 5px 8px;
-    font-size: 0.75rem;
+    padding: 2px 5px;
+    font-size: 0.65rem;
   }
 
   .site-footer__grid {
