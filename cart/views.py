@@ -15,7 +15,7 @@ from accounts.models import Profile
 from core.context_processors import get_selected_city
 
 from .cart import Cart
-from .forms import CheckoutForm
+from .forms import CheckoutForm, extract_city_from_address
 from .models import Favorite, Order, OrderItem
 
 logger = logging.getLogger(__name__)
@@ -135,7 +135,6 @@ def checkout(request):
     if request.user.is_authenticated:
         full_name = (request.user.first_name or '').strip()
         initial['full_name'] = full_name or request.user.username
-        initial['email'] = request.user.email or ''
         profile, _ = Profile.objects.get_or_create(user=request.user)
         if profile.phone:
             initial['phone'] = profile.phone
@@ -158,33 +157,33 @@ def checkout(request):
         form = CheckoutForm(
             request.POST,
             user=request.user,
-            selected_city=selected_city,
         )
         if form.is_valid():
-            city = form.cleaned_data['city']
-            city_label = CheckoutForm._city_label(city)
+            address = form.cleaned_data.get('address', '')
+            city_label = CheckoutForm.order_city_label(
+                delivery_method=form.cleaned_data['delivery_method'],
+                address=address,
+                selected_city=selected_city,
+            )
             order = Order.objects.create(
                 user=request.user if request.user.is_authenticated else None,
                 full_name=form.cleaned_data['full_name'],
                 phone=form.cleaned_data['phone'],
-                email=form.cleaned_data.get('email', ''),
+                email=request.user.email if request.user.is_authenticated else '',
                 delivery_method=form.cleaned_data['delivery_method'],
                 address=form.cleaned_data.get('address', ''),
                 address_name=form.cleaned_data.get('address_name', ''),
                 city=city_label,
                 comment=form.cleaned_data['comment'],
             )
-            request.session['selected_city_id'] = city.pk
+            if selected_city and not extract_city_from_address(address):
+                request.session['selected_city_id'] = selected_city.pk
             if request.user.is_authenticated:
                 profile, _ = Profile.objects.get_or_create(user=request.user)
                 updated = []
                 if form.cleaned_data['phone'] and profile.phone != form.cleaned_data['phone']:
                     profile.phone = form.cleaned_data['phone']
                     updated.append('phone')
-                email_value = form.cleaned_data.get('email') or ''
-                if email_value and request.user.email != email_value:
-                    request.user.email = email_value
-                    request.user.save(update_fields=['email'])
                 name_value = (form.cleaned_data.get('full_name') or '').strip()
                 if name_value and request.user.first_name != name_value:
                     request.user.first_name = name_value
@@ -214,7 +213,6 @@ def checkout(request):
         form = CheckoutForm(
             initial=initial,
             user=request.user,
-            selected_city=selected_city,
         )
 
     return render(

@@ -1,11 +1,38 @@
 from django import forms
 
 from accounts.models import DeliveryAddress
-from core.models import City
-from core.validators import clean_ru_phone, clean_user_email
+from core.validators import clean_ru_phone
 
 NAME_HELP = 'Как к вам обращаться'
 PHONE_HELP = 'Для уточнения заказа и для связи с курьером'
+
+_STREET_PREFIXES = (
+    'ул.', 'ул ', 'улица ',
+    'пр.', 'пр ', 'пр-т', 'просп.', 'проспект ',
+    'пер.', 'пер ', 'переулок ',
+    'б-р', 'бул.', 'ш.', 'шоссе ', 'наб.', 'набережная ',
+    'мкр.', 'мкр ', 'микрорайон ',
+)
+
+
+def extract_city_from_address(address: str) -> str:
+    """Первый сегмент адреса до запятой, если это не улица."""
+    address = (address or '').strip()
+    if not address:
+        return ''
+    first = address.split(',')[0].strip()
+    if not first:
+        return ''
+    lower = first.lower()
+    if any(lower.startswith(prefix) for prefix in _STREET_PREFIXES):
+        return ''
+    if lower.startswith('г.'):
+        first = first[2:].strip()
+    elif lower.startswith('г '):
+        first = first[2:].strip()
+    elif lower.startswith('город '):
+        first = first[6:].strip()
+    return first
 
 
 class CheckoutForm(forms.Form):
@@ -21,12 +48,6 @@ class CheckoutForm(forms.Form):
         choices=DELIVERY_CHOICES,
         initial=DELIVERY_COURIER,
         widget=forms.RadioSelect,
-    )
-    city = forms.ModelChoiceField(
-        label='Город',
-        queryset=City.objects.none(),
-        empty_label=None,
-        widget=forms.Select(attrs={'class': 'form-input'}),
     )
     full_name = forms.CharField(
         label='Имя',
@@ -48,16 +69,6 @@ class CheckoutForm(forms.Form):
             'inputmode': 'tel',
             'autocomplete': 'tel',
             'data-phone-mask': '1',
-        }),
-    )
-    email = forms.EmailField(
-        label='Email',
-        required=False,
-        widget=forms.EmailInput(attrs={
-            'class': 'form-input',
-            'placeholder': 'email@example.com',
-            'autocomplete': 'email',
-            'data-email-validate': '1',
         }),
     )
     saved_address = forms.ModelChoiceField(
@@ -87,20 +98,11 @@ class CheckoutForm(forms.Form):
         }),
     )
 
-    def __init__(self, *args, user=None, selected_city=None, **kwargs):
+    def __init__(self, *args, user=None, **kwargs):
         self.user = user
         super().__init__(*args, **kwargs)
-        cities = City.objects.filter(is_active=True).order_by('sort_order', 'name')
-        self.fields['city'].queryset = cities
-        self.fields['city'].label_from_instance = self._city_label
-        if selected_city and not self.is_bound:
-            self.fields['city'].initial = selected_city
-        elif cities.exists() and not self.is_bound and not self.fields['city'].initial:
-            default = cities.filter(is_default=True).first() or cities.first()
-            self.fields['city'].initial = default
 
         if not user or not user.is_authenticated:
-            self.fields.pop('email', None)
             self.fields.pop('saved_address', None)
             return
 
@@ -119,19 +121,22 @@ class CheckoutForm(forms.Form):
             self.fields.pop('saved_address')
 
     @staticmethod
-    def _city_label(city):
+    def city_label(city):
         if city.note:
             return f'{city.display_name} — {city.note}'
         return city.display_name
 
+    @staticmethod
+    def order_city_label(*, delivery_method, address, selected_city):
+        if delivery_method != CheckoutForm.DELIVERY_COURIER:
+            return CheckoutForm.city_label(selected_city) if selected_city else ''
+        from_address = extract_city_from_address(address)
+        if from_address:
+            return from_address
+        return CheckoutForm.city_label(selected_city) if selected_city else ''
+
     def clean_phone(self):
         return clean_ru_phone(self.cleaned_data.get('phone', ''))
-
-    def clean_email(self):
-        value = self.cleaned_data.get('email', '')
-        if not value:
-            return ''
-        return clean_user_email(value)
 
     def clean(self):
         cleaned = super().clean()

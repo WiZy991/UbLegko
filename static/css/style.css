@@ -1775,14 +1775,19 @@ input[type="number"] {
   transform: scale(0.98);
 }
 
-.btn-primary {
+.btn-primary,
+a.btn-primary,
+a.btn-primary:visited {
   background: var(--cyan);
-  color: #041018;
+  color: #fff;
   width: 100%;
+  text-decoration: none;
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+a.btn-primary:hover {
   background: var(--cyan-soft);
+  color: #fff;
 }
 
 .btn-ghost {
