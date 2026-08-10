@@ -1228,6 +1228,7 @@ select {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: clamp(14px, 1.5vw, 22px);
   width: 100%;
+  align-items: stretch;
 }
 
 .product-card {
@@ -1238,6 +1239,7 @@ select {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  height: 100%;
   box-shadow: 0 2px 10px rgba(15, 30, 40, 0.04);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   position: relative;
@@ -1277,6 +1279,7 @@ select {
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 
 .product-card__title-row {
@@ -1294,34 +1297,13 @@ select {
 
 .product-card__fav,
 .product-card__media > .fav-heart {
-  position: static;
-  top: auto;
-  right: auto;
+  position: absolute !important;
+  top: 10px;
+  right: 10px;
   z-index: 4;
   margin: 0;
   padding: 0;
   line-height: 0;
-}
-
-.product-card__corner {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.product-card__corner .product-card__meta--status {
-  margin: 0;
-  gap: 4px;
-}
-
-.product-card__corner .status-pill {
-  font-size: 0.75rem;
-  padding: 3px 8px;
-  white-space: nowrap;
 }
 
 .product-card__fav .fav-heart {
@@ -1336,8 +1318,8 @@ select {
 
 .badge-promo-img {
   display: block;
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   object-fit: contain;
   pointer-events: none;
@@ -1406,24 +1388,26 @@ select {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
+  line-height: 1.25;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  min-height: 2.5em;
+  min-height: calc(1.05rem * 1.25 * 2);
 }
 
 .product-card__desc {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.95rem;
+  line-height: 1.35;
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   line-clamp: 3;
   overflow: hidden;
-  min-height: 3.2em;
+  min-height: calc(0.95rem * 1.35 * 3);
 }
 
 .product-card__meta {
@@ -1437,6 +1421,7 @@ select {
 .product-card__meta--status {
   flex-wrap: nowrap;
   overflow: visible;
+  min-height: 32px;
 }
 
 .product-card__meta--status .status-pill {
@@ -1446,41 +1431,59 @@ select {
 .product-card__meta--price {
   align-items: center;
   justify-content: flex-start;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  min-height: 0;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-height: 56px;
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.product-card__actions {
   margin-top: 0;
+  flex-shrink: 0;
 }
 
 .product-card__rating {
   margin-left: 0;
+  align-self: center;
 }
 
 .price-block {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 2px;
+  display: inline-flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 8px;
   min-width: 0;
-  padding-top: 4px;
+  padding-top: 0;
 }
 
 .price {
   font-weight: 800;
   font-size: 1.1rem;
   line-height: 1.15;
-  min-height: 1.15em;
+  min-height: 0;
+  white-space: nowrap;
 }
 
 .price-old {
   color: var(--text-muted);
   font-size: 0.92rem;
   line-height: 1.2;
-  min-height: 1.2em;
+  min-height: 0;
+  white-space: nowrap;
+}
+
+.price-old:empty {
+  display: none;
 }
 
 .price-old:not(:empty) {
   text-decoration: line-through;
+}
+
+.product-card__meta--price .badge-promo-img {
+  align-self: center;
 }
 
 .badge-promo {
@@ -2704,11 +2707,14 @@ select.form-input {
   .product-card {
     display: grid;
     grid-template-columns: 64px minmax(0, 1fr) auto;
-    grid-template-areas: "media content actions";
-    gap: 6px 8px;
+    grid-template-areas:
+      "media content content"
+      "status price actions";
+    gap: 4px 8px;
     padding: 8px;
-    align-items: center;
+    align-items: start;
     position: relative;
+    overflow: visible;
   }
 
   .product-card:hover {
@@ -2716,20 +2722,11 @@ select.form-input {
     box-shadow: 0 2px 10px rgba(15, 30, 40, 0.04);
   }
 
-  .product-card__corner {
+  .product-card__fav {
+    position: absolute !important;
     top: 4px;
     right: 4px;
-    gap: 4px;
-  }
-
-  .product-card__corner .status-pill {
-    font-size: 0.6rem;
-    padding: 2px 6px;
-    line-height: 1.1;
-  }
-
-  .product-card__fav {
-    position: static !important;
+    z-index: 5;
   }
 
   .product-card__fav .fav-heart {
@@ -2746,20 +2743,69 @@ select.form-input {
   .product-card__media {
     grid-area: media;
     align-self: start;
+    position: relative;
+  }
+
+  .product-card__meta--status {
+    grid-area: status;
+    position: static;
+    top: auto;
+    right: auto;
+    z-index: auto;
+    margin: 0;
+    gap: 0;
+    width: 64px;
+    max-width: 64px;
+    min-height: 0;
+    justify-content: center;
+    align-self: center;
+    align-items: center;
+  }
+
+  .product-card__meta--status .status-pill {
+    font-size: 0.6rem;
+    padding: 2px 4px;
+    line-height: 1.1;
+    white-space: nowrap !important;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .product-card__content {
     grid-area: content;
     gap: 3px;
     min-width: 0;
-    overflow: visible;
+    overflow: hidden;
+    padding-right: 30px;
+    flex: none;
+    align-self: start;
+  }
+
+  .product-card__meta--price {
+    grid-area: price;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 0;
+    min-height: 0;
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     padding-right: 0;
+    align-self: center;
   }
 
   .product-card__actions {
     grid-area: actions;
+    position: static;
+    right: auto;
+    bottom: auto;
+    z-index: auto;
+    margin-top: 0;
     align-self: center;
-    margin-top: 28px;
+    flex-shrink: 0;
   }
 
   .product-card__image {
@@ -2774,36 +2820,45 @@ select.form-input {
     margin: 0;
     min-height: 0;
     display: block;
-    overflow: visible;
-    white-space: normal;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     word-break: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: normal;
     -webkit-line-clamp: unset;
     line-clamp: unset;
   }
 
   .product-card__name a {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
     word-break: normal;
-    overflow-wrap: break-word;
+    overflow-wrap: normal;
   }
 
   .product-card__desc {
     font-size: 0.72rem;
     line-height: 1.25;
-    -webkit-line-clamp: 1;
-    line-clamp: 1;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
     min-height: 0;
     margin: 0;
   }
 
-  .product-card__meta--price {
+  .product-card__meta--price .price-block {
     display: flex;
+    flex-direction: row;
     flex-wrap: nowrap;
-    align-items: center;
+    align-items: baseline;
     gap: 6px;
-    margin-top: 2px;
-    min-height: 0;
-    overflow: hidden;
+    padding-top: 0;
+    min-width: 0;
+    flex: 0 1 auto;
   }
 
   .product-card__meta--price .price {
@@ -2817,7 +2872,10 @@ select.form-input {
     font-size: 0.72rem;
     line-height: 1.2;
     min-height: 0;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .product-card__meta--price .product-card__rating,
@@ -2828,9 +2886,21 @@ select.form-input {
   }
 
   .product-card__meta--price .badge-promo-img {
-    width: 28px;
-    height: 28px;
-    flex: 0 0 auto;
+    width: 24px !important;
+    height: 24px !important;
+    max-width: 24px;
+    max-height: 24px;
+    flex: 0 0 24px;
+    margin: 0 !important;
+    padding: 0;
+    position: static !important;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    object-fit: contain;
+    align-self: center;
+    z-index: 1;
   }
 
   .product-card__buy {
