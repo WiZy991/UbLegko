@@ -1,8 +1,22 @@
 {% extends "admin/change_list.html" %}
+{% load static admin_list %}
 
-{% block object-tools-items %}
-  <li>
-    <a href="{% url 'admin:catalog_product_import' %}" class="addlink">Импорт CSV/XLSX</a>
-  </li>
+{% block extrahead %}
   {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=3">
+  <script defer src="{% static 'admin/js/product_expandable.js' %}?v=3"></script>
+{% endblock %}
+
+{% block result_list %}
+  <p class="product-expandable-hint">
+    Нажмите <strong>▼</strong>, чтобы раскрыть товар: править поля и управлять фото
+    (смотреть, добавлять, заменять, удалять, делать главным) прямо в таблице.
+  </p>
+  {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+  {% if expandable_rows %}
+    {% include "admin/catalog/product/change_list_results.html" %}
+  {% else %}
+    {% result_list cl %}
+  {% endif %}
+  {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
 {% endblock %}

@@ -2743,9 +2743,23 @@ select.form-input {
 
 .site-footer__copyright {
   margin: 10px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   text-align: center;
   color: var(--text-muted);
   font-size: 0.95rem;
+}
+
+.site-footer__copyright-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4d5c66;
+  font-size: 1.15rem;
+  line-height: 1;
+  font-weight: 400;
 }
 
 .site-footer__bottom {

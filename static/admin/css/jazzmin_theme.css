@@ -1,0 +1,87 @@
+/* Скрываем выбор Bootswatch-темы — нужны только светлая и тёмная схема */
+#jazzmin-theme-select {
+  display: none;
+}
+
+#jazzy-theme-chooser .dropdown-header:first-of-type,
+#jazzy-theme-chooser .dropdown-divider:nth-of-type(1),
+#jazzy-theme-chooser .dropdown-divider:nth-of-type(2) {
+  display: none;
+}
+
+#jazzmin-quick-theme-toggle {
+  cursor: pointer;
+}
+
+#jazzmin-quick-theme-toggle i {
+  width: 1.25rem;
+  text-align: center;
+}
+
+/* В тёмной теме делаем текст и значения белыми */
+html[data-bs-theme="dark"] .app-main,
+html[data-bs-theme="dark"] .app-main .card,
+html[data-bs-theme="dark"] .app-main .module,
+html[data-bs-theme="dark"] .app-main .results,
+html[data-bs-theme="dark"] .app-main #changelist,
+html[data-bs-theme="dark"] .app-main #changelist table,
+html[data-bs-theme="dark"] .app-main #changelist th,
+html[data-bs-theme="dark"] .app-main #changelist td,
+html[data-bs-theme="dark"] .app-main #changelist .small,
+html[data-bs-theme="dark"] .app-main #changelist label,
+html[data-bs-theme="dark"] .app-main #changelist .help,
+html[data-bs-theme="dark"] .app-main #changelist .helptext,
+html[data-bs-theme="dark"] .app-main #changelist p,
+html[data-bs-theme="dark"] .app-main #changelist span {
+  color: #fff !important;
+}
+
+html[data-bs-theme="dark"] .app-main #changelist a,
+html[data-bs-theme="dark"] .app-main #changelist a:visited,
+html[data-bs-theme="dark"] .app-main #changelist a:hover {
+  color: #fff !important;
+}
+
+html[data-bs-theme="dark"] .app-main #changelist input,
+html[data-bs-theme="dark"] .app-main #changelist select,
+html[data-bs-theme="dark"] .app-main #changelist textarea {
+  color: #fff !important;
+}
+
+/* Светлая тема: явно делаем светлый фон и контрастный текст */
+html[data-bs-theme="light"] #jazzy-sidebar {
+  background: #f8fbfd !important;
+  border-right: 1px solid #d9e8f2;
+}
+
+html[data-bs-theme="light"] #jazzy-sidebar .nav-link,
+html[data-bs-theme="light"] #jazzy-sidebar .brand-text,
+html[data-bs-theme="light"] #jazzy-sidebar .info a,
+html[data-bs-theme="light"] #jazzy-sidebar .info span,
+html[data-bs-theme="light"] #jazzy-sidebar .nav-header {
+  color: #17384a !important;
+}
+
+html[data-bs-theme="light"] #jazzy-sidebar .nav-link.active {
+  background: #dff2fb !important;
+  color: #0a5f73 !important;
+}
+
+html[data-bs-theme="light"] .app-main #changelist .results,
+html[data-bs-theme="light"] .app-main #changelist #result_list,
+html[data-bs-theme="light"] .app-main #changelist #result_list thead th,
+html[data-bs-theme="light"] .app-main #changelist #result_list tbody tr,
+html[data-bs-theme="light"] .app-main #changelist #result_list td,
+html[data-bs-theme="light"] .app-main #changelist .paginator {
+  background: #fff !important;
+  color: #1a2a35 !important;
+}
+
+html[data-bs-theme="light"] .app-main #changelist #result_list tbody tr:nth-child(even) td {
+  background: #f7fbfe !important;
+}
+
+html[data-bs-theme="light"] .app-main #changelist a,
+html[data-bs-theme="light"] .app-main #changelist a:visited {
+  color: #0a5f73 !important;
+}

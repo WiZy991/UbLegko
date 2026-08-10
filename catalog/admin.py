@@ -5,12 +5,20 @@ import re
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import admin, messages
+from django.contrib.admin.templatetags.admin_list import (
+    ResultList,
+    items_for_result,
+    result_headers,
+    result_hidden_fields,
+)
+from django.core.files.base import ContentFile
 from django.db.models import Count
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.urls import path
-from django.utils.html import format_html, mark_safe
+from django.urls import path, reverse
+from django.utils.html import escape, format_html, format_html_join, mark_safe
 from openpyxl import load_workbook
+from pathlib import Path
 
 from .categorize import resolve_category
 from .models import Category, Product, ProductImage, ProductRecommendation, ProductReview
@@ -204,6 +212,7 @@ class CategoryAdmin(admin.ModelAdmin):
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
+        'expand_toggle',
         'name',
         'category',
         'price',
@@ -259,7 +268,197 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('category')
+        return (
+            super()
+            .get_queryset(request)
+            .select_related('category')
+            .prefetch_related('images')
+        )
+
+    def changelist_view(self, request, extra_context=None):
+        response = super().changelist_view(request, extra_context=extra_context)
+        if not hasattr(response, 'context_data'):
+            return response
+
+        cl = response.context_data.get('cl')
+        if not cl:
+            return response
+
+        rows = []
+        if cl.formset:
+            for res, form in zip(cl.result_list, cl.formset.forms):
+                rows.append({
+                    'result': ResultList(form, items_for_result(cl, res, form)),
+                    'obj': res,
+                    'details_html': self.row_details_html(res),
+                })
+        else:
+            for res in cl.result_list:
+                rows.append({
+                    'result': ResultList(None, items_for_result(cl, res, None)),
+                    'obj': res,
+                    'details_html': self.row_details_html(res),
+                })
+
+        headers = list(result_headers(cl))
+        num_sorted_fields = sum(
+            1 for header in headers if header.get('sortable') and header.get('sorted')
+        )
+        response.context_data.update({
+            'expandable_rows': rows,
+            'result_headers': headers,
+            'num_sorted_fields': num_sorted_fields,
+            'result_hidden_fields': list(result_hidden_fields(cl)),
+        })
+        return response
+
+    @admin.display(description='')
+    def expand_toggle(self, obj):
+        return format_html(
+            '<button type="button" class="product-row-expand" data-product-id="{}" '
+            'aria-expanded="false" aria-label="Подробнее о товаре" title="Подробнее">'
+            '<i class="fas fa-chevron-down" aria-hidden="true"></i>'
+            '</button>',
+            obj.pk,
+        )
+
+    def photos_html(self, obj):
+        photos_url = reverse('admin:catalog_product_quick_photos', args=[obj.pk])
+        cards = []
+
+        if obj.image:
+            cards.append(
+                format_html(
+                    '<div class="product-row-detail__photo" data-photo-kind="main">'
+                    '<img src="{}" class="product-row-detail__thumb" alt="">'
+                    '<span class="product-row-detail__photo-badge">Главное</span>'
+                    '<div class="product-row-detail__photo-actions">'
+                    '<label class="button product-row-detail__file-btn">'
+                    'Заменить'
+                    '<input type="file" accept="image/*" hidden data-photo-upload="main">'
+                    '</label>'
+                    '<button type="button" class="button" data-photo-delete="main">Удалить</button>'
+                    '</div>'
+                    '</div>',
+                    obj.image.url,
+                )
+            )
+        else:
+            cards.append(
+                mark_safe(
+                    '<div class="product-row-detail__photo product-row-detail__photo--empty" data-photo-kind="main">'
+                    '<div class="product-row-detail__photo-empty">Нет главного фото</div>'
+                    '<div class="product-row-detail__photo-actions">'
+                    '<label class="button product-row-detail__file-btn">'
+                    'Загрузить главное'
+                    '<input type="file" accept="image/*" hidden data-photo-upload="main">'
+                    '</label>'
+                    '</div>'
+                    '</div>'
+                )
+            )
+
+        for image in obj.images.all():
+            if not image.image:
+                continue
+            cards.append(
+                format_html(
+                    '<div class="product-row-detail__photo" data-photo-kind="gallery" data-photo-id="{}">'
+                    '<img src="{}" class="product-row-detail__thumb" alt="">'
+                    '<span class="product-row-detail__photo-badge">Галерея</span>'
+                    '<div class="product-row-detail__photo-actions">'
+                    '<button type="button" class="button" data-photo-set-main="{}">Сделать главным</button>'
+                    '<button type="button" class="button" data-photo-delete="gallery" data-photo-id="{}">Удалить</button>'
+                    '</div>'
+                    '</div>',
+                    image.pk,
+                    image.image.url,
+                    image.pk,
+                    image.pk,
+                )
+            )
+
+        cards.append(
+            mark_safe(
+                '<label class="product-row-detail__photo product-row-detail__photo--add">'
+                '<span class="product-row-detail__photo-add-text">+ Добавить фото</span>'
+                '<span class="product-row-detail__photo-add-hint">можно несколько</span>'
+                '<input type="file" accept="image/*" multiple hidden data-photo-upload="gallery">'
+                '</label>'
+            )
+        )
+
+        return format_html(
+            '<div class="product-row-detail__gallery" data-photo-gallery data-photos-url="{}">{}</div>',
+            photos_url,
+            mark_safe(''.join(str(card) for card in cards)),
+        )
+
+    def row_details_html(self, obj):
+        quick_update_url = reverse('admin:catalog_product_quick_update', args=[obj.pk])
+        change_url = reverse('admin:catalog_product_change', args=[obj.pk])
+        site_url = obj.get_absolute_url()
+
+        status_options = format_html_join(
+            '',
+            '<option value="{}"{}>{}</option>',
+            (
+                (value, ' selected' if value == obj.status else '', label)
+                for value, label in Product.Status.choices
+            ),
+        )
+
+        return format_html(
+            '<div class="product-row-detail__inner">'
+            '<div class="product-row-detail__notice" data-quick-message></div>'
+            '<div class="product-row-detail__grid">'
+            '<div><span class="product-row-detail__label">Код</span><input class="vTextField product-row-detail__input" data-quick-field="sku" value="{}"></div>'
+            '<div><span class="product-row-detail__label">Штрихкод</span><input class="vTextField product-row-detail__input" data-quick-field="barcode" value="{}"></div>'
+            '<div><span class="product-row-detail__label">Слаг</span><input class="vTextField product-row-detail__input" data-quick-field="slug" value="{}"></div>'
+            '<div><span class="product-row-detail__label">Ед. изм.</span><input class="vTextField product-row-detail__input" data-quick-field="unit" value="{}"></div>'
+            '<div><span class="product-row-detail__label">Страна</span><input class="vTextField product-row-detail__input" data-quick-field="country" value="{}"></div>'
+            '<div><span class="product-row-detail__label">Статус</span><select class="product-row-detail__input" data-quick-field="status">{}</select></div>'
+            '<div><span class="product-row-detail__label">Популярный</span><label><input type="checkbox" data-quick-field="is_featured" {}> Да</label></div>'
+            '<div><span class="product-row-detail__label">Рейтинг</span> {} ({} оценок)</div>'
+            '<div><span class="product-row-detail__label">Создан</span> {}</div>'
+            '</div>'
+            '<div class="product-row-detail__block">'
+            '<span class="product-row-detail__label">Краткое описание</span>'
+            '<textarea class="vLargeTextField product-row-detail__input product-row-detail__textarea product-row-detail__textarea--short" '
+            'data-quick-field="short_description">{}</textarea>'
+            '</div>'
+            '<div class="product-row-detail__block">'
+            '<span class="product-row-detail__label">Описание</span>'
+            '<textarea class="vLargeTextField product-row-detail__input product-row-detail__textarea" '
+            'data-quick-field="description">{}</textarea>'
+            '</div>'
+            '<div class="product-row-detail__block">'
+            '<span class="product-row-detail__label">Фото</span>'
+            '{}'
+            '</div>'
+            '<div class="product-row-detail__actions">'
+            '<button type="button" class="button default product-row-detail__save" data-quick-save data-quick-url="{}">Сохранить в строке</button>'
+            '<a class="button" href="{}" target="_blank" rel="noopener noreferrer">На сайте</a>'
+            '<a class="button" href="{}">Полное редактирование</a>'
+            '</div>'
+            '</div>',
+            obj.sku or '',
+            obj.barcode or '',
+            obj.slug or '',
+            obj.unit or '',
+            obj.country or '',
+            status_options,
+            'checked' if obj.is_featured else '',
+            obj.rating,
+            obj.reviews_count,
+            obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—',
+            obj.short_description or '',
+            obj.description or '',
+            self.photos_html(obj),
+            quick_update_url,
+            site_url,
+            change_url,
+        )
 
     def thumb(self, obj):
         if obj.image:
@@ -275,12 +474,198 @@ class ProductAdmin(admin.ModelAdmin):
         urls = super().get_urls()
         custom = [
             path(
+                '<int:product_id>/quick-update/',
+                self.admin_site.admin_view(self.quick_update_view),
+                name='catalog_product_quick_update',
+            ),
+            path(
+                '<int:product_id>/quick-photos/',
+                self.admin_site.admin_view(self.quick_photos_view),
+                name='catalog_product_quick_photos',
+            ),
+            path(
                 'import/',
                 self.admin_site.admin_view(self.import_view),
                 name='catalog_product_import',
             ),
         ]
         return custom + urls
+
+    def _product_photos_response(self, product, message='Готово'):
+        product.refresh_from_db()
+        thumb_html = ''
+        if product.image:
+            thumb_html = format_html(
+                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />',
+                product.image.url,
+            )
+        elif product.display_image_url:
+            thumb_html = format_html(
+                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />',
+                product.display_image_url,
+            )
+        else:
+            thumb_html = '—'
+        return JsonResponse({
+            'ok': True,
+            'message': message,
+            'photos_html': str(self.photos_html(product)),
+            'thumb_html': str(thumb_html),
+        })
+
+    def quick_update_view(self, request, product_id):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        product = Product.objects.filter(pk=product_id).first()
+        if not product:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        changed_fields = []
+        text_fields = ('sku', 'barcode', 'slug', 'unit', 'country', 'short_description', 'description')
+        for field in text_fields:
+            if field in payload:
+                value = str(payload.get(field) or '').strip()
+                if field == 'short_description':
+                    value = value[:300]
+                setattr(product, field, value)
+                changed_fields.append(field)
+
+        if 'status' in payload:
+            status = str(payload.get('status') or '').strip()
+            valid_statuses = {choice[0] for choice in Product.Status.choices}
+            if status in valid_statuses:
+                product.status = status
+                changed_fields.append('status')
+
+        if 'is_featured' in payload:
+            raw = payload.get('is_featured')
+            product.is_featured = str(raw).lower() in {'1', 'true', 'yes', 'on'}
+            changed_fields.append('is_featured')
+
+        if not changed_fields:
+            return JsonResponse({'ok': False, 'error': 'Nothing to update'}, status=400)
+
+        product.save()
+        return JsonResponse({
+            'ok': True,
+            'message': 'Сохранено',
+            'slug': product.slug,
+            'short_description': product.short_description,
+        })
+
+    def quick_photos_view(self, request, product_id):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        product = (
+            Product.objects.filter(pk=product_id)
+            .prefetch_related('images')
+            .first()
+        )
+        if not product:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        action = (request.POST.get('action') or '').strip()
+
+        if action == 'upload_main':
+            uploaded = request.FILES.get('image')
+            if not uploaded:
+                return JsonResponse({'ok': False, 'error': 'Файл не выбран'}, status=400)
+            product.image = uploaded
+            product.save()
+            return self._product_photos_response(product, 'Главное фото обновлено')
+
+        if action == 'upload_gallery':
+            files = request.FILES.getlist('images') or (
+                [request.FILES['image']] if request.FILES.get('image') else []
+            )
+            if not files:
+                return JsonResponse({'ok': False, 'error': 'Файлы не выбраны'}, status=400)
+            next_order = (
+                ProductImage.objects.filter(product=product)
+                .order_by('-sort_order')
+                .values_list('sort_order', flat=True)
+                .first()
+            )
+            order = 0 if next_order is None else next_order + 1
+            for uploaded in files:
+                ProductImage.objects.create(product=product, image=uploaded, sort_order=order)
+                order += 1
+            return self._product_photos_response(product, f'Добавлено фото: {len(files)}')
+
+        if action == 'delete_main':
+            if product.image:
+                product.image.delete(save=False)
+                product.image = None
+                product.save()
+            return self._product_photos_response(product, 'Главное фото удалено')
+
+        if action == 'delete_gallery':
+            try:
+                image_id = int(request.POST.get('image_id') or 0)
+            except (TypeError, ValueError):
+                image_id = 0
+            image = ProductImage.objects.filter(product=product, pk=image_id).first()
+            if not image:
+                return JsonResponse({'ok': False, 'error': 'Фото не найдено'}, status=404)
+            image.image.delete(save=False)
+            image.delete()
+            return self._product_photos_response(product, 'Фото удалено')
+
+        if action == 'set_main':
+            try:
+                image_id = int(request.POST.get('image_id') or 0)
+            except (TypeError, ValueError):
+                image_id = 0
+            image = ProductImage.objects.filter(product=product, pk=image_id).first()
+            if not image or not image.image:
+                return JsonResponse({'ok': False, 'error': 'Фото не найдено'}, status=404)
+
+            old_main_name = None
+            old_main_content = None
+            if product.image:
+                product.image.open('rb')
+                try:
+                    old_main_content = product.image.read()
+                    old_main_name = Path(product.image.name).name
+                finally:
+                    product.image.close()
+
+            image.image.open('rb')
+            try:
+                new_content = image.image.read()
+                new_name = Path(image.image.name).name
+            finally:
+                image.image.close()
+
+            product.image.save(new_name, ContentFile(new_content), save=True)
+            image.image.delete(save=False)
+            image.delete()
+
+            if old_main_content and old_main_name:
+                next_order = (
+                    ProductImage.objects.filter(product=product)
+                    .order_by('-sort_order')
+                    .values_list('sort_order', flat=True)
+                    .first()
+                )
+                order = 0 if next_order is None else next_order + 1
+                gallery = ProductImage(product=product, sort_order=order)
+                gallery.image.save(old_main_name, ContentFile(old_main_content), save=True)
+
+            return self._product_photos_response(product, 'Главное фото заменено')
+
+        return JsonResponse({'ok': False, 'error': 'Unknown action'}, status=400)
 
     def import_view(self, request):
         if request.method == 'POST' and request.FILES.get('file'):
