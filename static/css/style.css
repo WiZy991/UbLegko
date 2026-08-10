@@ -2899,9 +2899,9 @@ select.form-input {
   .product-card__meta--price .badge-promo-img--mobile {
     display: block !important;
     width: auto !important;
-    height: 18px !important;
-    max-width: 72px;
-    max-height: 18px;
+    height: 14px !important;
+    max-width: 50px;
+    max-height: 14px;
     flex: 0 0 auto;
     margin: 0 0 0 2px !important;
     padding: 0;
@@ -2917,7 +2917,7 @@ select.form-input {
 
   .product-card__meta--price .badge-promo-img {
     width: auto;
-    height: 18px;
+    height: 14px;
   }
 
   .product-card__buy {
