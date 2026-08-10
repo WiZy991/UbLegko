@@ -61,24 +61,24 @@
     <p class="product-card__desc">{{ product.short_description|default:product.description|truncatechars:70 }}</p>
   </div>
 
-  <div class="product-card__meta product-card__meta--price">
-    <div class="price-block">
-      <span class="price">{{ product.price|floatformat:0 }} руб</span>
-      <span class="price-old">{% if product.old_price %}{{ product.old_price|floatformat:0 }} руб{% endif %}</span>
+    <div class="product-card__meta product-card__meta--price">
+      <div class="price-block">
+        <span class="price">{{ product.price|floatformat:0 }} руб</span>
+        <span class="price-old">{% if product.old_price %}{{ product.old_price|floatformat:0 }} руб{% endif %}</span>
+      </div>
+      {% if product.is_promo %}
+        <img
+          class="badge-promo-img"
+          src="{% static 'img/badge-akciya.png' %}?v=3"
+          alt="Акция"
+          width="28"
+          height="28"
+        >
+      {% endif %}
+      {% if product.reviews_count %}
+        <span class="rating product-card__rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
+      {% endif %}
     </div>
-    {% if product.reviews_count %}
-      <span class="rating product-card__rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
-    {% endif %}
-    {% if product.is_promo %}
-      <img
-        class="badge-promo-img"
-        src="{% static 'img/badge-akciya.png' %}?v=3"
-        alt="Акция"
-        width="28"
-        height="28"
-      >
-    {% endif %}
-  </div>
 
   <div class="product-card__meta product-card__meta--status">
     <span class="status-pill{% if product.status_modifier %} status-pill--{{ product.status_modifier }}{% endif %}">{{ product.get_status_display }}</span>
