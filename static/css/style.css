@@ -123,6 +123,11 @@ select {
 .brand-stars__item--xs { font-size: clamp(0.65rem, 1vw, 0.85rem); animation-delay: 1.35s; opacity: 0.85; }
 .brand-stars__item--tiny { font-size: clamp(0.5rem, 0.85vw, 0.7rem); animation-delay: 1.8s; opacity: 0.75; }
 
+/* Extra stars — только на мобиле */
+.brand-stars__item--extra {
+  display: none;
+}
+
 /* Левое поле — звёзды на всю ширину колонки */
 .brand-stars--left .brand-stars__item:nth-child(1)  { left: 4%;  top: 8%;  }
 .brand-stars--left .brand-stars__item:nth-child(2)  { left: 22%; top: 42%; }
@@ -2873,32 +2878,53 @@ select.form-input {
     display: block !important;
   }
 
-  /* Dense stars around letters, clear of title + tagline text */
+  /* Stars around letters; clear of title + tagline body text */
   .brand-stars--left .brand-stars__item:nth-child(1)  { left: 3%;  top: 6px; }
-  .brand-stars--left .brand-stars__item:nth-child(2)  { left: 16%; top: 2px; }
-  .brand-stars--left .brand-stars__item:nth-child(3)  { left: 32%; top: 8px; }
-  .brand-stars--left .brand-stars__item:nth-child(4)  { left: 48%; top: 3px; }
+  .brand-stars--left .brand-stars__item:nth-child(2)  { left: 14%; top: 2px; }
+  /* над «Е» в УБИРАЕМСЯ */
+  .brand-stars--left .brand-stars__item:nth-child(3)  { left: 30%; top: 3px; }
+  .brand-stars--left .brand-stars__item:nth-child(4)  { left: 50%; top: 4px; transform: translateX(-50%); }
   .brand-stars--left .brand-stars__item:nth-child(5)  { left: 2%;  top: 30%; }
-  .brand-stars--left .brand-stars__item:nth-child(6)  { left: 2%;  top: 52%; }
-  .brand-stars--left .brand-stars__item:nth-child(7)  { left: 3%;  top: 72%; }
-  .brand-stars--left .brand-stars__item:nth-child(8)  { left: 10%; bottom: 5px; top: auto; }
-  .brand-stars--left .brand-stars__item:nth-child(9)  { left: 28%; bottom: 3px; top: auto; }
-  .brand-stars--left .brand-stars__item:nth-child(10) { left: 46%; bottom: 6px; top: auto; }
-  .brand-stars--left .brand-stars__item:nth-child(11) { left: 4%;  top: 18%; }
-  .brand-stars--left .brand-stars__item:nth-child(12) { left: 64%; bottom: 4px; top: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(6)  { left: 2%;  top: 55%; }
+  .brand-stars--left .brand-stars__item:nth-child(7)  { left: 3%;  top: 74%; }
+  .brand-stars--left .brand-stars__item:nth-child(8)  { left: 20%; bottom: 10px; top: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(9)  { left: 8%;  bottom: 4px; top: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(10) { left: 4%;  top: 18%; }
+  .brand-stars--left .brand-stars__item:nth-child(11) { left: 16%; bottom: 3px; top: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(12) { left: 10%; bottom: 14px; top: auto; }
+  /* между заголовком и слоганом */
+  .brand-stars--left .brand-stars__item:nth-child(13) { left: 10%; top: 40%; display: block !important; }
+  .brand-stars--left .brand-stars__item:nth-child(14) { left: 22%; top: 43%; display: block !important; }
+  .brand-stars--left .brand-stars__item:nth-child(15) { left: 34%; top: 41%; display: block !important; }
+  .brand-stars--left .brand-stars__item:nth-child(16) { left: 46%; top: 44%; display: block !important; }
+  /* под нижней строкой слогана */
+  .brand-stars--left .brand-stars__item:nth-child(17) { left: 30%; bottom: 6px; top: auto; display: block !important; }
+  .brand-stars--left .brand-stars__item:nth-child(18) { left: 42%; bottom: 3px; top: auto; display: block !important; }
 
   .brand-stars--right .brand-stars__item:nth-child(1)  { left: auto; right: 3%;  top: 7px; }
-  .brand-stars--right .brand-stars__item:nth-child(2)  { left: auto; right: 16%; top: 2px; }
-  .brand-stars--right .brand-stars__item:nth-child(3)  { left: auto; right: 32%; top: 9px; }
-  .brand-stars--right .brand-stars__item:nth-child(4)  { left: auto; right: 48%; top: 3px; }
+  .brand-stars--right .brand-stars__item:nth-child(2)  { left: auto; right: 14%; top: 2px; }
+  .brand-stars--right .brand-stars__item:nth-child(3)  { left: auto; right: 26%; top: 9px; }
+  .brand-stars--right .brand-stars__item:nth-child(4)  { left: auto; right: 38%; top: 3px; }
   .brand-stars--right .brand-stars__item:nth-child(5)  { left: auto; right: 2%;  top: 32%; }
-  .brand-stars--right .brand-stars__item:nth-child(6)  { left: auto; right: 2%;  top: 54%; }
+  .brand-stars--right .brand-stars__item:nth-child(6)  { left: auto; right: 2%;  top: 56%; }
   .brand-stars--right .brand-stars__item:nth-child(7)  { left: auto; right: 3%;  top: 74%; }
-  .brand-stars--right .brand-stars__item:nth-child(8)  { left: auto; right: 10%; bottom: 5px; top: auto; }
-  .brand-stars--right .brand-stars__item:nth-child(9)  { left: auto; right: 28%; bottom: 3px; top: auto; }
-  .brand-stars--right .brand-stars__item:nth-child(10) { left: auto; right: 46%; bottom: 6px; top: auto; }
-  .brand-stars--right .brand-stars__item:nth-child(11) { left: auto; right: 4%;  top: 20%; }
-  .brand-stars--right .brand-stars__item:nth-child(12) { left: auto; right: 64%; bottom: 4px; top: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(8)  { left: auto; right: 20%; bottom: 10px; top: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(9)  { left: auto; right: 8%;  bottom: 4px; top: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(10) { left: auto; right: 4%;  top: 20%; }
+  .brand-stars--right .brand-stars__item:nth-child(11) { left: auto; right: 16%; bottom: 3px; top: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(12) { left: auto; right: 10%; bottom: 14px; top: auto; }
+  /* между заголовком и слоганом */
+  .brand-stars--right .brand-stars__item:nth-child(13) { left: auto; right: 10%; top: 40%; display: block !important; }
+  .brand-stars--right .brand-stars__item:nth-child(14) { left: auto; right: 22%; top: 43%; display: block !important; }
+  .brand-stars--right .brand-stars__item:nth-child(15) { left: auto; right: 34%; top: 41%; display: block !important; }
+  .brand-stars--right .brand-stars__item:nth-child(16) { left: auto; right: 8%;  top: 45%; display: block !important; }
+  /* под нижней строкой слогана */
+  .brand-stars--right .brand-stars__item:nth-child(17) { left: auto; right: 30%; bottom: 6px; top: auto; display: block !important; }
+  .brand-stars--right .brand-stars__item:nth-child(18) { left: auto; right: 42%; bottom: 3px; top: auto; display: block !important; }
+
+  .brand-stars__item--extra {
+    display: block !important;
+  }
 
   .brand-stars--left .brand-stars__item--lg,
   .brand-stars--right .brand-stars__item--lg { font-size: 1.15rem; }
