@@ -1142,7 +1142,9 @@
 
     function setActiveThumb(i) {
       thumbs.forEach((thumb, idx) => {
-        thumb.classList.toggle("is-active", idx === i);
+        const active = idx === i;
+        thumb.classList.toggle("is-active", active);
+        thumb.setAttribute("aria-current", active ? "true" : "false");
       });
     }
 
@@ -1166,6 +1168,12 @@
     }
 
     root.addEventListener("click", (event) => {
+      const thumb = event.target.closest("[data-gallery-thumb]");
+      if (thumb && root.contains(thumb)) {
+        const i = Number(thumb.dataset.index || 0);
+        show(Number.isFinite(i) ? i : 0);
+        return;
+      }
       const btn = event.target.closest("[data-gallery-open]");
       if (!btn || !root.contains(btn)) return;
       const i = Number(btn.dataset.index || 0);

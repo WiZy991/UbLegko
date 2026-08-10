@@ -26,9 +26,10 @@
                   <button
                     type="button"
                     class="product-gallery__thumb{% if forloop.first %} is-active{% endif %}"
-                    data-gallery-open
+                    data-gallery-thumb
                     data-index="{{ forloop.counter0 }}"
                     aria-label="Фото {{ forloop.counter }}"
+                    aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
                   >
                     <img src="{{ url }}" alt="">
                   </button>
