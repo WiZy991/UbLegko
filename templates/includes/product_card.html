@@ -58,7 +58,7 @@
 
   <div class="product-card__content">
     <h3 class="product-card__name"><a href="{{ product.get_absolute_url }}">{{ product.name }}</a></h3>
-    <p class="product-card__desc">{{ product.short_description|default:product.description|truncatechars:70 }}</p>
+    <p class="product-card__desc">{{ product.short_description|default:product.description|truncatechars:120 }}</p>
   </div>
 
     <div class="product-card__meta product-card__meta--price">
