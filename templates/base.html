@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260810auth3">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260810cart1">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -118,29 +118,25 @@
           <button class="search-form__submit" type="submit">Найти</button>
           <div class="search-suggest" id="search-suggest" data-search-suggest hidden role="listbox"></div>
         </form>
-        {% if user.is_authenticated %}
-          <a class="favorites-link" href="{% url 'favorites' %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
-            <span class="favorites-link__text">Избранное</span>
-            <span class="favorites-count" data-favorites-count>{{ favorites_count }}</span>
-          </a>
-        {% else %}
-          <a class="favorites-link" href="{% url 'accounts:login' %}?next={% url 'favorites' %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
-            <span class="favorites-link__text">Избранное</span>
-            <span class="favorites-count" data-favorites-count>0</span>
-          </a>
-        {% endif %}
-      </div>
-    </div>
-    <div class="account-bar">
-      <div class="container account-bar__inner">
-        <div class="account-bar__contact">
-          <div class="account-bar__slogan">{{ site_settings.slogan }}</div>
-          <a class="account-bar__phone" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">тел. {{ site_settings.phone }}</a>
-        </div>
-        <div class="account-bar__actions">
-          <a class="cart-link" href="{% url 'cart:detail' %}">
+        <div class="search-row__actions">
+          {% if user.is_authenticated %}
+            <a class="favorites-link" href="{% url 'favorites' %}" aria-label="Избранное">
+              <span class="favorites-link__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
+              </span>
+              <span class="favorites-link__text">Избранное</span>
+              <span class="favorites-count" data-favorites-count>{{ favorites_count }}</span>
+            </a>
+          {% else %}
+            <a class="favorites-link" href="{% url 'accounts:login' %}?next={% url 'favorites' %}" aria-label="Избранное">
+              <span class="favorites-link__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.35-9.5-8.5C.5 8.5 3 5 6.5 5c2 0 3.5 1.2 4.5 2.5C12 6.2 13.5 5 15.5 5 19 5 21.5 8.5 21.5 12.5 19 16.65 12 21 12 21z"/></svg>
+              </span>
+              <span class="favorites-link__text">Избранное</span>
+              <span class="favorites-count" data-favorites-count>0</span>
+            </a>
+          {% endif %}
+          <a class="cart-link search-row__cart" href="{% url 'cart:detail' %}">
             <span class="cart-link__icon" aria-hidden="true">
               <svg class="cart-link__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3.5 5h1.6l1.3 9.2a1.5 1.5 0 0 0 1.5 1.3h8.7a1.5 1.5 0 0 0 1.5-1.2l1.1-6.3H7.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -148,9 +144,18 @@
                 <circle cx="16.3" cy="19" r="1.4" fill="currentColor"/>
               </svg>
             </span>
-            <span data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
+            <span class="search-row__cart-total" data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
           </a>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="account-bar">
+    <div class="container account-bar__inner">
+      <div class="account-bar__contact">
+        <div class="account-bar__slogan">{{ site_settings.slogan }}</div>
+        <a class="account-bar__phone" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">тел. {{ site_settings.phone }}</a>
       </div>
     </div>
   </div>
