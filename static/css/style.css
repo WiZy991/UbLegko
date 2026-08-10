@@ -1450,10 +1450,11 @@ select {
 
 .price-block {
   display: inline-flex;
-  flex-direction: row;
+  flex-direction: column;
   flex-wrap: nowrap;
-  align-items: baseline;
-  gap: 8px;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
   min-width: 0;
   padding-top: 0;
 }
