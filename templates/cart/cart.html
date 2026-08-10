@@ -6,71 +6,84 @@
 <h1>Корзина</h1>
 <div class="cart-table-wrap">
   {% if items %}
-    <table class="cart-table">
-      <thead>
-        <tr>
-          <th>Товар</th>
-          <th>Цена</th>
-          <th>Кол-во</th>
-          <th>Сумма</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in items %}
-          <tr data-cart-product-id="{{ item.product.id }}">
-            <td><a href="{{ item.product.get_absolute_url }}">{{ item.product.name }}</a></td>
-            <td>{{ item.price|floatformat:0 }} руб</td>
-            <td>
-              <form
-                class="cart-qty-form"
-                action="{% url 'cart:update' item.product.id %}"
-                method="post"
-                data-cart-qty-form
-                data-product-id="{{ item.product.id }}"
-                {% if not item.product.can_add_to_cart %}data-cart-locked="1"{% endif %}
-              >
-                {% csrf_token %}
-                <div class="qty{% if not item.product.can_add_to_cart %} is-disabled{% endif %}" data-qty-group>
-                  <button
-                    type="button"
-                    data-qty-minus
-                    aria-label="Уменьшить количество"
-                    {% if not item.product.can_add_to_cart %}disabled{% endif %}
-                  >−</button>
-                  <input
-                    class="cart-qty-input"
-                    type="number"
-                    name="quantity"
-                    value="{{ item.quantity }}"
-                    min="1"
-                    inputmode="numeric"
-                    aria-label="Количество"
-                    {% if not item.product.can_add_to_cart %}disabled{% endif %}
-                  >
-                  <button
-                    type="button"
-                    data-qty-plus
-                    aria-label="Увеличить количество"
-                    {% if not item.product.can_add_to_cart %}disabled{% endif %}
-                  >+</button>
-                </div>
-              </form>
-            </td>
-            <td data-cart-line-total>{{ item.total|floatformat:0 }} руб</td>
-            <td>
-              <form action="{% url 'cart:remove' item.product.id %}" method="post">
-                {% csrf_token %}
-                <button class="btn btn-ghost" type="submit" style="padding:6px 10px;">Удалить</button>
-              </form>
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="cart-list-head" aria-hidden="true">
+      <span class="cart-list-head__name">Товар</span>
+      <span class="cart-list-head__unit">Цена</span>
+      <span class="cart-list-head__qty">Кол-во</span>
+      <span class="cart-list-head__total">Сумма</span>
+      <span class="cart-list-head__remove"></span>
+    </div>
+    <div class="cart-list">
+      {% for item in items %}
+        <article class="cart-item" data-cart-product-id="{{ item.product.id }}">
+          <a class="cart-item__thumb" href="{{ item.product.get_absolute_url }}">
+            {% if item.product.image %}
+              <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}">
+            {% else %}
+              <span class="cart-item__thumb-placeholder">Фото</span>
+            {% endif %}
+          </a>
+          <div class="cart-item__body">
+          <div class="cart-item__head">
+            <span class="cart-item__total cart-item__total--line" data-cart-line-total>{{ item.total|floatformat:0 }} руб</span>
+            <a class="cart-item__name" href="{{ item.product.get_absolute_url }}">
+              <span class="cart-item__total cart-item__total--float" data-cart-line-total aria-hidden="true">{{ item.total|floatformat:0 }} руб</span><span class="cart-item__name-text">{{ item.product.name }}</span>
+            </a>
+          </div>
+          <div class="cart-item__unit-price">
+            <span class="cart-item__price">{{ item.price|floatformat:0 }} руб</span>
+            {% if item.product.old_price %}
+              <span class="cart-item__price-old">{{ item.product.old_price|floatformat:0 }} руб</span>
+            {% endif %}
+            <span class="cart-item__per">/ шт</span>
+          </div>
+          <div class="cart-item__foot">
+            <form
+              class="cart-qty-form cart-item__qty"
+              action="{% url 'cart:update' item.product.id %}"
+              method="post"
+              data-cart-qty-form
+              data-product-id="{{ item.product.id }}"
+              {% if not item.product.can_add_to_cart %}data-cart-locked="1"{% endif %}
+            >
+              {% csrf_token %}
+              <div class="qty{% if not item.product.can_add_to_cart %} is-disabled{% endif %}" data-qty-group>
+                <button
+                  type="button"
+                  data-qty-minus
+                  aria-label="Уменьшить количество"
+                  {% if not item.product.can_add_to_cart %}disabled{% endif %}
+                >−</button>
+                <input
+                  class="cart-qty-input"
+                  type="number"
+                  name="quantity"
+                  value="{{ item.quantity }}"
+                  min="1"
+                  inputmode="numeric"
+                  aria-label="Количество"
+                  {% if not item.product.can_add_to_cart %}disabled{% endif %}
+                >
+                <button
+                  type="button"
+                  data-qty-plus
+                  aria-label="Увеличить количество"
+                  {% if not item.product.can_add_to_cart %}disabled{% endif %}
+                >+</button>
+              </div>
+            </form>
+            <form class="cart-item__remove" action="{% url 'cart:remove' item.product.id %}" method="post">
+              {% csrf_token %}
+              <button class="btn btn-ghost cart-item__remove-btn" type="submit">Удалить</button>
+            </form>
+          </div>
+          </div>
+        </article>
+      {% endfor %}
+    </div>
     <p class="cart-total" data-cart-page-total>Итого: {{ cart_total|floatformat:0 }} руб</p>
-    <div style="text-align:right;margin-top:12px;">
-      <a class="btn btn-primary" style="width:auto;" href="{% url 'cart:checkout' %}">Оформить заявку</a>
+    <div class="cart-checkout-actions">
+      <a class="btn btn-primary cart-checkout-btn" href="{% url 'cart:checkout' %}">Оформить заявку</a>
     </div>
   {% else %}
     <div class="empty-state">Корзина пуста. <a class="link-accent" href="{% url 'catalog:home' %}">Перейти в каталог</a></div>

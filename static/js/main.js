@@ -37,6 +37,7 @@
   syncStickyHeaderHeight();
   window.addEventListener("resize", syncStickyHeaderHeight);
   window.addEventListener("load", syncStickyHeaderHeight);
+
   if (typeof ResizeObserver !== "undefined") {
     const stickyObserver = new ResizeObserver(syncStickyHeaderHeight);
     const sticky = document.querySelector(".header-sticky");
@@ -157,7 +158,7 @@
       syncProductQtyInputs(form.getAttribute("data-product-id"), qty, input);
       updateCartTotals(data);
 
-      const row = form.closest("tr");
+      const row = form.closest(".cart-item");
       const fromRecommendations = !row && Boolean(document.querySelector(".cart-table-wrap"));
 
       if (fromRecommendations) {
@@ -169,13 +170,15 @@
         return;
       }
 
-      const lineTotal = row ? row.querySelector("[data-cart-line-total]") : null;
-      if (lineTotal && data.line_total !== undefined) {
-        lineTotal.textContent = `${data.line_total} руб`;
+      const lineTotals = row ? row.querySelectorAll("[data-cart-line-total]") : [];
+      if (lineTotals.length && data.line_total !== undefined) {
+        lineTotals.forEach((el) => {
+          el.textContent = `${data.line_total} руб`;
+        });
       }
       if (data.removed && row) {
         row.remove();
-        if (!document.querySelector(".cart-table tbody tr")) {
+        if (!document.querySelector(".cart-list .cart-item")) {
           window.location.reload();
         }
       } else if (!row) {
