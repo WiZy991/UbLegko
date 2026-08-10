@@ -2646,9 +2646,16 @@ select.form-input {
   .catalog-toolbar .sort-bar,
   .sort-bar {
     flex-wrap: wrap;
-    gap: 6px 10px;
-    padding: 8px 0;
-    font-size: 0.82rem;
+    gap: 4px 8px;
+    padding: 6px 0 8px;
+    margin-bottom: 12px;
+    font-size: 0.72rem;
+  }
+
+  .sort-bar a,
+  .sort-bar__filter {
+    font-size: 0.72rem;
+    line-height: 1.25;
   }
 
   .product-grid {
@@ -3129,6 +3136,12 @@ select.form-input {
 
   .search-row__cart {
     display: inline-flex;
+    color: #fff;
+  }
+
+  .search-row__cart-total {
+    color: #fff;
+    font-size: 0.82rem;
   }
 
   .search-form {
@@ -3285,6 +3298,7 @@ select.form-input {
 
   .search-row__cart-total {
     font-size: 0.78rem;
+    color: #fff;
   }
 
   .favorites-count {
