@@ -1,4 +1,4 @@
-"""Варианты поискового запроса: RU/EN транслит и раскладка клавиатуры."""
+"""Варианты поискового запроса: RU/EN транслит, раскладка, поиск по описанию."""
 
 from __future__ import annotations
 
@@ -29,6 +29,8 @@ _LATIN_TO_RU = [
     ('n', 'н'), ('o', 'о'), ('p', 'п'), ('r', 'р'), ('s', 'с'), ('t', 'т'),
     ('u', 'у'), ('f', 'ф'), ('h', 'х'),
 ]
+
+_TEXT_FIELDS = ('name', 'short_description', 'description')
 
 
 def _transliterate_ru_to_en(text: str) -> str:
@@ -79,7 +81,6 @@ def query_variants(q: str) -> list[str]:
         _transliterate_ru_to_en(q),
         _transliterate_en_to_ru(q),
     ]
-    # Убрать пустые и дубли (без учёта регистра)
     seen = set()
     result = []
     for v in variants:
@@ -94,55 +95,134 @@ def query_variants(q: str) -> list[str]:
     return result
 
 
+def query_tokens(q: str) -> list[str]:
+    """Слова запроса (от 2 символов)."""
+    return [t for t in re.split(r'[\s,;]+', (q or '').strip()) if len(t) >= 2]
+
+
+def stem_variants(word: str) -> list[str]:
+    """Варианты слова с укороченным окончанием (пятновыводитель / пятновыводители)."""
+    w = (word or '').strip()
+    if not w:
+        return []
+    stems = [w]
+    if len(w) >= 6:
+        stems.append(w[:-1])
+    if len(w) >= 8:
+        stems.append(w[:-2])
+    seen = set()
+    result = []
+    for stem in stems:
+        key = stem.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        result.append(stem)
+    return result
+
+
 def name_prefix_q(variants: list[str]) -> Q:
     """Совпадение с началом названия или началом слова в названии."""
     filt = Q()
     for v in variants:
         filt |= Q(name__istartswith=v)
-        # начало слова после пробела / скобки / дефиса
         filt |= Q(name__icontains=f' {v}')
         filt |= Q(name__icontains=f'({v}')
         filt |= Q(name__icontains=f'-{v}')
     return filt
 
 
+def _term_in_text_q(term: str) -> Q:
+    """Термин в названии или описании (с вариантами раскладки и окончаний)."""
+    filt = Q()
+    for variant in query_variants(term):
+        for stem in stem_variants(variant):
+            for field in _TEXT_FIELDS:
+                filt |= Q(**{f'{field}__icontains': stem})
+    return filt
+
+
+def text_search_q(q: str) -> Q:
+    """
+    Поиск по названию и описанию.
+    Несколько слов — каждое должно встретиться хотя бы в одном из полей.
+    """
+    tokens = query_tokens(q)
+    if not tokens:
+        variants = query_variants(q)
+        if not variants:
+            return Q()
+        tokens = [variants[0]]
+
+    combined = Q()
+    for token in tokens:
+        combined &= _term_in_text_q(token)
+    return combined
+
+
+def description_search_q(q: str) -> Q:
+    """Вхождение запроса только в описании (для подсказок)."""
+    filt = Q()
+    for token in query_tokens(q) or [q.strip()]:
+        for variant in query_variants(token):
+            for stem in stem_variants(variant):
+                filt |= Q(short_description__icontains=stem) | Q(description__icontains=stem)
+    return filt
+
+
 def filter_products_by_query(qs, q: str, *, prefix_only: bool = False):
     """
     Фильтр товаров по запросу.
-    prefix_only=True — только начало названия (для автоподсказок).
+    prefix_only=True — подсказки: префикс названия или совпадение в описании.
     """
+    q = (q or '').strip()
     variants = query_variants(q)
     if not variants:
         return qs.none() if prefix_only else qs
 
-    prefix = name_prefix_q(variants)
     if prefix_only:
-        return qs.filter(prefix)
+        return qs.filter(name_prefix_q(variants) | description_search_q(q))
 
-    # Полный поиск: сначала префикс названия, плюс вхождение в описание
-    broad = Q()
-    for v in variants:
-        broad |= (
-            Q(name__icontains=v)
-            | Q(short_description__icontains=v)
-            | Q(description__icontains=v)
-        )
-    return qs.filter(prefix | broad)
+    return qs.filter(name_prefix_q(variants) | text_search_q(q))
 
 
 def rank_prefix_first(products, q: str):
-    """Сортировка: сначала точное начало названия, затем остальные."""
+    """Сортировка: название → краткое описание → полное описание."""
     variants = [v.casefold() for v in query_variants(q)]
-    if not variants:
-        return list(products)
+    tokens = query_tokens(q) or ([q.strip()] if q.strip() else [])
+    token_variants = []
+    for token in tokens:
+        token_variants.extend(v.casefold() for v in query_variants(token))
+    if not token_variants:
+        token_variants = variants
 
     def score(product):
         name = (product.name or '').casefold()
+        short = (product.short_description or '').casefold()
+        desc = (product.description or '').casefold()
+
         for i, v in enumerate(variants):
             if name.startswith(v):
                 return (0, i, name)
             if re.search(rf'(^|[\s(\-]){re.escape(v)}', name):
                 return (1, i, name)
-        return (2, 99, name)
+            if v in name:
+                return (2, i, name)
+
+        for i, v in enumerate(variants):
+            if v in short:
+                return (3, i, name)
+            if v in desc:
+                return (4, i, name)
+
+        for i, v in enumerate(token_variants):
+            for stem in stem_variants(v):
+                s = stem.casefold()
+                if s in short:
+                    return (5, i, name)
+                if s in desc:
+                    return (6, i, name)
+
+        return (7, 99, name)
 
     return sorted(list(products), key=score)

@@ -255,7 +255,7 @@ class SearchView(CatalogMixin, ListView):
 
 
 def search_suggest(request):
-    """JSON-подсказки: товары, у которых название начинается с запроса (RU/EN)."""
+    """JSON-подсказки: название или описание (RU/EN)."""
     q = (request.GET.get('q') or '').strip()
     if len(q) < 1:
         return JsonResponse({'results': []})
