@@ -1,11 +1,15 @@
 .product-expandable-hint {
   margin: 0 0 12px;
   padding: 10px 12px;
-  background: #e8f6fb;
-  border: 1px solid #b6e2ef;
+  background: #e8f6fb !important;
+  border: 1px solid #b6e2ef !important;
   border-radius: 6px;
-  color: #0a4b5c;
+  color: #0a4b5c !important;
   font-size: 13px;
+}
+
+.product-expandable-hint strong {
+  color: #063846 !important;
 }
 
 #result_list .field-expand_toggle {
@@ -269,12 +273,6 @@ html[data-bs-theme="dark"] .product-row-detail__photo-badge {
 .product-row-detail__save[disabled] {
   opacity: 0.65;
   cursor: wait;
-}
-
-html[data-bs-theme="dark"] .product-expandable-hint {
-  background: #1a2a33;
-  border-color: #2d4452;
-  color: #b8d4e3;
 }
 
 html[data-bs-theme="dark"] .product-row-detail td {
