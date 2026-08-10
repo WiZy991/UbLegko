@@ -12,7 +12,14 @@ from catalog.search_utils import build_product_search_text
 
 class Category(models.Model):
     name = models.CharField('Название', max_length=200)
-    slug = models.SlugField('Слаг', max_length=220, unique=True, blank=True)
+    slug = models.SlugField(
+        'Слаг',
+        max_length=220,
+        unique=True,
+        blank=True,
+        allow_unicode=True,
+        help_text='Адрес страницы в URL. Можно оставить пустым — создастся из названия.',
+    )
     sort_order = models.PositiveIntegerField('Порядок', default=0)
     is_visible = models.BooleanField('Показывать', default=True)
 
@@ -25,6 +32,8 @@ class Category(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        if self.slug:
+            self.slug = slugify(self.slug, allow_unicode=True)
         if not self.slug:
             base = slugify(self.name, allow_unicode=True) or 'category'
             slug = base
@@ -47,7 +56,14 @@ class Product(models.Model):
         ON_ORDER = 'on_order', 'Под\u00a0заказ'
 
     name = models.CharField('Название', max_length=255)
-    slug = models.SlugField('Слаг', max_length=280, unique=True, blank=True)
+    slug = models.SlugField(
+        'Слаг',
+        max_length=280,
+        unique=True,
+        blank=True,
+        allow_unicode=True,
+        help_text='Адрес страницы в URL. Можно оставить пустым — создастся из названия.',
+    )
     category = models.ForeignKey(
         Category,
         on_delete=models.PROTECT,
@@ -97,6 +113,8 @@ class Product(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        if self.slug:
+            self.slug = slugify(self.slug, allow_unicode=True)
         if not self.slug:
             base = slugify(self.name, allow_unicode=True) or 'product'
             slug = base

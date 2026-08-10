@@ -49,6 +49,33 @@ class SearchUtilsTests(SimpleTestCase):
         self.assertEqual(ranked[0].name, 'Пятновыводитель Pro')
 
 
+class ProductSlugTests(TestCase):
+    def setUp(self):
+        self.category = Category.objects.create(name='Тест', slug='test-cat')
+
+    def test_cyrillic_slug_saves_on_resave(self):
+        product = Product.objects.create(
+            name='Alfa 20 1л',
+            slug='alfa-20-1л',
+            category=self.category,
+            price='100.00',
+        )
+        product.short_description = 'Обновление при загрузке фото'
+        product.save()
+        product.refresh_from_db()
+        self.assertEqual(product.slug, 'alfa-20-1л')
+
+    def test_slug_normalized_on_save(self):
+        product = Product(
+            name='Тестовый товар',
+            slug='Тест 1 л',
+            category=self.category,
+            price='50.00',
+        )
+        product.save()
+        self.assertEqual(product.slug, 'тест-1-л')
+
+
 class SearchCaseInsensitivityTests(TestCase):
     def setUp(self):
         category = Category.objects.create(name='Чистящие', slug='cleaners')
