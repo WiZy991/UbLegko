@@ -68,11 +68,18 @@
       </div>
       {% if product.is_promo %}
         <img
-          class="badge-promo-img"
+          class="badge-promo-img badge-promo-img--desktop"
           src="{% static 'img/badge-akciya.png' %}?v=3"
           alt="Акция"
-          width="28"
-          height="28"
+          width="56"
+          height="56"
+        >
+        <img
+          class="badge-promo-img badge-promo-img--mobile"
+          src="{% static 'img/badge-akciya-mobile.png' %}?v=1"
+          alt="Акция"
+          width="84"
+          height="24"
         >
       {% endif %}
       {% if product.reviews_count %}
