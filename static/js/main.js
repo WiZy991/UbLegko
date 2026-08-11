@@ -74,81 +74,42 @@
     window.__ublegkoObserveToolbar = observeToolbar;
   }
 
-  // iOS-кривая; анимируем без sticky-пересчётов (fixed + spacer)
+  // iOS-like: одна анимация height (WAAPI), без grid 0fr/1fr
   const IOS_SHEET_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
-  const IOS_SHEET_MS = 480;
-  let catalogNavLock = null;
+  const IOS_SHEET_MS = 420;
 
   function measureSheetHeight(panel) {
-    const clip = panel.querySelector(".catalog-sheet__clip") || panel;
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const prevHeight = panel.style.height;
     const prevTransition = panel.style.transition;
     const wasOpen = panel.classList.contains("is-open");
-    panel.style.transition = "none";
+    const wasPulling = shell && shell.classList.contains("is-pulling");
+    const wasAnimating = shell && shell.classList.contains("is-sheet-animating");
+
+    if (shell) {
+      shell.classList.add("is-pulling");
+      shell.classList.remove("is-sheet-animating");
+    }
     panel.classList.add("is-open");
+    panel.style.transition = "none";
+    panel.style.padding = "0";
     panel.style.height = "auto";
+    // Полная высота панели (как после анимации с height:auto) — без расхождения с фильтрами
     const h = Math.min(
-      Math.max(clip.scrollHeight || panel.scrollHeight, 80),
+      Math.max(Math.round(panel.getBoundingClientRect().height), 72),
       Math.round(window.innerHeight * 0.7),
       480
     );
     panel.style.height = prevHeight;
     panel.style.transition = prevTransition;
+    panel.style.padding = "";
     if (!wasOpen) panel.classList.remove("is-open");
-    if (shell) shell.classList.remove("is-pulling");
-    return h;
-  }
-
-  function lockCatalogNav(shell) {
-    if (!shell) return null;
-    if (catalogNavLock && catalogNavLock.shell === shell) return catalogNavLock;
-    unlockCatalogNav();
-    const rect = shell.getBoundingClientRect();
-    const ph = document.createElement("div");
-    ph.setAttribute("data-catalog-nav-ph", "1");
-    // Spacer на всю ширину контейнера, без фона — только высота
-    ph.style.cssText =
-      "display:block;width:100%;height:" +
-      Math.round(rect.height) +
-      "px;margin:0;padding:0;border:0;background:transparent;pointer-events:none;";
-    shell.parentNode.insertBefore(ph, shell);
-    shell.classList.add("is-nav-fixed");
-    // На всю ширину вьюпорта — иначе справа остаётся «щель»/белый хвост
-    shell.style.position = "fixed";
-    shell.style.top = `${Math.round(rect.top)}px`;
-    shell.style.left = "0";
-    shell.style.right = "0";
-    shell.style.width = "100%";
-    shell.style.maxWidth = "100%";
-    shell.style.margin = "0";
-    shell.style.zIndex = "60";
-    shell.style.boxSizing = "border-box";
-    catalogNavLock = { placeholder: ph, shell };
-    return catalogNavLock;
-  }
-
-  function setNavPlaceholderHeight(px) {
-    if (catalogNavLock && catalogNavLock.placeholder) {
-      catalogNavLock.placeholder.style.height = `${Math.max(0, Math.round(px))}px`;
+    if (shell) {
+      if (!wasPulling) shell.classList.remove("is-pulling");
+      if (wasAnimating) shell.classList.add("is-sheet-animating");
     }
-  }
-
-  function unlockCatalogNav() {
-    if (!catalogNavLock) return;
-    const { placeholder, shell } = catalogNavLock;
-    shell.classList.remove("is-nav-fixed");
-    shell.style.position = "";
-    shell.style.top = "";
-    shell.style.left = "";
-    shell.style.right = "";
-    shell.style.width = "";
-    shell.style.maxWidth = "";
-    shell.style.zIndex = "";
-    shell.style.margin = "";
-    shell.style.boxSizing = "";
-    if (placeholder && placeholder.parentNode) placeholder.remove();
-    catalogNavLock = null;
+    panel._ublegkoFullH = h;
+    return h;
   }
 
   function clearSheetInline(panel) {
@@ -158,10 +119,22 @@
     panel.style.overflow = "";
     panel.style.background = "";
     panel.style.willChange = "";
+    panel.style.padding = "";
   }
 
   function cancelSheetAnimation(panel) {
     if (!panel) return;
+    if (panel._ublegkoSheetAnim) {
+      const anim = panel._ublegkoSheetAnim;
+      panel._ublegkoSheetAnim = null;
+      anim.onfinish = null;
+      anim.oncancel = null;
+      try {
+        anim.cancel();
+      } catch (_) {
+        /* ignore */
+      }
+    }
     if (panel._ublegkoSheetTimer) {
       clearTimeout(panel._ublegkoSheetTimer);
       panel._ublegkoSheetTimer = 0;
@@ -171,66 +144,14 @@
       panel._ublegkoSheetFinish = null;
     }
     panel._ublegkoBusy = false;
-    panel.style.transition = "none";
   }
 
-  function animateSheetHeight(panel, { from, to, open }) {
-    const shell = document.querySelector("[data-catalog-nav-shell]");
-    const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
-    if (!shell || !panel) return;
-
-    cancelSheetAnimation(panel);
-    // Без position:fixed — иначе при возврате вверх шторка секунду лежит поверх товаров
-    unlockCatalogNav();
-    skipStickySync = true;
-    shell.classList.remove("is-pulling");
-    shell.classList.add("is-sheet-animating");
-
-    const start = Math.max(0, from);
-    const end = Math.max(0, to);
-
-    panel.style.transition = "none";
-    panel.style.overflow = "hidden";
-    panel.style.background = "var(--bg)";
-    panel.style.willChange = "height";
-    panel.style.height = `${start}px`;
-    if (open || end > 0) panel.classList.add("is-open");
-    if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    void panel.offsetHeight;
-
-    panel._ublegkoBusy = true;
-    panel.style.transition = `height ${IOS_SHEET_MS}ms ${IOS_SHEET_EASING}`;
-
-    let done = false;
-    const finish = (evt) => {
-      if (done) return;
-      if (evt && evt.target !== panel) return;
-      if (evt && evt.propertyName && evt.propertyName !== "height") return;
-      done = true;
-      panel._ublegkoBusy = false;
-      if (panel._ublegkoSheetFinish) {
-        panel.removeEventListener("transitionend", panel._ublegkoSheetFinish);
-        panel._ublegkoSheetFinish = null;
-      }
-      if (panel._ublegkoSheetTimer) {
-        clearTimeout(panel._ublegkoSheetTimer);
-        panel._ublegkoSheetTimer = 0;
-      }
-
-      if (open) panel.classList.add("is-open");
-      else panel.classList.remove("is-open");
-      clearSheetInline(panel);
-      shell.classList.remove("is-sheet-animating", "is-pulling");
-      skipStickySync = false;
-      syncStickyHeaderHeight();
-    };
-    panel._ublegkoSheetFinish = finish;
-    panel.addEventListener("transitionend", finish);
-    panel._ublegkoSheetTimer = setTimeout(finish, IOS_SHEET_MS + 60);
-
-    requestAnimationFrame(() => {
-      panel.style.height = `${end}px`;
-    });
+  function currentSheetHeight(panel) {
+    if (panel.style.height && panel.style.height.endsWith("px")) {
+      return Math.max(0, parseFloat(panel.style.height) || 0);
+    }
+    if (!panel.classList.contains("is-open")) return 0;
+    return Math.round(panel.getBoundingClientRect().height);
   }
 
   function setCatalogNavOpen(open, options = {}) {
@@ -243,41 +164,132 @@
     if (!toggle || !panel) return;
 
     const wasOpen = panel.classList.contains("is-open");
+    const from = currentSheetHeight(panel);
+    const isMobile = window.matchMedia("(max-width: 900px)").matches;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const useAnimate = animate && isMobile && !reduceMotion;
+
     if (
       wasOpen === open &&
       !panel._ublegkoBusy &&
       !(shell && shell.classList.contains("is-pulling"))
     ) {
-      syncStickyHeaderHeight();
-      return;
+      const settledTarget = open ? panel._ublegkoFullH || from : 0;
+      // Не выходим рано после жеста — иначе дожим с промежуточной высоты пропускается
+      if (!useAnimate || Math.abs(from - settledTarget) < 2) {
+        syncStickyHeaderHeight();
+        return;
+      }
     }
 
-    const isMobile = window.matchMedia("(max-width: 900px)").matches;
-    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const useAnimate = animate && isMobile && !reduceMotion;
+    cancelSheetAnimation(panel);
+    clearSheetInline(panel);
+    if (shell) shell.classList.remove("is-pulling");
 
     if (!useAnimate) {
-      cancelSheetAnimation(panel);
-      if (shell) shell.classList.remove("is-pulling", "is-sheet-animating");
-      unlockCatalogNav();
-      clearSheetInline(panel);
+      if (shell) shell.classList.add("is-instant");
       panel.classList.toggle("is-open", open);
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      void panel.offsetHeight;
+      if (shell) shell.classList.remove("is-instant", "is-sheet-animating");
       skipStickySync = false;
       syncStickyHeaderHeight();
       return;
     }
 
-    const from = panel.getBoundingClientRect().height;
-    if (open) {
-      animateSheetHeight(panel, { from, to: measureSheetHeight(panel), open: true });
-    } else {
-      animateSheetHeight(panel, {
-        from: from || measureSheetHeight(panel),
-        to: 0,
-        open: false,
-      });
+    const fullH = measureSheetHeight(panel);
+    const to = open ? fullH : 0;
+
+    skipStickySync = true;
+    panel._ublegkoBusy = true;
+    if (shell) shell.classList.add("is-sheet-animating");
+    panel.classList.add("is-open");
+    panel.style.height = `${from}px`;
+    panel.style.padding = "0";
+    panel.style.overflow = "hidden";
+    panel.style.background = "var(--bg)";
+    panel.style.willChange = "height";
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    void panel.offsetHeight;
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      if (panel._ublegkoSheetTimer) {
+        clearTimeout(panel._ublegkoSheetTimer);
+        panel._ublegkoSheetTimer = 0;
+      }
+      // Класс до cancel(anim), иначе на закрытии мигает height:auto
+      panel.classList.toggle("is-open", open);
+      if (open) {
+        // Держим финальные px до снятия anim — совпадает с auto, без прыжка фильтров
+        panel.style.height = `${to}px`;
+      } else {
+        panel.style.height = "0px";
+      }
+      if (panel._ublegkoSheetAnim) {
+        const anim = panel._ublegkoSheetAnim;
+        panel._ublegkoSheetAnim = null;
+        anim.onfinish = null;
+        anim.oncancel = null;
+        try {
+          anim.cancel();
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      if (shell) shell.classList.remove("is-sheet-animating");
+      panel.style.transition = "";
+      panel.style.overflow = "";
+      panel.style.background = "";
+      panel.style.willChange = "";
+      panel.style.padding = "";
+      // auto только после кадра с той же высотой — иначе sticky-блок дёргает toolbar
+      if (open) {
+        requestAnimationFrame(() => {
+          if (!panel.classList.contains("is-open")) return;
+          panel.style.height = "";
+          panel._ublegkoBusy = false;
+          skipStickySync = false;
+          syncStickyHeaderHeight();
+        });
+      } else {
+        panel.style.height = "";
+        panel._ublegkoBusy = false;
+        skipStickySync = false;
+        syncStickyHeaderHeight();
+      }
+    };
+
+    if (Math.abs(from - to) < 1) {
+      finish();
+      return;
     }
+
+    if (typeof panel.animate === "function") {
+      const anim = panel.animate(
+        [{ height: `${from}px` }, { height: `${to}px` }],
+        { duration: IOS_SHEET_MS, easing: IOS_SHEET_EASING, fill: "forwards" }
+      );
+      panel._ublegkoSheetAnim = anim;
+      anim.onfinish = finish;
+      anim.oncancel = finish;
+    } else {
+      panel.style.transition = `height ${IOS_SHEET_MS}ms ${IOS_SHEET_EASING}`;
+      requestAnimationFrame(() => {
+        panel.style.height = `${to}px`;
+      });
+      const onEnd = (evt) => {
+        if (evt && evt.propertyName && evt.propertyName !== "height") return;
+        panel.removeEventListener("transitionend", onEnd);
+        panel._ublegkoSheetFinish = null;
+        finish();
+      };
+      panel._ublegkoSheetFinish = onEnd;
+      panel.addEventListener("transitionend", onEnd);
+    }
+    panel._ublegkoSheetTimer = setTimeout(finish, IOS_SHEET_MS + 100);
   }
 
   let catalogNavCollapseCleanup = null;
@@ -399,20 +411,20 @@
       if (event.cancelable) event.preventDefault();
 
       const t = event.touches[0];
+      const fromH = currentSheetHeight(panel);
+      const startOpen = panel.classList.contains("is-open") || fromH > 1;
       cancelSheetAnimation(panel);
       shell.classList.remove("is-sheet-animating");
 
-      const startOpen = panel.classList.contains("is-open");
-      const fromH = startOpen ? panel.getBoundingClientRect().height : 0;
-
       startScrollFreeze();
       skipStickySync = true;
-      unlockCatalogNav();
       fullH = measureSheetHeight(panel);
       shell.classList.add("is-pulling");
       panel.style.transition = "none";
       panel.style.overflow = "hidden";
       panel.style.background = "var(--bg)";
+      panel.style.padding = "0";
+      panel.style.willChange = "height";
       if (startOpen) panel.classList.add("is-open");
 
       drag = {
@@ -421,7 +433,7 @@
         y: t.clientY,
         startOpen,
         locked: false,
-        h: startOpen ? fromH || fullH : 0,
+        h: startOpen ? fromH || fullH : fromH,
         lastY: t.clientY,
         lastT: performance.now(),
         velocity: 0,
@@ -505,18 +517,18 @@
       else if (velocity < -0.4) shouldOpen = false;
       else shouldOpen = startOpen ? h > fullH * 0.4 : h >= fullH * 0.18 || dy > 28;
 
-      const from = Math.max(0, h);
-      const to = shouldOpen ? fullH : 0;
-      clearDragStyles();
       userHoldOpen = shouldOpen && isStuckUnderHeader();
-      animateSheetHeight(panel, { from, to, open: shouldOpen });
+      // Дожим тем же height/WAAPI-путём, что и скролл/тап
+      clearDragStyles();
+      panel.style.height = `${Math.max(0, h)}px`;
+      panel.classList.toggle("is-open", startOpen || h > 0);
+      setCatalogNavOpen(shouldOpen);
     };
 
     const onTouchCancel = () => {
       if (!drag) return;
       drag = null;
       clearDragStyles();
-      unlockCatalogNav();
       clearSheetInline(panel);
       skipStickySync = false;
       syncStickyHeaderHeight();
@@ -592,7 +604,7 @@
       drag = null;
       clearDragStyles();
       cancelSheetAnimation(panel);
-      unlockCatalogNav();
+      clearSheetInline(panel);
       document.removeEventListener("touchmove", onDocTouchMove, { capture: true });
       toggle.removeEventListener("touchstart", onTouchStart);
       toggle.removeEventListener("touchmove", onTouchMove);

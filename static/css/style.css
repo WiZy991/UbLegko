@@ -3089,7 +3089,7 @@ select.form-input {
     background: #6b7882;
   }
 
-  /* Высота + WAAPI; overflow всегда hidden — иначе категории «вытекают» на товары */
+  /* Высота в px (JS/WAAPI). Padding только внутри clip — иначе фильтры дёргаются в конце */
   .catalog-sheet {
     order: 1;
     display: block;
@@ -3104,35 +3104,32 @@ select.form-input {
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    transform: translateZ(0);
     touch-action: pan-y;
   }
 
   .catalog-sheet.is-open {
     height: auto;
-    padding: 4px 0 2px;
-    overflow: hidden;
     pointer-events: auto;
-    background: var(--bg);
   }
 
   .catalog-sheet__clip {
     display: block;
     overflow: hidden;
+    padding: 4px 0 2px;
+  }
+
+  .catalog-nav.is-instant .catalog-sheet {
+    transition: none !important;
   }
 
   .catalog-nav.is-pulling .catalog-sheet,
   .catalog-nav.is-sheet-animating .catalog-sheet {
+    height: 0;
+    padding: 0;
     overflow: hidden;
     pointer-events: none;
-    will-change: height;
+    transition: none !important;
     background: var(--bg);
-    transform: translateZ(0);
-  }
-
-  .catalog-nav.is-pulling .catalog-sheet.is-open,
-  .catalog-nav.is-sheet-animating .catalog-sheet.is-open {
-    padding: 4px 0 2px;
   }
 
   .catalog-sheet .sidebar {
