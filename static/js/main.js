@@ -77,6 +77,50 @@
   // iOS-like: одна анимация height (WAAPI), без grid 0fr/1fr
   const IOS_SHEET_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
   const IOS_SHEET_MS = 420;
+  // Глушим open/close по скроллу после клика по фильтрам/категориям (AJAX + scroll restore)
+  let sheetSyncQuietUntil = 0;
+  function quietSheetSync(ms = 2800) {
+    sheetSyncQuietUntil = Math.max(sheetSyncQuietUntil, Date.now() + ms);
+  }
+  function isSheetSyncQuiet() {
+    return Date.now() < sheetSyncQuietUntil;
+  }
+
+  function isCatalogNavStuck() {
+    const shell = document.querySelector("[data-catalog-nav-shell]");
+    const anchor = document.querySelector("[data-catalog-nav-anchor]");
+    const header = document.querySelector(".header-sticky");
+    const stickyLine = header ? header.getBoundingClientRect().bottom - 2 : 0;
+    if (anchor) return anchor.getBoundingClientRect().bottom <= stickyLine + 1;
+    if (shell) return shell.getBoundingClientRect().top <= stickyLine + 1;
+    return (window.scrollY || 0) > 24;
+  }
+
+  function syncCatalogSheetToScroll({ animate = false } = {}) {
+    const panel =
+      document.querySelector("[data-catalog-sheet]") ||
+      document.querySelector("[data-sidebar], #sidebar");
+    if (!panel || !window.matchMedia("(max-width: 900px)").matches) {
+      if (panel) setCatalogNavOpen(true, { animate: false });
+      return;
+    }
+    setCatalogNavOpen(!isCatalogNavStuck(), { animate: Boolean(animate) });
+  }
+
+  function settleSheetAfterScroll(ms = 2800) {
+    quietSheetSync(ms);
+    let settled = false;
+    const done = () => {
+      if (settled) return;
+      settled = true;
+      quietSheetSync(200);
+      syncCatalogSheetToScroll({ animate: false });
+    };
+    if ("onscrollend" in window) {
+      window.addEventListener("scrollend", done, { once: true });
+    }
+    setTimeout(done, ms);
+  }
 
   function measureSheetHeight(panel) {
     const shell = document.querySelector("[data-catalog-nav-shell]");
@@ -223,7 +267,7 @@
       // Класс до cancel(anim), иначе на закрытии мигает height:auto
       panel.classList.toggle("is-open", open);
       if (open) {
-        // Держим финальные px до снятия anim — совпадает с auto, без прыжка фильтров
+        // Оставляем height в px — переход на auto дёргал фильтры
         panel.style.height = `${to}px`;
       } else {
         panel.style.height = "0px";
@@ -241,25 +285,17 @@
       }
       if (shell) shell.classList.remove("is-sheet-animating");
       panel.style.transition = "";
-      panel.style.overflow = "";
       panel.style.background = "";
       panel.style.willChange = "";
       panel.style.padding = "";
-      // auto только после кадра с той же высотой — иначе sticky-блок дёргает toolbar
-      if (open) {
-        requestAnimationFrame(() => {
-          if (!panel.classList.contains("is-open")) return;
-          panel.style.height = "";
-          panel._ublegkoBusy = false;
-          skipStickySync = false;
-          syncStickyHeaderHeight();
-        });
-      } else {
+      panel.style.overflow = "hidden";
+      if (!open) {
         panel.style.height = "";
-        panel._ublegkoBusy = false;
-        skipStickySync = false;
-        syncStickyHeaderHeight();
+        panel.style.overflow = "";
       }
+      panel._ublegkoBusy = false;
+      skipStickySync = false;
+      syncStickyHeaderHeight();
     };
 
     if (Math.abs(from - to) < 1) {
@@ -352,25 +388,28 @@
       return (window.scrollY || 0) > 24;
     };
 
-    const applyStickyState = () => {
+    const applyStickyState = (opts = {}) => {
+      const animate = opts.animate === true;
       if (!isMobile()) {
         userHoldOpen = false;
         setCatalogNavOpen(true, { animate: false });
         return;
       }
       if (drag || panel._ublegkoBusy || Date.now() < ignoreScrollUntil) return;
+      // Во время quiet разрешаем только мгновенный sync (после AJAX), не анимированный
+      if (isSheetSyncQuiet() && animate) return;
       const stuck = isStuckUnderHeader();
       if (!stuck) {
         userHoldOpen = false;
         if (!panel.classList.contains("is-open")) {
-          bumpIgnore(IOS_SHEET_MS);
-          setCatalogNavOpen(true);
+          if (animate) bumpIgnore(IOS_SHEET_MS);
+          setCatalogNavOpen(true, { animate });
         }
         return;
       }
       if (!userHoldOpen && panel.classList.contains("is-open")) {
-        bumpIgnore(IOS_SHEET_MS);
-        setCatalogNavOpen(false);
+        if (animate) bumpIgnore(IOS_SHEET_MS);
+        setCatalogNavOpen(false, { animate });
       }
     };
 
@@ -538,10 +577,11 @@
       if (!isMobile()) return;
       const link = event.target.closest("a[data-scroll-spy-link], a[data-catalog-nav]");
       if (!link) return;
+      // Не анимируем шторку тут — иначе вместе с loadCatalog получается «закрылась/открылась» дважды
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
-      bumpIgnore(IOS_SHEET_MS);
-      setCatalogNavOpen(false);
+      quietSheetSync(2800);
+      bumpIgnore(2800);
     };
 
     let scrollTicking = false;
@@ -558,8 +598,13 @@
           return;
         }
         // Не блокируем скролл-сворачивание из‑за skipStickySync (он для ResizeObserver).
-        // Блокируем только жест/идущую анимацию шторки.
-        if (drag || panel._ublegkoBusy || Date.now() < ignoreScrollUntil) {
+        // Блокируем жест/анимацию и «тихий» период после клика по фильтрам.
+        if (
+          drag ||
+          panel._ublegkoBusy ||
+          Date.now() < ignoreScrollUntil ||
+          isSheetSyncQuiet()
+        ) {
           lastY = window.scrollY || 0;
           return;
         }
@@ -597,8 +642,8 @@
     toggle.addEventListener("click", onToggleClick);
     shell.addEventListener("click", onNavClick);
     window.addEventListener("scroll", onWindowScroll, { passive: true });
-    window.addEventListener("resize", applyStickyState);
-    applyStickyState();
+    window.addEventListener("resize", () => applyStickyState({ animate: false }));
+    applyStickyState({ animate: false });
 
     catalogNavCollapseCleanup = () => {
       drag = null;
@@ -974,7 +1019,14 @@
       }
     };
     // После replaceWith нужны кадры на layout, иначе координаты секций врёт
-    requestAnimationFrame(() => requestAnimationFrame(run));
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        quietSheetSync(2800);
+        run();
+        syncCatalogSheetToScroll({ animate: false });
+        settleSheetAfterScroll(2800);
+      })
+    );
   }
 
   function initCategoryScrollSpy(options = {}) {
@@ -1041,13 +1093,18 @@
         history.replaceState(null, "", `#${id}`);
       };
 
-      if (isMobile && panel && panel.classList.contains("is-open")) {
+      if (isMobile) {
+        quietSheetSync(2800);
         // Перед прыжком к секции сворачиваем без анимации — иначе offset врёт
         setCatalogNavOpen(false, { animate: false });
-        requestAnimationFrame(() => requestAnimationFrame(doScroll));
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            doScroll();
+            settleSheetAfterScroll(2800);
+          })
+        );
         return;
       }
-      if (isMobile) setCatalogNavOpen(false, { animate: false });
       requestAnimationFrame(() => requestAnimationFrame(doScroll));
     }
 
@@ -1099,10 +1156,27 @@
         window.location.href = url;
         return;
       }
+      const isMobile = window.matchMedia("(max-width: 900px)").matches;
+      const nextUrl = new URL(url, window.location.origin);
+      const enteredCategoryPage =
+        nextUrl.pathname.includes("/category/") && !prevPath.includes("/category/");
+      // HTML всегда с is-open — до insert ставим нужный класс, чтобы не мигало
+      const nextPanel = next.querySelector("[data-catalog-sheet]");
+      const nextToggle = next.querySelector("[data-menu-toggle], #menu-toggle");
+      if (isMobile && nextPanel) {
+        const wantOpen = enteredCategoryPage ? true : prevScrollY <= 24;
+        nextPanel.classList.toggle("is-open", wantOpen);
+        if (nextToggle) nextToggle.setAttribute("aria-expanded", wantOpen ? "true" : "false");
+        if (!wantOpen) {
+          nextPanel.style.height = "0px";
+          nextPanel.style.overflow = "hidden";
+        }
+      }
+
+      quietSheetSync(2800);
       root.replaceWith(next);
       const title = doc.querySelector("title");
       if (title) document.title = title.textContent;
-      const nextUrl = new URL(url, window.location.origin);
       if (push) {
         history.pushState(
           { catalogAjax: true },
@@ -1118,11 +1192,11 @@
         window.__ublegkoRefreshCatalogNav();
       }
 
-      const enteredCategoryPage =
-        nextUrl.pathname.includes("/category/") && !prevPath.includes("/category/");
       if (enteredCategoryPage) {
         categorySpyLockUntil = Date.now() + 900;
         window.scrollTo({ top: 0, behavior: "auto" });
+        quietSheetSync(2800);
+        syncCatalogSheetToScroll({ animate: false });
       } else {
         restoreScrollAfterCatalogFilter(preferCategoryId, prevScrollY);
       }
@@ -1148,7 +1222,14 @@
     const link = event.target.closest("[data-catalog-nav]");
     if (!link || event.defaultPrevented || event.button !== 0) return;
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    if (link.getAttribute("aria-hidden") === "true" || link.classList.contains("is-hidden")) return;
+    if (
+      link.getAttribute("aria-hidden") === "true" ||
+      link.getAttribute("aria-disabled") === "true" ||
+      link.classList.contains("is-hidden") ||
+      link.classList.contains("is-disabled")
+    ) {
+      return;
+    }
     if (!document.querySelector("[data-catalog-root]")) return;
     event.preventDefault();
     loadCatalog(link.href, true);

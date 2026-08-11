@@ -49,7 +49,7 @@ class CatalogMixin:
         context['sort'] = get_sort(self.request)
         context['sort_options'] = SORT_OPTIONS
         context['filters'] = filters
-        context['has_active_filters'] = has_active_filters(filters)
+        context['has_active_filters'] = has_active_filters(filters, context['sort'])
         context['scroll_spy_categories'] = False
         paginator = context.get('paginator')
         page_obj = context.get('page_obj')

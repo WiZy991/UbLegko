@@ -34,14 +34,11 @@ def catalog_query(context, **updates):
 
 @register.simple_tag(takes_context=True)
 def catalog_clear_filters(context):
-    """Keep only sort and search query."""
+    """Сброс фильтров и сортировки; оставляем только поиск."""
     request = context.get('request')
     params = {}
     if request is not None:
-        sort = request.GET.get('sort')
         q = request.GET.get('q')
-        if sort:
-            params['sort'] = sort
         if q:
             params['q'] = q
     query = urlencode(params)

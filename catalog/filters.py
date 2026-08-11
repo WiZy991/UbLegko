@@ -11,8 +11,13 @@ def parse_catalog_filters(params) -> dict:
     }
 
 
-def has_active_filters(filters: dict) -> bool:
-    return bool(filters.get('in_stock') or filters.get('promo'))
+def has_active_filters(filters: dict, sort: str | None = None) -> bool:
+    """Сбросить — после любого фильтра или сортировки ≠ «По категориям»."""
+    if filters.get("in_stock") or filters.get("promo"):
+        return True
+    if sort and sort != "category":
+        return True
+    return False
 
 
 def apply_catalog_filters(qs, filters: dict):
