@@ -2987,7 +2987,7 @@ select.form-input {
     pointer-events: none;
   }
 
-  /* Шторка только с категориями; фильтры снаружи */
+  /* Шторка: категории сворачиваются; фильтры в том же sticky-блоке — без лага */
   .catalog-nav {
     order: 2;
     display: flex !important;
@@ -3001,7 +3001,7 @@ select.form-input {
     margin: 0;
     padding: 0;
     background: var(--bg);
-    border-bottom: 0;
+    border-bottom: 1px solid var(--line);
     touch-action: none;
     overscroll-behavior: none;
   }
@@ -3010,30 +3010,34 @@ select.form-input {
     content: none;
   }
 
-  .catalog-toolbar {
-    order: 3;
-    position: sticky;
-    top: calc(var(--header-sticky-height) + var(--catalog-nav-height, 0px) - 2px);
-    z-index: 44;
+  .catalog-nav .catalog-toolbar {
+    order: 2;
+    position: static;
+    top: auto;
+    z-index: auto;
     width: 100%;
-    margin: 0 0 8px;
-    padding: 6px 0 8px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
+    margin: 0;
+    padding: 4px 0 2px;
+    background: transparent;
+    border-bottom: 0;
+  }
+
+  .catalog-nav .catalog-toolbar::before {
+    content: none;
   }
 
   .catalog-body {
-    order: 4;
+    order: 3;
     width: 100%;
   }
 
-  /* Зацеп внизу шторки */
+  /* Зацеп внизу sticky-блока */
   .menu-toggle {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    order: 2;
+    order: 3;
     width: 100%;
     margin: 0;
     min-height: 28px;

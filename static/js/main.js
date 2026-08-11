@@ -40,8 +40,9 @@
     const headerH = sticky ? Math.round(sticky.getBoundingClientRect().height) : 0;
     const isMobile = window.matchMedia("(max-width: 900px)").matches;
     const navH = isMobile && catalogNav ? Math.round(catalogNav.getBoundingClientRect().height) : 0;
-    // Фильтры снова снаружи шторки — учитываем на мобиле и десктопе
-    const toolbarH = toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0;
+    // На мобиле фильтры внутри .catalog-nav — не дублируем их высоту
+    const toolbarH =
+      !isMobile && toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0;
     const overlap = navH || toolbarH ? 2 : 0;
     document.documentElement.style.setProperty("--header-sticky-height", `${headerH}px`);
     document.documentElement.style.setProperty("--catalog-nav-height", `${navH}px`);
@@ -359,7 +360,7 @@
       syncStickyHeaderHeight();
     };
 
-    const onPanelClick = (event) => {
+    const onNavClick = (event) => {
       if (!isMobile()) return;
       const link = event.target.closest("a[data-scroll-spy-link], a[data-catalog-nav]");
       if (!link) return;
@@ -402,7 +403,7 @@
     toggle.addEventListener("touchend", onTouchEnd);
     toggle.addEventListener("touchcancel", onTouchCancel);
     toggle.addEventListener("click", onToggleClick);
-    panel.addEventListener("click", onPanelClick);
+    shell.addEventListener("click", onNavClick);
     window.addEventListener("scroll", onWindowScroll, { passive: true });
     window.addEventListener("resize", applyStickyState);
     applyStickyState();
@@ -416,7 +417,7 @@
       toggle.removeEventListener("touchend", onTouchEnd);
       toggle.removeEventListener("touchcancel", onTouchCancel);
       toggle.removeEventListener("click", onToggleClick);
-      panel.removeEventListener("click", onPanelClick);
+      shell.removeEventListener("click", onNavClick);
       window.removeEventListener("scroll", onWindowScroll);
       window.removeEventListener("resize", applyStickyState);
     };
@@ -703,17 +704,17 @@
       bottom = Math.max(bottom, sticky.getBoundingClientRect().bottom);
     }
     if (isMobile && nav) {
-      // Открытая шторка перекрывает контент — для spy/скролла считаем только
-      // высоту свёрнутого бара (зацеп), иначе активной становится нижняя категория.
+      // Открытая шторка перекрывает контент — для spy/скролла считаем
+      // свёрнутый бар (зацеп + фильтры), иначе активной становится нижняя категория.
       const sheetOpen = panel && panel.classList.contains("is-open");
       if (sheetOpen) {
-        const handleH = toggle ? toggle.offsetHeight || 36 : 36;
-        bottom = Math.max(bottom, nav.getBoundingClientRect().top + handleH);
+        const handleH = toggle ? toggle.offsetHeight || 28 : 28;
+        const toolbarH = toolbar ? toolbar.offsetHeight || 0 : 0;
+        bottom = Math.max(bottom, nav.getBoundingClientRect().top + handleH + toolbarH);
       } else {
         bottom = Math.max(bottom, nav.getBoundingClientRect().bottom);
       }
-    }
-    if (toolbar) {
+    } else if (!isMobile && toolbar) {
       bottom = Math.max(bottom, toolbar.getBoundingClientRect().bottom);
     }
     if (!bottom) {
