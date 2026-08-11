@@ -16,18 +16,12 @@
 
   let suppressMenuToggleClick = false;
 
+  // Клик/тап по полоске не открывает шторку — только жест «потянуть»
   document.addEventListener("click", (event) => {
     const toggle = event.target.closest("[data-menu-toggle], #menu-toggle");
     if (!toggle) return;
-    if (suppressMenuToggleClick) {
-      event.preventDefault();
-      event.stopPropagation();
-      suppressMenuToggleClick = false;
-      return;
-    }
-    const sidebar = document.querySelector("[data-sidebar], #sidebar");
-    if (!sidebar) return;
-    setCatalogNavOpen(!sidebar.classList.contains("is-open"));
+    event.preventDefault();
+    suppressMenuToggleClick = false;
   });
 
   let skipStickySync = false;
@@ -620,12 +614,12 @@
       pendingH = null;
 
       if (!locked) {
+        // Тап без протяжки — не тогглим, возвращаем как было
         clearDragStyles();
         suppressMenuToggleClick = true;
-        bumpIgnore(IOS_SHEET_MS);
-        const next = !startOpen;
-        setCatalogNavOpen(next, { force: true });
-        userHoldOpen = next && isStuckUnderHeader();
+        bumpIgnore(120);
+        setCatalogNavOpen(startOpen, { animate: false, force: true });
+        userHoldOpen = startOpen && isStuckUnderHeader();
         return;
       }
 
