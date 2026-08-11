@@ -582,6 +582,21 @@ select {
   flex-shrink: 0;
 }
 
+.catalog-download {
+  gap: 6px;
+}
+
+.catalog-download__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.catalog-download__icon svg {
+  display: block;
+}
+
 .link-accent {
   color: var(--cyan);
 }
@@ -3695,7 +3710,8 @@ select.form-input {
 
   .topbar__right .pill-link,
   .topbar__right .pill-link--button,
-  .topbar__right .auth-link {
+  .topbar__right .auth-link,
+  .topbar__right .catalog-download {
     height: 28px;
     min-height: 28px;
     max-height: 28px;
@@ -3706,6 +3722,15 @@ select.form-input {
     flex-shrink: 0;
     box-sizing: border-box;
     border-width: 1.5px;
+  }
+
+  /* На мобиле компактнее: без иконки; корзина скрыта — Excel рядом с Кабинет/Вход */
+  .topbar__right .catalog-download {
+    gap: 0;
+  }
+
+  .topbar__right .catalog-download__icon {
+    display: none;
   }
 
   .topbar__right form {
@@ -3937,6 +3962,7 @@ select.form-input {
   .topbar__right .pill-link,
   .topbar__right .pill-link--button,
   .topbar__right .auth-link,
+  .topbar__right .catalog-download,
   .pill-link--max,
   .pill-link--gis {
     height: 26px;

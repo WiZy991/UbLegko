@@ -1,10 +1,13 @@
+from urllib.parse import quote
+
 from django.contrib import messages
 from django.contrib.auth.views import redirect_to_login
 from django.db.models import Case, IntegerField, When
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic import DetailView, ListView
 
+from .export_xlsx import build_catalog_xlsx
 from .filters import (
     apply_catalog_filters,
     has_active_filters,
@@ -274,3 +277,18 @@ def search_suggest(request):
         for p in ranked
     ]
     return JsonResponse({'results': results})
+
+
+def download_catalog_xlsx(request):
+    """Скачать весь видимый каталог в Excel с фото и полями с сайта."""
+    payload = build_catalog_xlsx(site_origin=request.build_absolute_uri('/').rstrip('/'))
+    filename = 'Каталог-УбираемсяЛегко.xlsx'
+    response = HttpResponse(
+        payload,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = (
+        f"attachment; filename=\"catalog.xlsx\"; filename*=UTF-8''{quote(filename)}"
+    )
+    response['Cache-Control'] = 'no-store'
+    return response
