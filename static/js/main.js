@@ -74,7 +74,8 @@
     window.__ublegkoObserveToolbar = observeToolbar;
   }
 
-  function setCatalogNavOpen(open) {
+  function setCatalogNavOpen(open, options = {}) {
+    const animate = options.animate !== false;
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
     const panel =
@@ -85,14 +86,25 @@
       shell.classList.remove("is-pulling");
       panel.style.maxHeight = "";
       panel.style.opacity = "";
+      panel.style.transition = "";
     }
     const wasOpen = panel.classList.contains("is-open");
     if (wasOpen === open) {
       syncStickyHeaderHeight();
       return;
     }
+    // При авто-сворачивании по скроллу без анимации — иначе фильтры «дотягиваются»
+    if (!animate && shell) {
+      shell.classList.add("is-instant");
+      panel.style.transition = "none";
+    }
     panel.classList.toggle("is-open", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (!animate && shell) {
+      void panel.offsetHeight;
+      panel.style.transition = "";
+      shell.classList.remove("is-instant");
+    }
     syncStickyHeaderHeight();
   }
 
@@ -159,17 +171,17 @@
     const applyStickyState = () => {
       if (!isMobile()) {
         userHoldOpen = false;
-        setCatalogNavOpen(true);
+        setCatalogNavOpen(true, { animate: false });
         return;
       }
       if (drag || Date.now() < ignoreScrollUntil) return;
       const stuck = isStuckUnderHeader();
       if (!stuck) {
         userHoldOpen = false;
-        setCatalogNavOpen(true);
+        setCatalogNavOpen(true, { animate: false });
         return;
       }
-      if (!userHoldOpen) setCatalogNavOpen(false);
+      if (!userHoldOpen) setCatalogNavOpen(false, { animate: false });
     };
 
     const measureFullH = () => {
@@ -366,13 +378,13 @@
       if (!link) return;
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
-      setCatalogNavOpen(false);
+      setCatalogNavOpen(false, { animate: false });
     };
 
     const onWindowScroll = () => {
       if (!isMobile()) {
         userHoldOpen = false;
-        setCatalogNavOpen(true);
+        setCatalogNavOpen(true, { animate: false });
         lastY = window.scrollY || 0;
         return;
       }
@@ -386,12 +398,12 @@
 
       if (!stuck) {
         userHoldOpen = false;
-        setCatalogNavOpen(true);
+        setCatalogNavOpen(true, { animate: false });
       } else if (userHoldOpen && y > lastY + 8) {
         userHoldOpen = false;
-        setCatalogNavOpen(false);
+        setCatalogNavOpen(false, { animate: false });
       } else if (!userHoldOpen) {
-        setCatalogNavOpen(false);
+        setCatalogNavOpen(false, { animate: false });
       }
 
       lastY = y;

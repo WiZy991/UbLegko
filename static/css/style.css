@@ -3017,7 +3017,7 @@ select.form-input {
     z-index: auto;
     width: 100%;
     margin: 0;
-    padding: 4px 0 2px;
+    padding: 8px 0 0;
     background: transparent;
     border-bottom: 0;
   }
@@ -3031,8 +3031,8 @@ select.form-input {
     width: 100%;
   }
 
-  /* Зацеп внизу sticky-блока */
-  .menu-toggle {
+  /* Зацеп сразу под фильтрами — без лишнего воздуха */
+  .catalog-nav .menu-toggle {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -3040,8 +3040,8 @@ select.form-input {
     order: 3;
     width: 100%;
     margin: 0;
-    min-height: 28px;
-    padding: 2px 0 8px;
+    min-height: 0;
+    padding: 4px 0 6px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -3055,20 +3055,23 @@ select.form-input {
     -webkit-user-select: none;
   }
 
-  .menu-toggle:active {
+  .catalog-nav .menu-toggle:active {
     cursor: grabbing;
   }
 
-  .menu-toggle__handle {
+  .catalog-nav .menu-toggle__handle {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 100%;
+    /* Увеличенная зона нажатия без визуального зазора */
+    padding: 6px 0 2px;
+    margin: -6px 0 0;
   }
 
-  .menu-toggle__grip {
+  .catalog-nav .menu-toggle__grip {
     display: block;
-    width: 44px;
+    width: 40px;
     height: 4px;
     border-radius: 999px;
     background: #8a96a0;
@@ -3102,12 +3105,16 @@ select.form-input {
     pointer-events: auto;
   }
 
-  .catalog-nav.is-pulling .catalog-sheet {
+  .catalog-nav.is-pulling .catalog-sheet,
+  .catalog-nav.is-instant .catalog-sheet {
     overflow: hidden;
+    transition: none !important;
+  }
+
+  .catalog-nav.is-pulling .catalog-sheet {
     opacity: 1;
     pointer-events: none;
     padding: 4px 0 2px;
-    transition: none !important;
   }
 
   .catalog-sheet .sidebar {
@@ -3175,28 +3182,30 @@ select.form-input {
     }
   }
 
-  .catalog-toolbar .sort-bar,
-  .sort-bar {
+  .catalog-nav .catalog-toolbar .sort-bar,
+  .catalog-nav .sort-bar {
     flex-wrap: wrap;
     align-items: center;
-    gap: 6px 10px;
+    gap: 2px 10px;
     padding: 0;
     margin: 0;
     border-bottom: 0;
     font-size: 0.82rem;
+    row-gap: 2px;
   }
 
-  .sort-bar a,
-  .sort-bar__filter {
+  .catalog-nav .sort-bar a,
+  .catalog-nav .sort-bar__filter {
     font-size: 0.82rem;
-    line-height: 1.25;
+    line-height: 1.2;
+    min-height: 0;
+    padding: 0;
   }
 
-  .sort-bar__reset {
+  .catalog-nav .sort-bar__reset {
     flex: 1 0 100%;
-    margin-left: 0;
-    margin-top: 2px;
-    padding-top: 2px;
+    margin: 0;
+    padding: 0;
     order: 99;
   }
 
