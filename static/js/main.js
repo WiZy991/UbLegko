@@ -78,9 +78,19 @@
   const IOS_SHEET_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
   const IOS_SHEET_MS = 480;
   // Глушим только программный sync после AJAX — скролл пользователя анимируется
+  const SHEET_OPEN_TOP_PX = 64;
   let sheetSyncQuietUntil = 0;
+  let sheetQuietTimer = 0;
+  let pendingSheetTopOpen = false;
+
   function quietSheetSync(ms = 900) {
     sheetSyncQuietUntil = Math.max(sheetSyncQuietUntil, Date.now() + ms);
+    if (sheetQuietTimer) clearTimeout(sheetQuietTimer);
+    // После тишины догоняем открытие у верха (иначе нужен «второй» скролл)
+    sheetQuietTimer = setTimeout(() => {
+      sheetQuietTimer = 0;
+      flushPendingSheetTopOpen();
+    }, ms + 40);
   }
   function isSheetSyncQuiet() {
     return Date.now() < sheetSyncQuietUntil;
@@ -96,6 +106,27 @@
     return (window.scrollY || 0) > 24;
   }
 
+  function isNearCatalogTop() {
+    return (window.scrollY || 0) <= SHEET_OPEN_TOP_PX;
+  }
+
+  function flushPendingSheetTopOpen() {
+    if (!window.matchMedia("(max-width: 900px)").matches) return;
+    if (!isNearCatalogTop()) {
+      pendingSheetTopOpen = false;
+      return;
+    }
+    const panel =
+      document.querySelector("[data-catalog-sheet]") ||
+      document.querySelector("[data-sidebar], #sidebar");
+    if (!panel || panel.classList.contains("is-open") || panel._ublegkoBusy) {
+      pendingSheetTopOpen = false;
+      return;
+    }
+    pendingSheetTopOpen = false;
+    setCatalogNavOpen(true, { animate: true });
+  }
+
   function syncCatalogSheetToScroll({ animate = false } = {}) {
     const panel =
       document.querySelector("[data-catalog-sheet]") ||
@@ -104,7 +135,8 @@
       if (panel) setCatalogNavOpen(true, { animate: false });
       return;
     }
-    setCatalogNavOpen(!isCatalogNavStuck(), { animate: Boolean(animate) });
+    // У верха всегда открываем — stuck после AJAX часто врёт
+    setCatalogNavOpen(isNearCatalogTop(), { animate: Boolean(animate) });
   }
 
   function settleSheetAfterScroll(ms = 900) {
@@ -113,9 +145,8 @@
     const done = () => {
       if (settled) return;
       settled = true;
-      quietSheetSync(120);
-      // После программного скролла — без анимации; дальше пользовательский скролл снова с анимацией
       syncCatalogSheetToScroll({ animate: false });
+      if (isNearCatalogTop()) pendingSheetTopOpen = false;
     };
     if ("onscrollend" in window) {
       window.addEventListener("scrollend", done, { once: true });
@@ -353,9 +384,20 @@
     let rafId = 0;
     let pendingH = null;
     let freezeY = 0;
+    // Антидребезг: не открывать/закрывать шторку пачкой при инерции скролла
+    let sheetGateUntil = 0;
+    let sheetGateTimer = 0;
 
     const bumpIgnore = (ms = 450) => {
       ignoreScrollUntil = Date.now() + ms;
+    };
+    const bumpSheetGate = (ms = IOS_SHEET_MS + 180) => {
+      sheetGateUntil = Date.now() + ms;
+      if (sheetGateTimer) clearTimeout(sheetGateTimer);
+      sheetGateTimer = setTimeout(() => {
+        sheetGateTimer = 0;
+        flushPendingSheetTopOpen();
+      }, ms + 40);
     };
 
     const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
@@ -581,7 +623,7 @@
       // Не трогаем шторку тут — loadCatalog синхронизирует без двойной анимации
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
-      quietSheetSync(1200);
+      quietSheetSync(900);
     };
 
     let scrollTicking = false;
@@ -597,30 +639,56 @@
           lastY = window.scrollY || 0;
           return;
         }
-        // Скролл пользователя всегда с анимацией. quiet — только для AJAX-sync.
-        if (drag || panel._ublegkoBusy || Date.now() < ignoreScrollUntil) {
-          lastY = window.scrollY || 0;
+
+        const y = window.scrollY || 0;
+        const nearTop = y <= SHEET_OPEN_TOP_PX;
+
+        if (
+          drag ||
+          panel._ublegkoBusy ||
+          Date.now() < ignoreScrollUntil ||
+          Date.now() < sheetGateUntil ||
+          isSheetSyncQuiet()
+        ) {
+          // Доезд до верха во время блокировки — откроем сразу после неё
+          if (nearTop) pendingSheetTopOpen = true;
+          lastY = y;
           return;
         }
 
-        const y = window.scrollY || 0;
+        if (pendingSheetTopOpen && nearTop) {
+          pendingSheetTopOpen = false;
+          userHoldOpen = false;
+          if (!panel.classList.contains("is-open")) {
+            bumpIgnore(IOS_SHEET_MS);
+            bumpSheetGate();
+            setCatalogNavOpen(true, { animate: true });
+          }
+          lastY = y;
+          return;
+        }
+
+        const dy = y - lastY;
         const stuck = isStuckUnderHeader();
         const isOpen = panel.classList.contains("is-open");
 
-        if (!stuck) {
+        // У верха всегда раскрываем (без !stuck — после фильтров/«Все товары» stuck врёт)
+        if (nearTop) {
           userHoldOpen = false;
+          pendingSheetTopOpen = false;
           if (!isOpen) {
             bumpIgnore(IOS_SHEET_MS);
+            bumpSheetGate();
             setCatalogNavOpen(true, { animate: true });
           }
-        } else if (userHoldOpen && y > lastY + 8) {
-          userHoldOpen = false;
-          if (isOpen) {
-            bumpIgnore(IOS_SHEET_MS);
-            setCatalogNavOpen(false, { animate: true });
-          }
-        } else if (!userHoldOpen && isOpen) {
+        } else if (isOpen && !userHoldOpen && stuck && dy >= 2) {
           bumpIgnore(IOS_SHEET_MS);
+          bumpSheetGate();
+          setCatalogNavOpen(false, { animate: true });
+        } else if (userHoldOpen && isOpen && stuck && dy > 10) {
+          userHoldOpen = false;
+          bumpIgnore(IOS_SHEET_MS);
+          bumpSheetGate();
           setCatalogNavOpen(false, { animate: true });
         }
 

@@ -965,39 +965,47 @@ select {
   row-gap: 6px;
 }
 
-.catalog-toolbar .sort-bar__reset {
-  flex: 1 0 100%;
-  margin-left: 0;
-  margin-top: 4px;
-  order: 99;
-}
-
 .sort-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   margin-bottom: 20px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--line);
 }
 
+.sort-bar__options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.sort-bar__actions {
+  display: flex;
+  justify-content: flex-end;
+  min-height: 1.2em;
+}
+
 .sort-bar a {
   color: var(--text-muted);
   font-size: 0.95rem;
+  font-weight: 600;
   line-height: 1.2;
   min-height: 0;
 }
 
+/* Только цвет — без смены font-weight, иначе кнопки «гуляют» */
 .sort-bar a.is-active {
   color: var(--cyan);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .sort-bar__filter {
   color: var(--text-muted);
   font-size: 0.95rem;
-  font-weight: 400;
+  font-weight: 600;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -1006,13 +1014,12 @@ select {
 
 .sort-bar__filter.is-active {
   color: var(--cyan) !important;
-  font-weight: 700;
+  font-weight: 600;
   background: transparent;
 }
 
 .sort-bar__reset {
-  margin-left: auto;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--cyan);
   text-decoration: underline;
   white-space: nowrap;
@@ -1020,15 +1027,13 @@ select {
 
 .sort-bar__reset.is-disabled {
   color: var(--text-muted);
-  font-weight: 600;
-  opacity: 0.45;
+  opacity: 0.4;
   pointer-events: none;
-  text-decoration: none;
+  text-decoration: underline;
 }
 
 .sort-bar__reset.is-active {
   color: var(--cyan);
-  font-weight: 700;
   opacity: 1;
   pointer-events: auto;
   text-decoration: underline;
@@ -3046,9 +3051,17 @@ select.form-input {
   .catalog-body {
     order: 3;
     width: 100%;
+    /* Зазор под sticky-шторкой, чтобы не наезжала на первый товар */
+    padding-top: 10px;
   }
 
-  /* Зацеп: hit-area на самой кнопке, без перекрытия фильтров сверху */
+  .catalog-body > .category-block:first-child,
+  .catalog-body > .category-block__title:first-child,
+  .catalog-body > .product-grid:first-child {
+    scroll-margin-top: calc(var(--sticky-offset) + 12px);
+  }
+
+  /* Зацеп: компактный, без вылета поверх первого товара */
   .catalog-nav .menu-toggle {
     display: flex;
     flex-direction: column;
@@ -3059,8 +3072,8 @@ select.form-input {
     z-index: 1;
     width: 100%;
     margin: 0;
-    min-height: 36px;
-    padding: 4px 0 10px;
+    min-height: 28px;
+    padding: 2px 0 6px;
     border: 0;
     border-radius: 0;
     background: var(--bg);
@@ -3075,15 +3088,7 @@ select.form-input {
   }
 
   .catalog-nav .menu-toggle::before {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: -16px;
-    z-index: 0;
-    /* Не перехватывает клики по «Акции» / «Сбросить» над зацепом */
-    pointer-events: none;
+    content: none;
   }
 
   .catalog-nav .menu-toggle:active {
@@ -3098,7 +3103,7 @@ select.form-input {
     justify-content: center;
     width: 100%;
     min-height: 0;
-    padding: 8px 0 6px;
+    padding: 6px 0 4px;
   }
 
   .catalog-nav .menu-toggle__grip {
@@ -3219,14 +3224,23 @@ select.form-input {
 
   .catalog-nav .catalog-toolbar .sort-bar,
   .catalog-nav .sort-bar {
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 2px 10px;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 4px;
     padding: 0;
     margin: 0;
     border-bottom: 0;
     font-size: 0.82rem;
-    row-gap: 2px;
+  }
+
+  .catalog-nav .sort-bar__options {
+    gap: 4px 12px;
+  }
+
+  .catalog-nav .sort-bar__actions {
+    justify-content: flex-end;
+    min-height: 1.15em;
   }
 
   .catalog-nav .sort-bar a,
@@ -3234,18 +3248,24 @@ select.form-input {
     position: relative;
     z-index: 2;
     font-size: 0.82rem;
+    font-weight: 600;
     line-height: 1.2;
     min-height: 0;
     padding: 0;
   }
 
+  .catalog-nav .sort-bar a.is-active,
+  .catalog-nav .sort-bar__filter.is-active {
+    font-weight: 600;
+  }
+
   .catalog-nav .sort-bar__reset {
-    flex: 1 0 100%;
     margin: 0;
     padding: 0;
-    order: 99;
     position: relative;
     z-index: 3;
+    white-space: nowrap;
+    font-weight: 600;
   }
 
   .product-grid {
