@@ -219,7 +219,6 @@ class ProductAdmin(admin.ModelAdmin):
         'price',
         'old_price',
         'status',
-        'is_promo',
         'is_visible',
         'thumb',
     )
@@ -230,7 +229,6 @@ class ProductAdmin(admin.ModelAdmin):
         'price',
         'old_price',
         'status',
-        'is_promo',
         'is_visible',
     )
     list_select_related = ('category',)
@@ -419,7 +417,6 @@ class ProductAdmin(admin.ModelAdmin):
             '<div><span class="product-row-detail__label">Ед. изм.</span><input class="vTextField product-row-detail__input" data-quick-field="unit" value="{}"></div>'
             '<div><span class="product-row-detail__label">Страна</span><input class="vTextField product-row-detail__input" data-quick-field="country" value="{}"></div>'
             '<div><span class="product-row-detail__label">Статус</span><select class="product-row-detail__input" data-quick-field="status">{}</select></div>'
-            '<div><span class="product-row-detail__label">Популярный</span><label><input type="checkbox" data-quick-field="is_featured" {}> Да</label></div>'
             '<div><span class="product-row-detail__label">Рейтинг</span> {} ({} оценок)</div>'
             '<div><span class="product-row-detail__label">Создан</span> {}</div>'
             '</div>'
@@ -444,7 +441,6 @@ class ProductAdmin(admin.ModelAdmin):
             obj.unit or '',
             obj.country or '',
             status_options,
-            'checked' if obj.is_featured else '',
             obj.rating,
             obj.reviews_count,
             obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—',
