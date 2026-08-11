@@ -2987,7 +2987,7 @@ select.form-input {
     pointer-events: none;
   }
 
-  /* Категории + фильтры в одной sticky-шторке; зацеп СНИЗУ */
+  /* Шторка только с категориями; фильтры снаружи */
   .catalog-nav {
     order: 2;
     display: flex !important;
@@ -2996,12 +2996,12 @@ select.form-input {
     top: calc(var(--header-sticky-height) - 2px);
     z-index: 45;
     box-sizing: border-box;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    margin: 0 calc(50% - 50vw);
-    padding: 0 var(--page-pad);
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    padding: 0;
     background: var(--bg);
-    border-bottom: 1px solid var(--line);
+    border-bottom: 0;
     touch-action: none;
     overscroll-behavior: none;
   }
@@ -3010,8 +3010,20 @@ select.form-input {
     content: none;
   }
 
-  .catalog-body {
+  .catalog-toolbar {
     order: 3;
+    position: sticky;
+    top: calc(var(--header-sticky-height) + var(--catalog-nav-height, 0px) - 2px);
+    z-index: 44;
+    width: 100%;
+    margin: 0 0 8px;
+    padding: 6px 0 8px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .catalog-body {
+    order: 4;
     width: 100%;
   }
 
@@ -3021,21 +3033,16 @@ select.form-input {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 4px;
     order: 2;
     width: 100%;
     margin: 0;
-    min-height: 36px;
-    padding: 4px 0 10px;
+    min-height: 28px;
+    padding: 2px 0 8px;
     border: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
     color: #44505a;
-    font: inherit;
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
     overscroll-behavior: none;
@@ -3046,14 +3053,6 @@ select.form-input {
 
   .menu-toggle:active {
     cursor: grabbing;
-  }
-
-  .menu-toggle__label {
-    display: none;
-  }
-
-  .menu-toggle[aria-expanded="false"] .menu-toggle__label {
-    display: block;
   }
 
   .menu-toggle__handle {
@@ -3071,7 +3070,6 @@ select.form-input {
     background: #8a96a0;
   }
 
-  /* Панель без «белой карточки» — один фон со страницей */
   .catalog-sheet {
     order: 1;
     box-sizing: border-box;
@@ -3094,7 +3092,7 @@ select.form-input {
 
   .catalog-sheet.is-open {
     max-height: min(70vh, 480px);
-    padding: 6px 0 2px;
+    padding: 4px 0 2px;
     overflow: auto;
     opacity: 1;
     pointer-events: auto;
@@ -3104,17 +3102,16 @@ select.form-input {
     overflow: hidden;
     opacity: 1;
     pointer-events: none;
-    padding: 6px 0 2px;
+    padding: 4px 0 2px;
     transition: none !important;
   }
 
   .catalog-sheet .sidebar {
     display: flex !important;
-    flex-direction: row !important;
     flex-wrap: wrap !important;
-    align-items: flex-start;
+    align-items: baseline;
     align-content: flex-start;
-    gap: 8px 10px;
+    gap: 8px 14px;
     position: static !important;
     top: auto !important;
     left: auto !important;
@@ -3123,8 +3120,8 @@ select.form-input {
     width: 100% !important;
     max-width: none !important;
     max-height: none !important;
-    margin: 0 0 8px !important;
-    padding: 0 !important;
+    margin: 0 !important;
+    padding: 4px 0 10px !important;
     overflow: visible !important;
     border: 0 !important;
     border-radius: 0 !important;
@@ -3132,18 +3129,6 @@ select.form-input {
     box-shadow: none !important;
     opacity: 1 !important;
     pointer-events: auto !important;
-  }
-
-  .catalog-sheet .catalog-toolbar {
-    position: static !important;
-    top: auto !important;
-    z-index: auto;
-    order: unset;
-    margin: 0;
-    padding: 8px 0 2px;
-    background: transparent;
-    border-bottom: 0;
-    border-top: 1px solid var(--line);
   }
 
   .sidebar__body {
@@ -3154,33 +3139,35 @@ select.form-input {
     display: none !important;
   }
 
+  /* Как раньше: обычные подчёркнутые ссылки */
   .sidebar a {
-    display: inline-flex !important;
-    align-items: center;
+    display: inline !important;
     width: auto !important;
     max-width: 100%;
-    padding: 8px 12px !important;
+    padding: 0 !important;
     border: 0 !important;
     border-left: 0 !important;
-    border-radius: 12px;
-    background: rgba(244, 247, 249, 0.95);
-    color: #1b2228;
-    font-size: 0.88rem;
-    font-weight: 650;
-    line-height: 1.25;
-    text-decoration: none;
-    box-shadow: 0 1px 3px rgba(15, 30, 40, 0.08);
+    border-radius: 0;
+    background: transparent !important;
+    color: #111;
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+    box-shadow: none !important;
   }
 
   .sidebar a.is-active {
     color: #0a5f73;
-    background: rgba(0, 183, 232, 0.16);
+    background: transparent !important;
   }
 
   @media (hover: hover) and (pointer: fine) {
     .sidebar a:hover {
       color: #0a5f73;
-      background: rgba(0, 183, 232, 0.16);
+      background: transparent !important;
     }
   }
 
@@ -3188,16 +3175,16 @@ select.form-input {
   .sort-bar {
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px 8px;
+    gap: 6px 10px;
     padding: 0;
     margin: 0;
     border-bottom: 0;
-    font-size: 0.72rem;
+    font-size: 0.82rem;
   }
 
   .sort-bar a,
   .sort-bar__filter {
-    font-size: 0.72rem;
+    font-size: 0.82rem;
     line-height: 1.25;
   }
 

@@ -40,9 +40,8 @@
     const headerH = sticky ? Math.round(sticky.getBoundingClientRect().height) : 0;
     const isMobile = window.matchMedia("(max-width: 900px)").matches;
     const navH = isMobile && catalogNav ? Math.round(catalogNav.getBoundingClientRect().height) : 0;
-    // На мобилке фильтры внутри шторки — не дублируем высоту
-    const toolbarH =
-      !isMobile && toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0;
+    // Фильтры снова снаружи шторки — учитываем на мобиле и десктопе
+    const toolbarH = toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0;
     const overlap = navH || toolbarH ? 2 : 0;
     document.documentElement.style.setProperty("--header-sticky-height", `${headerH}px`);
     document.documentElement.style.setProperty("--catalog-nav-height", `${navH}px`);
@@ -96,7 +95,14 @@
     syncStickyHeaderHeight();
   }
 
+  let catalogNavCollapseCleanup = null;
+
   function initMobileCatalogNavCollapse() {
+    if (typeof catalogNavCollapseCleanup === "function") {
+      catalogNavCollapseCleanup();
+      catalogNavCollapseCleanup = null;
+    }
+
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const anchor = document.querySelector("[data-catalog-nav-anchor]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
@@ -205,13 +211,13 @@
       stopScrollFreeze();
     };
 
-    toggle.addEventListener("click", () => {
+    const onToggleClick = () => {
       if (drag) return;
       bumpIgnore(500);
       requestAnimationFrame(() => {
         userHoldOpen = panel.classList.contains("is-open") && isStuckUnderHeader();
       });
-    });
+    };
 
     const onDocTouchMove = (event) => {
       if (!drag) return;
@@ -353,57 +359,70 @@
       syncStickyHeaderHeight();
     };
 
-    document.addEventListener("touchmove", onDocTouchMove, { passive: false, capture: true });
-    toggle.addEventListener("touchstart", onTouchStart, { passive: false });
-    toggle.addEventListener("touchmove", onTouchMove, { passive: false });
-    toggle.addEventListener("touchend", onTouchEnd);
-    toggle.addEventListener("touchcancel", onTouchCancel);
-
-    panel.addEventListener("click", (event) => {
+    const onPanelClick = (event) => {
       if (!isMobile()) return;
       const link = event.target.closest("a[data-scroll-spy-link], a[data-catalog-nav]");
       if (!link) return;
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
       setCatalogNavOpen(false);
-    });
+    };
 
-    window.addEventListener(
-      "scroll",
-      () => {
-        if (!isMobile()) {
-          userHoldOpen = false;
-          setCatalogNavOpen(true);
-          lastY = window.scrollY || 0;
-          return;
-        }
-        if (drag || Date.now() < ignoreScrollUntil) {
-          lastY = window.scrollY || 0;
-          return;
-        }
+    const onWindowScroll = () => {
+      if (!isMobile()) {
+        userHoldOpen = false;
+        setCatalogNavOpen(true);
+        lastY = window.scrollY || 0;
+        return;
+      }
+      if (drag || Date.now() < ignoreScrollUntil) {
+        lastY = window.scrollY || 0;
+        return;
+      }
 
-        const y = window.scrollY || 0;
-        const stuck = isStuckUnderHeader();
+      const y = window.scrollY || 0;
+      const stuck = isStuckUnderHeader();
 
-        if (!stuck) {
-          userHoldOpen = false;
-          setCatalogNavOpen(true);
-        } else if (userHoldOpen && y > lastY + 8) {
-          userHoldOpen = false;
-          setCatalogNavOpen(false);
-        } else if (!userHoldOpen) {
-          setCatalogNavOpen(false);
-        }
+      if (!stuck) {
+        userHoldOpen = false;
+        setCatalogNavOpen(true);
+      } else if (userHoldOpen && y > lastY + 8) {
+        userHoldOpen = false;
+        setCatalogNavOpen(false);
+      } else if (!userHoldOpen) {
+        setCatalogNavOpen(false);
+      }
 
-        lastY = y;
-      },
-      { passive: true }
-    );
+      lastY = y;
+    };
 
+    document.addEventListener("touchmove", onDocTouchMove, { passive: false, capture: true });
+    toggle.addEventListener("touchstart", onTouchStart, { passive: false });
+    toggle.addEventListener("touchmove", onTouchMove, { passive: false });
+    toggle.addEventListener("touchend", onTouchEnd);
+    toggle.addEventListener("touchcancel", onTouchCancel);
+    toggle.addEventListener("click", onToggleClick);
+    panel.addEventListener("click", onPanelClick);
+    window.addEventListener("scroll", onWindowScroll, { passive: true });
     window.addEventListener("resize", applyStickyState);
     applyStickyState();
+
+    catalogNavCollapseCleanup = () => {
+      drag = null;
+      clearDragStyles();
+      document.removeEventListener("touchmove", onDocTouchMove, { capture: true });
+      toggle.removeEventListener("touchstart", onTouchStart);
+      toggle.removeEventListener("touchmove", onTouchMove);
+      toggle.removeEventListener("touchend", onTouchEnd);
+      toggle.removeEventListener("touchcancel", onTouchCancel);
+      toggle.removeEventListener("click", onToggleClick);
+      panel.removeEventListener("click", onPanelClick);
+      window.removeEventListener("scroll", onWindowScroll);
+      window.removeEventListener("resize", applyStickyState);
+    };
   }
   initMobileCatalogNavCollapse();
+  window.__ublegkoRefreshCatalogNav = initMobileCatalogNavCollapse;
 
   const cartQtyState = new WeakMap();
 
@@ -640,27 +659,30 @@
   let categorySpyLockUntil = 0;
 
   function getActiveCatalogCategoryId() {
-    const active = document.querySelector("[data-scroll-spy-link].is-active");
-    if (active) {
-      return active.getAttribute("data-scroll-spy-link");
+    // Считаем по геометрии: класс .is-active мог остаться от открытой шторки
+    // (там линия активации уезжала вниз и подсвечивалась нижняя категория).
+    const sections = Array.from(document.querySelectorAll("[data-category-section]"));
+    if (sections.length) {
+      const line = stickyStackBottomPx() + 8;
+      let currentId = null;
+      for (const section of sections) {
+        const title = section.querySelector(".category-block__title") || section;
+        if (title.getBoundingClientRect().top <= line) {
+          currentId = section.getAttribute("data-category-section");
+        } else {
+          break;
+        }
+      }
+      if (currentId) return currentId;
     }
     if (location.hash && location.hash.startsWith("#category-")) {
       return location.hash.slice(1);
     }
-    // Fallback: какая секция сейчас под шапкой
-    const sections = Array.from(document.querySelectorAll("[data-category-section]"));
-    if (!sections.length) return null;
-    const line = stickyStackBottomPx() + 8;
-    let currentId = null;
-    for (const section of sections) {
-      const title = section.querySelector(".category-block__title") || section;
-      if (title.getBoundingClientRect().top <= line) {
-        currentId = section.getAttribute("data-category-section");
-      } else {
-        break;
-      }
+    const active = document.querySelector("[data-scroll-spy-link].is-active");
+    if (active) {
+      return active.getAttribute("data-scroll-spy-link");
     }
-    return currentId;
+    return null;
   }
 
   function stickyOffsetPx() {
@@ -673,12 +695,23 @@
     const sticky = document.querySelector(".header-sticky");
     const nav = document.querySelector("[data-catalog-nav-shell]");
     const toolbar = document.querySelector("[data-catalog-toolbar]");
+    const panel = document.querySelector("[data-catalog-sheet]");
+    const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
+    const isMobile = window.matchMedia("(max-width: 900px)").matches;
     let bottom = 0;
     if (sticky) {
       bottom = Math.max(bottom, sticky.getBoundingClientRect().bottom);
     }
-    if (nav && window.matchMedia("(max-width: 900px)").matches) {
-      bottom = Math.max(bottom, nav.getBoundingClientRect().bottom);
+    if (isMobile && nav) {
+      // Открытая шторка перекрывает контент — для spy/скролла считаем только
+      // высоту свёрнутого бара (зацеп), иначе активной становится нижняя категория.
+      const sheetOpen = panel && panel.classList.contains("is-open");
+      if (sheetOpen) {
+        const handleH = toggle ? toggle.offsetHeight || 36 : 36;
+        bottom = Math.max(bottom, nav.getBoundingClientRect().top + handleH);
+      } else {
+        bottom = Math.max(bottom, nav.getBoundingClientRect().bottom);
+      }
     }
     if (toolbar) {
       bottom = Math.max(bottom, toolbar.getBoundingClientRect().bottom);
@@ -692,30 +725,61 @@
   function scrollToCategorySection(target, { behavior = "smooth" } = {}) {
     if (!target) return;
     syncStickyHeaderHeight();
+    const mark = target.querySelector(".category-block__title") || target;
     const offset = stickyStackBottomPx() + 12;
-    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+    const top = mark.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior });
+  }
+
+  function scrollToCatalogTop({ behavior = "auto" } = {}) {
+    const root = document.querySelector("[data-catalog-root]");
+    if (!root) {
+      window.scrollTo({ top: 0, behavior });
+      return;
+    }
+    syncStickyHeaderHeight();
+    const offset = stickyStackBottomPx() + 8;
+    const top = root.getBoundingClientRect().top + window.scrollY - offset;
     window.scrollTo({ top: Math.max(0, top), behavior });
   }
 
   function restoreScrollAfterCatalogFilter(categoryId, prevScrollY) {
-    categorySpyLockUntil = Date.now() + 900;
-    const target = categoryId ? document.getElementById(categoryId) : null;
-    if (target) {
-      scrollToCategorySection(target, { behavior: "auto" });
-      const url = new URL(window.location.href);
-      url.hash = categoryId;
-      history.replaceState({ catalogAjax: true }, "", `${url.pathname}${url.search}${url.hash}`);
-      return true;
-    }
-    // Не прыгаем вверх к шапке — оставляем позицию, только не даём уехать за низ страницы
-    const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    window.scrollTo({ top: Math.min(prevScrollY, maxY), behavior: "auto" });
-    if (location.hash) {
-      const url = new URL(window.location.href);
-      url.hash = "";
-      history.replaceState({ catalogAjax: true }, "", `${url.pathname}${url.search}`);
-    }
-    return false;
+    categorySpyLockUntil = Date.now() + 1200;
+    const run = () => {
+      let target = categoryId ? document.getElementById(categoryId) : null;
+      if (!target) {
+        target = document.querySelector("[data-category-section]");
+      }
+      if (target) {
+        const id = target.id || target.getAttribute("data-category-section");
+        scrollToCategorySection(target, { behavior: "auto" });
+        if (id) {
+          const url = new URL(window.location.href);
+          url.hash = id;
+          history.replaceState(
+            { catalogAjax: true },
+            "",
+            `${url.pathname}${url.search}${url.hash}`
+          );
+        }
+        return;
+      }
+
+      // Контент укоротился (фильтр) — не клампим старый scrollY в футер
+      const maxY = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+      if (Number.isFinite(prevScrollY) && prevScrollY <= maxY + 24) {
+        window.scrollTo({ top: prevScrollY, behavior: "auto" });
+      } else {
+        scrollToCatalogTop({ behavior: "auto" });
+      }
+      if (location.hash) {
+        const url = new URL(window.location.href);
+        url.hash = "";
+        history.replaceState({ catalogAjax: true }, "", `${url.pathname}${url.search}`);
+      }
+    };
+    // После replaceWith нужны кадры на layout, иначе координаты секций врёт
+    requestAnimationFrame(() => requestAnimationFrame(run));
   }
 
   function initCategoryScrollSpy(options = {}) {
@@ -770,6 +834,32 @@
     window.addEventListener("scroll", categorySpyScrollHandler, { passive: true });
     updateActiveFromScroll();
 
+    function goToCategory(id, target, { behavior = "smooth" } = {}) {
+      categorySpyLockUntil = Date.now() + 1400;
+      setActive(id);
+      const isMobile = window.matchMedia("(max-width: 900px)").matches;
+      const panel = document.querySelector("[data-catalog-sheet]");
+
+      const doScroll = () => {
+        syncStickyHeaderHeight();
+        scrollToCategorySection(target, { behavior });
+        history.replaceState(null, "", `#${id}`);
+      };
+
+      if (isMobile && panel && panel.classList.contains("is-open")) {
+        // Мгновенно сворачиваем шторку, чтобы offset не считался по открытой панели
+        panel.style.transition = "none";
+        setCatalogNavOpen(false);
+        // force reflow
+        void panel.offsetHeight;
+        panel.style.transition = "";
+        requestAnimationFrame(() => requestAnimationFrame(doScroll));
+        return;
+      }
+      if (isMobile) setCatalogNavOpen(false);
+      requestAnimationFrame(() => requestAnimationFrame(doScroll));
+    }
+
     links.forEach((link) => {
       if (link.dataset.scrollBound === "1") return;
       link.dataset.scrollBound = "1";
@@ -778,19 +868,8 @@
         const target = id ? document.getElementById(id) : null;
         if (!target) return;
         event.preventDefault();
-        categorySpyLockUntil = Date.now() + 1200;
-        setActive(id);
         link.blur();
-        // Сначала сворачиваем категории, ждём пересчёт sticky-высот, потом скроллим
-        if (window.matchMedia("(max-width: 900px)").matches) {
-          setCatalogNavOpen(false);
-        }
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            scrollToCategorySection(target, { behavior: "smooth" });
-            history.replaceState(null, "", `#${id}`);
-          });
-        });
+        goToCategory(id, target, { behavior: "smooth" });
       });
     });
 
@@ -798,15 +877,8 @@
       const id = location.hash.slice(1);
       const target = document.getElementById(id);
       if (target) {
-        categorySpyLockUntil = Date.now() + 1200;
         setTimeout(() => {
-          if (window.matchMedia("(max-width: 900px)").matches) {
-            setCatalogNavOpen(false);
-          }
-          requestAnimationFrame(() => {
-            scrollToCategorySection(target, { behavior: "smooth" });
-            setActive(id);
-          });
+          goToCategory(id, target, { behavior: "smooth" });
         }, 50);
       }
     }
@@ -850,6 +922,9 @@
       syncStickyHeaderHeight();
       if (typeof window.__ublegkoObserveToolbar === "function") {
         window.__ublegkoObserveToolbar();
+      }
+      if (typeof window.__ublegkoRefreshCatalogNav === "function") {
+        window.__ublegkoRefreshCatalogNav();
       }
 
       const enteredCategoryPage =

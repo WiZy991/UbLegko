@@ -1,7 +1,6 @@
 {% load catalog_extras %}
 <div class="catalog-nav-anchor" data-catalog-nav-anchor aria-hidden="true"></div>
 <div class="catalog-nav" data-catalog-nav-shell>
-  {# Сначала панель (категории → фильтры), зацеп снизу — как на эскизе #}
   <div class="catalog-sheet is-open" id="catalog-sheet" data-catalog-sheet data-sidebar>
     <aside class="sidebar" id="sidebar">
       <div class="sidebar__body">
@@ -36,7 +35,6 @@
         {% endif %}
       </div>
     </aside>
-    {% include "includes/catalog_toolbar.html" %}
   </div>
   <button
     type="button"
@@ -44,11 +42,10 @@
     id="menu-toggle"
     aria-expanded="true"
     aria-controls="catalog-sheet"
-    aria-label="Категории и сортировка"
+    aria-label="Категории"
     title="Потяните вниз"
     data-menu-toggle
   >
-    <span class="menu-toggle__label">Сортировка</span>
     <span class="menu-toggle__handle" aria-hidden="true">
       <span class="menu-toggle__grip"></span>
     </span>
