@@ -351,8 +351,8 @@
       if (!stuck) {
         userHoldOpen = false;
         if (!panel.classList.contains("is-open")) {
-          bumpIgnore(120);
-          setCatalogNavOpen(true, { animate: false });
+          bumpIgnore(IOS_SHEET_MS);
+          setCatalogNavOpen(true);
         }
         return;
       }
@@ -559,9 +559,8 @@
         if (!stuck) {
           userHoldOpen = false;
           if (!isOpen) {
-            // Вверху открываем сразу в потоке — без «накрывания» товаров
-            bumpIgnore(120);
-            setCatalogNavOpen(true, { animate: false });
+            bumpIgnore(IOS_SHEET_MS);
+            setCatalogNavOpen(true);
           }
         } else if (userHoldOpen && y > lastY + 8) {
           userHoldOpen = false;
