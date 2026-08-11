@@ -117,6 +117,12 @@ class CheckoutForm(forms.Form):
             if not self.is_bound:
                 default = addresses.filter(is_default=True).first() or addresses.first()
                 self.fields['saved_address'].initial = default
+            # Самовывоз — адрес не нужен, не валим форму из‑за hidden select
+            method = ''
+            if self.is_bound:
+                method = (self.data.get('delivery_method') or '').strip()
+            if method == self.DELIVERY_PICKUP:
+                self.fields['saved_address'].required = False
         else:
             self.fields.pop('saved_address')
 

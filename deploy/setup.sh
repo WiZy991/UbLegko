@@ -50,9 +50,21 @@ DJANGO_SECRET_KEY=${SECRET}
 ALLOWED_HOSTS=${SERVER_IP},localhost,127.0.0.1
 SESSION_COOKIE_SECURE=0
 CSRF_COOKIE_SECURE=0
+
+# ВАЖНО: без SMTP заявки сохраняются, но на почту НЕ приходят!
+# Раскомментируйте и заполните (см. deploy/env.example):
 EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+# EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+# EMAIL_HOST=smtp.mail.ru
+# EMAIL_PORT=587
+# EMAIL_USE_TLS=1
+# EMAIL_USE_SSL=0
+# EMAIL_HOST_USER=your-mailbox@mail.ru
+# EMAIL_HOST_PASSWORD=your-smtp-password
+# DEFAULT_FROM_EMAIL=your-mailbox@mail.ru
+# ORDER_EMAIL_TO=pro-brite_uss@mail.ru
 EOF
-  echo ">> Создан файл .env"
+  echo ">> Создан файл .env (настройте SMTP, иначе письма заявок не уходят!)"
 else
   echo ">> .env уже есть — не перезаписываю"
 fi

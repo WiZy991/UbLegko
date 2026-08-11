@@ -50,3 +50,13 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', '1') == '1'
 CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', '1') == '1'
 X_FRAME_OPTIONS = 'DENY'
+
+_backend = (EMAIL_BACKEND or '').lower()
+if 'console' in _backend or 'dummy' in _backend or 'locmem' in _backend:
+    import logging
+
+    logging.getLogger(__name__).error(
+        'EMAIL_BACKEND=%s — заявки не будут приходить на почту. '
+        'Задайте SMTP в .env (см. deploy/env.example / .env.example).',
+        EMAIL_BACKEND,
+    )

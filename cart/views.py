@@ -199,14 +199,17 @@ def checkout(request):
                     quantity=item['quantity'],
                 )
             email_ok = _send_order_email(order)
+            if order.email_sent != email_ok:
+                order.email_sent = email_ok
+                order.save(update_fields=['email_sent'])
             cart.clear()
             if email_ok:
                 messages.success(request, f'Заявка №{order.pk} отправлена. Мы свяжемся с вами.')
             else:
                 messages.warning(
                     request,
-                    f'Заявка №{order.pk} сохранена, но письмо не удалось отправить. '
-                    'Мы всё равно обработаем заявку — свяжемся по телефону или email.',
+                    f'Заявка №{order.pk} сохранена, но письмо на почту магазина не ушло. '
+                    'Мы всё равно обработаем заявку — проверьте заявки в админке.',
                 )
             return redirect('cart:order_success', order_id=order.pk)
     else:
@@ -227,23 +230,63 @@ def order_success(request, order_id):
     return render(request, 'cart/order_success.html', {'order': order})
 
 
+def _is_real_smtp_backend():
+    backend = (settings.EMAIL_BACKEND or '').lower()
+    return 'smtp' in backend and 'console' not in backend and 'dummy' not in backend and 'locmem' not in backend
+
+
 def _send_order_email(order):
-    """Отправляет письмо о заявке. Возвращает True при успехе."""
+    """Отправляет письмо о заявке магазину. Возвращает True при реальной отправке."""
     from core.models import SiteSettings
 
     site = SiteSettings.load()
-    to_email = site.order_email or settings.ORDER_EMAIL_TO
+    to_email = (site.order_email or settings.ORDER_EMAIL_TO or '').strip()
+    if not to_email:
+        logger.error('Нет адреса ORDER_EMAIL / SiteSettings.order_email для заявки №%s', order.pk)
+        return False
+
+    # Подтягиваем позиции — иначе письмо может уйти пустым при ленивом queryset
+    order = (
+        Order.objects.prefetch_related('items')
+        .filter(pk=order.pk)
+        .first()
+        or order
+    )
+
     subject = f'Заявка №{order.pk} с сайта {site.brand_name}'
     body = render_to_string('cart/email/order.txt', {'order': order, 'site': site})
+    from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
+    client_email = (order.email or '').strip()
+
+    # Reply-To вместо CC: у Mail.ru/Beget CC на чужой ящик часто роняет всю отправку
     email = EmailMessage(
         subject=subject,
         body=body,
-        from_email=settings.DEFAULT_FROM_EMAIL,
+        from_email=from_email,
         to=[to_email],
-        cc=[order.email] if order.email else None,
+        reply_to=[client_email] if client_email else None,
     )
     try:
-        email.send(fail_silently=False)
+        if not _is_real_smtp_backend():
+            # Console/dummy «успешно» печатают в лог, но на почту ничего не приходит
+            email.send(fail_silently=False)
+            logger.error(
+                'Заявка №%s: EMAIL_BACKEND=%s — письмо не ушло на почту. '
+                'Настройте SMTP в .env (см. .env.example).',
+                order.pk,
+                settings.EMAIL_BACKEND,
+            )
+            return False
+
+        sent = email.send(fail_silently=False)
+        if not sent:
+            logger.error(
+                'Заявка №%s: SMTP вернул 0 (письмо на %s не принято)',
+                order.pk,
+                to_email,
+            )
+            return False
+        logger.info('Заявка №%s: письмо отправлено на %s', order.pk, to_email)
         return True
     except Exception:
         logger.exception('Не удалось отправить письмо по заявке №%s на %s', order.pk, to_email)

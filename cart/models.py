@@ -64,6 +64,7 @@ class Order(models.Model):
         choices=Status.choices,
         default=Status.NEW,
     )
+    email_sent = models.BooleanField('Письмо отправлено', default=False)
     created_at = models.DateTimeField('Создана', auto_now_add=True)
 
     class Meta:
