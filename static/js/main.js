@@ -76,10 +76,10 @@
 
   // iOS-like: одна анимация height (WAAPI), без grid 0fr/1fr
   const IOS_SHEET_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
-  const IOS_SHEET_MS = 420;
-  // Глушим open/close по скроллу после клика по фильтрам/категориям (AJAX + scroll restore)
+  const IOS_SHEET_MS = 480;
+  // Глушим только программный sync после AJAX — скролл пользователя анимируется
   let sheetSyncQuietUntil = 0;
-  function quietSheetSync(ms = 2800) {
+  function quietSheetSync(ms = 900) {
     sheetSyncQuietUntil = Math.max(sheetSyncQuietUntil, Date.now() + ms);
   }
   function isSheetSyncQuiet() {
@@ -107,13 +107,14 @@
     setCatalogNavOpen(!isCatalogNavStuck(), { animate: Boolean(animate) });
   }
 
-  function settleSheetAfterScroll(ms = 2800) {
+  function settleSheetAfterScroll(ms = 900) {
     quietSheetSync(ms);
     let settled = false;
     const done = () => {
       if (settled) return;
       settled = true;
-      quietSheetSync(200);
+      quietSheetSync(120);
+      // После программного скролла — без анимации; дальше пользовательский скролл снова с анимацией
       syncCatalogSheetToScroll({ animate: false });
     };
     if ("onscrollend" in window) {
@@ -577,11 +578,10 @@
       if (!isMobile()) return;
       const link = event.target.closest("a[data-scroll-spy-link], a[data-catalog-nav]");
       if (!link) return;
-      // Не анимируем шторку тут — иначе вместе с loadCatalog получается «закрылась/открылась» дважды
+      // Не трогаем шторку тут — loadCatalog синхронизирует без двойной анимации
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
-      quietSheetSync(2800);
-      bumpIgnore(2800);
+      quietSheetSync(1200);
     };
 
     let scrollTicking = false;
@@ -597,14 +597,8 @@
           lastY = window.scrollY || 0;
           return;
         }
-        // Не блокируем скролл-сворачивание из‑за skipStickySync (он для ResizeObserver).
-        // Блокируем жест/анимацию и «тихий» период после клика по фильтрам.
-        if (
-          drag ||
-          panel._ublegkoBusy ||
-          Date.now() < ignoreScrollUntil ||
-          isSheetSyncQuiet()
-        ) {
+        // Скролл пользователя всегда с анимацией. quiet — только для AJAX-sync.
+        if (drag || panel._ublegkoBusy || Date.now() < ignoreScrollUntil) {
           lastY = window.scrollY || 0;
           return;
         }
@@ -617,17 +611,17 @@
           userHoldOpen = false;
           if (!isOpen) {
             bumpIgnore(IOS_SHEET_MS);
-            setCatalogNavOpen(true);
+            setCatalogNavOpen(true, { animate: true });
           }
         } else if (userHoldOpen && y > lastY + 8) {
           userHoldOpen = false;
           if (isOpen) {
             bumpIgnore(IOS_SHEET_MS);
-            setCatalogNavOpen(false);
+            setCatalogNavOpen(false, { animate: true });
           }
         } else if (!userHoldOpen && isOpen) {
           bumpIgnore(IOS_SHEET_MS);
-          setCatalogNavOpen(false);
+          setCatalogNavOpen(false, { animate: true });
         }
 
         lastY = y;
@@ -1021,10 +1015,10 @@
     // После replaceWith нужны кадры на layout, иначе координаты секций врёт
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        quietSheetSync(2800);
+        quietSheetSync(900);
         run();
         syncCatalogSheetToScroll({ animate: false });
-        settleSheetAfterScroll(2800);
+        settleSheetAfterScroll(900);
       })
     );
   }
@@ -1094,13 +1088,13 @@
       };
 
       if (isMobile) {
-        quietSheetSync(2800);
+        quietSheetSync(900);
         // Перед прыжком к секции сворачиваем без анимации — иначе offset врёт
         setCatalogNavOpen(false, { animate: false });
         requestAnimationFrame(() =>
           requestAnimationFrame(() => {
             doScroll();
-            settleSheetAfterScroll(2800);
+            settleSheetAfterScroll(900);
           })
         );
         return;
@@ -1173,7 +1167,7 @@
         }
       }
 
-      quietSheetSync(2800);
+      quietSheetSync(900);
       root.replaceWith(next);
       const title = doc.querySelector("title");
       if (title) document.title = title.textContent;
@@ -1195,7 +1189,7 @@
       if (enteredCategoryPage) {
         categorySpyLockUntil = Date.now() + 900;
         window.scrollTo({ top: 0, behavior: "auto" });
-        quietSheetSync(2800);
+        quietSheetSync(900);
         syncCatalogSheetToScroll({ animate: false });
       } else {
         restoreScrollAfterCatalogFilter(preferCategoryId, prevScrollY);

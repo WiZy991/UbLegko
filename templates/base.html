@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260811filt3">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260811anim4">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -177,11 +177,13 @@
 
   <main class="page">
     <div class="container">
-      {% if request.path != '/' %}
-        <nav class="nav-back-wrap" aria-label="Навигация">
-          <a class="nav-back" href="{% url 'catalog:home' %}">← Назад в каталог</a>
-        </nav>
-      {% endif %}
+      {% with uname=request.resolver_match.url_name|default:'' %}
+        {% if uname != 'home' and uname != 'category' and uname != 'search' %}
+          <nav class="nav-back-wrap" aria-label="Навигация">
+            <a class="nav-back" href="{% url 'catalog:home' %}">← Назад в каталог</a>
+          </nav>
+        {% endif %}
+      {% endwith %}
       {% if messages %}
         <ul class="messages">
           {% for message in messages %}
@@ -280,7 +282,7 @@
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="{% static 'js/main.js' %}?v=20260811filt3"></script>
+  <script src="{% static 'js/main.js' %}?v=20260811anim4"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
