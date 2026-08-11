@@ -5,18 +5,20 @@
 {% block content %}
 <div class="layout" data-catalog-root>
   {% include "includes/sidebar.html" %}
-  <div>
+  <div class="catalog-main">
     <h2 class="category-block__title">Результаты поиска{% if query %}: «{{ query }}»{% endif %}</h2>
     <div class="category-block__line"></div>
     {% include "includes/catalog_toolbar.html" %}
-    <div class="product-grid">
-      {% for product in products %}
-        {% include "includes/product_card.html" %}
-      {% empty %}
-        <div class="empty-state">Ничего не найдено</div>
-      {% endfor %}
+    <div class="catalog-body">
+      <div class="product-grid">
+        {% for product in products %}
+          {% include "includes/product_card.html" %}
+        {% empty %}
+          <div class="empty-state">Ничего не найдено</div>
+        {% endfor %}
+      </div>
+      {% include "includes/pagination.html" %}
     </div>
-    {% include "includes/pagination.html" %}
   </div>
 </div>
 {% endblock %}
