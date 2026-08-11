@@ -1,4 +1,55 @@
-/* Скрываем выбор Bootswatch — оставляем только светлую/тёмную схему */
+/* Скрываем стандартные кнопки FK: карандаш / плюс / крестик / глаз */
+.related-widget-wrapper-link,
+.related-widget-wrapper > a,
+#changelist .related-widget-wrapper-link,
+.app-main .related-widget-wrapper-link {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+}
+
+.related-widget-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* В списке товаров убираем пустоту после скрытых кнопок у категории */
+#result_list .field-category {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 8px !important;
+}
+
+#result_list .field-category .related-widget-wrapper {
+  display: inline-flex !important;
+  width: auto !important;
+  max-width: 200px;
+  flex-wrap: nowrap;
+  gap: 0 !important;
+  margin: 0 !important;
+}
+
+#result_list .field-category select {
+  width: 180px !important;
+  max-width: 180px !important;
+}
+
+#result_list .field-category .select2-container {
+  width: 180px !important;
+  max-width: 180px !important;
+  flex: 0 0 auto !important;
+}
+
+.related-widget-wrapper select,
+.related-widget-wrapper .select2-container {
+  max-width: 100%;
+}
 #jazzmin-theme-select,
 #jazzy-theme-chooser .dropdown-header:first-of-type,
 #jazzy-theme-chooser > .dropdown-divider:nth-of-type(1),

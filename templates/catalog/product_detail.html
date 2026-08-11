@@ -272,7 +272,6 @@
 
     {% if bought_together %}
       <h2 class="section-title">Рекомендуем к этому товару</h2>
-      <p style="color:var(--text-muted);margin:-8px 0 16px;">Товары из той же рекомендательной группы</p>
       <div class="product-grid">
         {% for product in bought_together %}
           {% include "includes/product_card.html" %}

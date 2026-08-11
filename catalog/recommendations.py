@@ -417,40 +417,9 @@ def _chemistry_for_accessory(product: Product, exclude: set[int], limit: int) ->
 
 
 def get_recommendations_for_product(product: Product, limit: int = DEFAULT_LIMIT) -> RecommendationSet:
-    """
-    Приоритет: общие номера «Рекомендация».
-    Если номеров нет — запасной автоподбор (линейка / инвентарь).
-    """
+    """Только товары с общими номерами «Рекомендация» из админки."""
     coded = products_by_recommendation_codes(product, limit=limit)
-    if coded:
-        # Все связанные по номерам — в «С этим товаром обычно берут»
-        return RecommendationSet(similar=[], bought_together=coded[:limit])
-
-    role = product_role(product)
-    similar_budget = 2
-    accessories_budget = 4
-    affinity_budget = 2
-
-    similar = _similar_products(product, {product.id}, similar_budget)
-    exclude_together = {product.id} | {p.id for p in similar}
-    bought: list[Product] = []
-    seen_together = set(exclude_together)
-
-    if role == 'accessory':
-        chem = _chemistry_for_accessory(product, seen_together, accessories_budget)
-        _take_unique(chem, bought, seen_together, accessories_budget)
-    else:
-        target_roles = CROSS_SELL.get(role) or CROSS_SELL['chemistry']
-        acc = _accessories_by_roles(target_roles, seen_together, accessories_budget)
-        _take_unique(acc, bought, seen_together, accessories_budget)
-
-    if role != 'accessory':
-        aff = _affinity_chemistry(product, seen_together | {s.id for s in similar}, affinity_budget)
-        _take_unique(aff, bought, seen_together, affinity_budget)
-
-    similar = similar[:3]
-    bought = bought[: max(4, limit - len(similar))]
-    return RecommendationSet(similar=similar, bought_together=bought)
+    return RecommendationSet(similar=[], bought_together=coded[:limit])
 
 
 def get_recommendations_for_products(
@@ -459,7 +428,7 @@ def get_recommendations_for_products(
     exclude_ids: Iterable[int] | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> list[Product]:
-    """Для корзины — сначала по общим номерам, затем запасной автоподбор."""
+    """Для корзины — только по общим номерам рекомендации."""
     exclude = set(exclude_ids or [])
     collected: list[Product] = []
     seen: set[int] = set(exclude)
@@ -473,20 +442,6 @@ def get_recommendations_for_products(
         )
         for rec in coded:
             if rec.id in seen:
-                continue
-            seen.add(rec.id)
-            collected.append(rec)
-            if len(collected) >= limit:
-                return collected[:limit]
-
-    if len(collected) >= limit:
-        return collected[:limit]
-
-    for product in products:
-        seen.add(product.id)
-        bundle = get_recommendations_for_product(product, limit=limit)
-        for rec in bundle.bought_together + bundle.similar:
-            if rec.id in seen or _is_stop_product(rec):
                 continue
             seen.add(rec.id)
             collected.append(rec)

@@ -18,15 +18,57 @@
   display: none !important;
 }
 
+#result_list {
+  table-layout: auto;
+}
+
+#result_list th,
+#result_list td {
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+
+#result_list .field-category {
+  width: 1%;
+  white-space: nowrap;
+}
+
+#result_list .field-price,
+#result_list .field-old_price {
+  width: 110px;
+  min-width: 110px;
+  max-width: 120px;
+  white-space: nowrap;
+}
+
+#result_list .field-price input,
+#result_list .field-old_price input {
+  width: 102px !important;
+  min-width: 96px !important;
+  max-width: 112px;
+  box-sizing: border-box;
+}
+
+#result_list .field-status {
+  min-width: 150px;
+  width: 160px;
+}
+
+#result_list .field-status select {
+  min-width: 140px !important;
+  width: 100% !important;
+  max-width: 180px;
+}
+
 #result_list .field-recommendation_codes {
-  min-width: 90px;
-  max-width: 140px;
+  min-width: 72px;
+  max-width: 100px;
 }
 
 #result_list .field-recommendation_codes input {
   width: 100%;
-  min-width: 72px;
-  max-width: 130px;
+  min-width: 56px;
+  max-width: 90px;
 }
 
 #result_list .field-name {

@@ -285,7 +285,7 @@ def download_catalog_xlsx(request):
     payload = build_catalog_xlsx(site_origin=request.build_absolute_uri('/').rstrip('/'))
     filename = catalog_xlsx_filename()
     ascii_fallback = (
-        f"price-ubiraemsya-legko-{timezone.localdate().strftime('%d-%m-%y')}.xlsx"
+        f"price-ubiraemsya-legko-na-{timezone.localdate().strftime('%d-%m-%y')}.xlsx"
     )
     response = HttpResponse(
         payload,
