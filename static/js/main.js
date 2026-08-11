@@ -30,7 +30,10 @@
     setCatalogNavOpen(!sidebar.classList.contains("is-open"));
   });
 
+  let skipStickySync = false;
+
   function syncStickyHeaderHeight() {
+    if (skipStickySync) return;
     const sticky = document.querySelector(".header-sticky");
     const catalogNav = document.querySelector("[data-catalog-nav-shell]");
     const toolbar = document.querySelector("[data-catalog-toolbar]");
@@ -71,11 +74,21 @@
   }
 
   function setCatalogNavOpen(open) {
+    const shell = document.querySelector("[data-catalog-nav-shell]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
     const sidebar = document.querySelector("[data-sidebar], #sidebar");
     if (!toggle || !sidebar) return;
+    if (shell) {
+      shell.classList.remove("is-pulling");
+      sidebar.style.height = "";
+      sidebar.style.opacity = "";
+      sidebar.style.marginTop = "";
+    }
     const wasOpen = sidebar.classList.contains("is-open");
-    if (wasOpen === open) return;
+    if (wasOpen === open) {
+      syncStickyHeaderHeight();
+      return;
+    }
     sidebar.classList.toggle("is-open", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     syncStickyHeaderHeight();
@@ -91,6 +104,10 @@
     let lastY = window.scrollY || 0;
     let ignoreScrollUntil = 0;
     let userHoldOpen = false;
+    let drag = null;
+    let fullH = 120;
+    let rafId = 0;
+    let pendingH = null;
 
     const bumpIgnore = (ms = 400) => {
       ignoreScrollUntil = Date.now() + ms;
@@ -114,39 +131,95 @@
         setCatalogNavOpen(true);
         return;
       }
-      if (Date.now() < ignoreScrollUntil) return;
-
+      if (drag || Date.now() < ignoreScrollUntil) return;
       const stuck = isStuckUnderHeader();
       if (!stuck) {
         userHoldOpen = false;
         setCatalogNavOpen(true);
         return;
       }
-      if (!userHoldOpen) {
-        setCatalogNavOpen(false);
+      if (!userHoldOpen) setCatalogNavOpen(false);
+    };
+
+    const measureFullH = (startOpen) => {
+      skipStickySync = true;
+      shell.classList.add("is-pulling");
+      if (startOpen) {
+        const h = Math.min(
+          Math.max(sidebar.scrollHeight || sidebar.offsetHeight, 56),
+          Math.round(window.innerHeight * 0.45),
+          280
+        );
+        return h;
       }
+      sidebar.style.height = "auto";
+      sidebar.style.opacity = "0";
+      sidebar.style.marginTop = "8px";
+      const h = Math.min(
+        Math.max(sidebar.scrollHeight, 56),
+        Math.round(window.innerHeight * 0.45),
+        280
+      );
+      sidebar.style.height = "0px";
+      sidebar.style.opacity = "0";
+      sidebar.style.marginTop = "0px";
+      return h;
+    };
+
+    const paintPull = (h) => {
+      pendingH = h;
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = 0;
+        if (pendingH == null) return;
+        const px = pendingH;
+        pendingH = null;
+        sidebar.style.height = `${px}px`;
+        sidebar.style.opacity = String(Math.min(1, px / Math.max(fullH * 0.35, 1)));
+        sidebar.style.marginTop = px > 2 ? "8px" : "0px";
+      });
+    };
+
+    const endPull = (open) => {
+      drag = null;
+      skipStickySync = false;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      pendingH = null;
+      shell.classList.remove("is-pulling");
+      sidebar.style.height = "";
+      sidebar.style.opacity = "";
+      sidebar.style.marginTop = "";
+      userHoldOpen = open && isStuckUnderHeader();
+      setCatalogNavOpen(open);
     };
 
     toggle.addEventListener("click", () => {
+      if (drag) return;
       bumpIgnore(500);
       requestAnimationFrame(() => {
         userHoldOpen = sidebar.classList.contains("is-open") && isStuckUnderHeader();
       });
     });
 
-    // Простой свайп без follow-finger (без лагов): вниз — открыть, вверх — закрыть
-    let drag = null;
-    const SWIPE_MIN = 24;
-
     const onTouchStart = (event) => {
       if (!isMobile() || event.touches.length !== 1) return;
+      if (drag) return;
       const t = event.touches[0];
+      const startOpen = sidebar.classList.contains("is-open");
+      fullH = measureFullH(startOpen);
       drag = {
         id: t.identifier,
         x: t.clientX,
         y: t.clientY,
+        startOpen,
         locked: false,
+        h: startOpen ? fullH : 0,
       };
+      bumpIgnore(1500);
+      paintPull(drag.h);
     };
 
     const onTouchMove = (event) => {
@@ -155,44 +228,74 @@
       if (t.identifier !== drag.id) return;
       const dy = t.clientY - drag.y;
       const dx = t.clientX - drag.x;
-      if (!drag.locked && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) {
-        drag.locked = true;
+
+      if (!drag.locked && Math.abs(dy) > 6 && Math.abs(dy) > Math.abs(dx)) {
+        const canOpen = !drag.startOpen && dy > 0;
+        const canClose = drag.startOpen && dy < 0;
+        if (canOpen || canClose) drag.locked = true;
       }
-      if (drag.locked && event.cancelable) {
-        event.preventDefault();
+      if (!drag.locked) return;
+      if (event.cancelable) event.preventDefault();
+
+      let h;
+      if (drag.startOpen) {
+        h = Math.max(0, Math.min(fullH, fullH + dy));
+      } else {
+        h = Math.max(0, Math.min(fullH, dy));
       }
+      drag.h = h;
+      bumpIgnore(1500);
+      paintPull(h);
     };
 
     const onTouchEnd = (event) => {
       if (!drag) return;
       const t = event.changedTouches[0];
       if (!t || t.identifier !== drag.id) {
-        drag = null;
+        endPull(sidebar.classList.contains("is-open"));
         return;
       }
-      const dy = t.clientY - drag.y;
-      const dx = t.clientX - drag.x;
       const locked = drag.locked;
-      drag = null;
-      if (!locked || Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx)) return;
-
+      const h = drag.h;
+      const startOpen = drag.startOpen;
+      if (!locked) {
+        // тап — не трогаем, click сам переключит
+        skipStickySync = false;
+        shell.classList.remove("is-pulling");
+        sidebar.style.height = "";
+        sidebar.style.opacity = "";
+        sidebar.style.marginTop = "";
+        drag = null;
+        syncStickyHeaderHeight();
+        return;
+      }
       suppressMenuToggleClick = true;
-      bumpIgnore(600);
-      if (dy > 0) {
-        userHoldOpen = isStuckUnderHeader();
-        setCatalogNavOpen(true);
+      bumpIgnore(700);
+      const open = h >= fullH * 0.3 || (!startOpen && h > 40);
+      endPull(open);
+    };
+
+    const onTouchCancel = () => {
+      if (!drag) return;
+      const open = drag.startOpen ? drag.h > fullH * 0.5 : drag.h >= fullH * 0.3;
+      if (drag.locked) {
+        suppressMenuToggleClick = true;
+        endPull(open);
       } else {
-        userHoldOpen = false;
-        setCatalogNavOpen(false);
+        skipStickySync = false;
+        shell.classList.remove("is-pulling");
+        sidebar.style.height = "";
+        sidebar.style.opacity = "";
+        sidebar.style.marginTop = "";
+        drag = null;
+        syncStickyHeaderHeight();
       }
     };
 
     toggle.addEventListener("touchstart", onTouchStart, { passive: true });
     toggle.addEventListener("touchmove", onTouchMove, { passive: false });
     toggle.addEventListener("touchend", onTouchEnd);
-    toggle.addEventListener("touchcancel", () => {
-      drag = null;
-    });
+    toggle.addEventListener("touchcancel", onTouchCancel);
 
     shell.addEventListener(
       "touchstart",
@@ -205,9 +308,7 @@
     );
     shell.addEventListener("touchmove", onTouchMove, { passive: false });
     shell.addEventListener("touchend", onTouchEnd);
-    shell.addEventListener("touchcancel", () => {
-      drag = null;
-    });
+    shell.addEventListener("touchcancel", onTouchCancel);
 
     sidebar.addEventListener("click", (event) => {
       if (!isMobile()) return;
@@ -227,7 +328,7 @@
           lastY = window.scrollY || 0;
           return;
         }
-        if (Date.now() < ignoreScrollUntil) {
+        if (drag || Date.now() < ignoreScrollUntil) {
           lastY = window.scrollY || 0;
           return;
         }

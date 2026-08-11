@@ -2928,15 +2928,19 @@ select.form-input {
     top: calc(var(--header-sticky-height) - 2px);
     z-index: 45;
     background: var(--bg);
-    margin: 0 0 6px;
-    /* Зазор под шапкой поиска, чтобы «Категории» не прилипали */
-    padding: 8px 0 4px;
+    margin: 0;
+    padding: 0;
     border-bottom: 1px solid var(--line);
     touch-action: pan-y;
   }
 
   .catalog-nav:has(.menu-toggle[aria-expanded="false"]) {
     touch-action: none;
+  }
+
+  .catalog-nav:has(.menu-toggle[aria-expanded="true"]) {
+    padding: 8px 0 4px;
+    margin-bottom: 6px;
   }
 
   .catalog-nav::before {
@@ -2976,8 +2980,7 @@ select.form-input {
   /* Свёрнуто при скролле: только ручка-иконка */
   .menu-toggle[aria-expanded="false"] {
     justify-content: center;
-    padding: 10px 16px 12px;
-    min-height: 40px;
+    padding: 2px 10px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -3005,13 +3008,11 @@ select.form-input {
 
   .menu-toggle[aria-expanded="false"] .menu-toggle__handle {
     display: inline-flex;
-    pointer-events: none;
   }
 
   .menu-toggle__handle-svg {
-    width: 72px;
-    height: 24px;
-    pointer-events: none;
+    width: 68px;
+    height: 22px;
   }
 
   .sidebar {
@@ -3033,6 +3034,17 @@ select.form-input {
 
   .sidebar.is-open {
     display: flex;
+  }
+
+  /* Плавное раскрытие шторки за пальцем */
+  .catalog-nav.is-pulling .sidebar {
+    display: flex;
+    overflow: hidden;
+    max-height: none;
+    margin-top: 0;
+    padding: 8px 2px 4px;
+    pointer-events: none;
+    will-change: height, opacity;
   }
 
   .sidebar__body {
