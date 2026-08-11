@@ -26,7 +26,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: calc(var(--sticky-offset) + 8px);
+  scroll-padding-top: calc(var(--sticky-offset) + 16px);
   scrollbar-gutter: stable;
   overflow-y: scroll;
 }
@@ -1227,7 +1227,7 @@ select {
   margin-bottom: 40px;
   padding-bottom: 8px;
   animation: fadeUp 0.45s ease both;
-  scroll-margin-top: calc(var(--sticky-offset) + 8px);
+  scroll-margin-top: calc(var(--sticky-offset) + 16px);
 }
 
 .category-block + .category-block {
@@ -2892,8 +2892,8 @@ select.form-input {
     top: calc(var(--header-sticky-height) - 2px);
     z-index: 45;
     background: var(--bg);
-    margin: 0 0 10px;
-    padding: 6px 0 8px;
+    margin: 0 0 8px;
+    padding: 4px 0 6px;
     border-bottom: 1px solid var(--line);
   }
 
@@ -2912,17 +2912,20 @@ select.form-input {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
     margin: 0;
-    padding: 12px 14px;
+    min-height: 0;
+    padding: 6px 12px;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 8px;
     background: var(--bg-panel);
     color: var(--text);
     font: inherit;
+    font-size: 0.92rem;
     font-weight: 700;
-    box-shadow: 0 1px 4px rgba(15, 30, 40, 0.06);
+    line-height: 1.2;
+    box-shadow: 0 1px 3px rgba(15, 30, 40, 0.05);
   }
 
   .sidebar {

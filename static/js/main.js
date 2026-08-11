@@ -90,10 +90,13 @@
       ignoreScrollUntil = Date.now() + 400;
     });
 
-    // После выбора категории свернуть список
+    // После выбора категории свернуть список (для обычных ссылок без scroll-spy)
     sidebar.addEventListener("click", (event) => {
       if (!window.matchMedia("(max-width: 900px)").matches) return;
-      if (!event.target.closest("a")) return;
+      const link = event.target.closest("a");
+      if (!link) return;
+      // scroll-spy ссылки сворачивают меню сами перед точным скроллом
+      if (link.hasAttribute("data-scroll-spy-link")) return;
       setCatalogNavOpen(false);
     });
 
@@ -365,10 +368,7 @@
     // Fallback: какая секция сейчас под шапкой
     const sections = Array.from(document.querySelectorAll("[data-category-section]"));
     if (!sections.length) return null;
-    const toolbar = document.querySelector("[data-catalog-toolbar]");
-    const sticky = document.querySelector(".header-sticky");
-    const anchor = toolbar || sticky;
-    const line = (anchor ? anchor.getBoundingClientRect().bottom : 130) + 8;
+    const line = stickyStackBottomPx() + 8;
     let currentId = null;
     for (const section of sections) {
       const title = section.querySelector(".category-block__title") || section;
@@ -387,12 +387,39 @@
     return Number.isFinite(parsed) ? parsed : 130;
   }
 
+  function stickyStackBottomPx() {
+    const sticky = document.querySelector(".header-sticky");
+    const nav = document.querySelector("[data-catalog-nav-shell]");
+    const toolbar = document.querySelector("[data-catalog-toolbar]");
+    let bottom = 0;
+    if (sticky) {
+      bottom = Math.max(bottom, sticky.getBoundingClientRect().bottom);
+    }
+    if (nav && window.matchMedia("(max-width: 900px)").matches) {
+      bottom = Math.max(bottom, nav.getBoundingClientRect().bottom);
+    }
+    if (toolbar) {
+      bottom = Math.max(bottom, toolbar.getBoundingClientRect().bottom);
+    }
+    if (!bottom) {
+      return stickyOffsetPx();
+    }
+    return bottom;
+  }
+
+  function scrollToCategorySection(target, { behavior = "smooth" } = {}) {
+    if (!target) return;
+    syncStickyHeaderHeight();
+    const offset = stickyStackBottomPx() + 12;
+    const top = target.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(0, top), behavior });
+  }
+
   function restoreScrollAfterCatalogFilter(categoryId, prevScrollY) {
     categorySpyLockUntil = Date.now() + 900;
     const target = categoryId ? document.getElementById(categoryId) : null;
     if (target) {
-      const top = target.getBoundingClientRect().top + window.scrollY - stickyOffsetPx() - 8;
-      window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+      scrollToCategorySection(target, { behavior: "auto" });
       const url = new URL(window.location.href);
       url.hash = categoryId;
       history.replaceState({ catalogAjax: true }, "", `${url.pathname}${url.search}${url.hash}`);
@@ -426,20 +453,11 @@
       if (homeLink) homeLink.classList.toggle("is-active", !id);
     }
 
-    function headerOffset() {
-      const raw = getComputedStyle(document.documentElement).getPropertyValue("--sticky-offset");
-      const parsed = parseFloat(raw);
-      return Number.isFinite(parsed) ? parsed : 130;
-    }
-
     function updateActiveFromScroll() {
       if (Date.now() < categorySpyLockUntil) return;
 
-      // Линия активации = низ липкой шапки + панели фильтров.
-      const toolbar = document.querySelector("[data-catalog-toolbar]");
-      const sticky = document.querySelector(".header-sticky");
-      const anchor = toolbar || sticky;
-      const line = (anchor ? anchor.getBoundingClientRect().bottom : headerOffset()) + 8;
+      // Линия активации = низ липкого стека (шапка + категории + фильтры).
+      const line = stickyStackBottomPx() + 8;
 
       let currentId = null;
       for (const section of sections) {
@@ -473,10 +491,18 @@
         const target = id ? document.getElementById(id) : null;
         if (!target) return;
         event.preventDefault();
-        categorySpyLockUntil = Date.now() + 900;
+        categorySpyLockUntil = Date.now() + 1200;
         setActive(id);
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-        history.replaceState(null, "", `#${id}`);
+        // Сначала сворачиваем категории, ждём пересчёт sticky-высот, потом скроллим
+        if (window.matchMedia("(max-width: 900px)").matches) {
+          setCatalogNavOpen(false);
+        }
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            scrollToCategorySection(target, { behavior: "smooth" });
+            history.replaceState(null, "", `#${id}`);
+          });
+        });
       });
     });
 
@@ -484,10 +510,15 @@
       const id = location.hash.slice(1);
       const target = document.getElementById(id);
       if (target) {
-        categorySpyLockUntil = Date.now() + 900;
+        categorySpyLockUntil = Date.now() + 1200;
         setTimeout(() => {
-          target.scrollIntoView({ behavior: "smooth", block: "start" });
-          setActive(id);
+          if (window.matchMedia("(max-width: 900px)").matches) {
+            setCatalogNavOpen(false);
+          }
+          requestAnimationFrame(() => {
+            scrollToCategorySection(target, { behavior: "smooth" });
+            setActive(id);
+          });
         }, 50);
       }
     }
