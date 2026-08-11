@@ -147,14 +147,14 @@ class Product(models.Model):
 
     @property
     def card_description(self):
-        """Первые 2 непустые строки полного описания для карточки каталога."""
+        """Первые 3 непустые строки полного описания для карточки каталога."""
         text = (self.description or '').strip()
         if not text:
             return ''
         lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
         if not lines:
             return ''
-        return '\n'.join(lines[:2])
+        return '\n'.join(lines[:3])
 
     def gallery_urls(self):
         """URL всех фото товара: главное + дополнительные, без дублей."""
