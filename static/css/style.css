@@ -3035,18 +3035,6 @@ select.form-input {
     display: flex;
   }
 
-  /* Тянем шторку пальцем — высота задаётся инлайном */
-  .catalog-nav.is-drawer-dragging .sidebar {
-    display: flex;
-    max-height: none;
-    margin-top: 0;
-    padding-top: 0;
-    padding-bottom: 0;
-    overflow: hidden;
-    pointer-events: none;
-    transition: none !important;
-  }
-
   .sidebar__body {
     display: contents;
   }

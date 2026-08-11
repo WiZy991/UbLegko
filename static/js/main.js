@@ -71,24 +71,11 @@
   }
 
   function setCatalogNavOpen(open) {
-    const shell = document.querySelector("[data-catalog-nav-shell]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
     const sidebar = document.querySelector("[data-sidebar], #sidebar");
     if (!toggle || !sidebar) return;
     const wasOpen = sidebar.classList.contains("is-open");
-    if (shell) {
-      shell.classList.remove("is-drawer-dragging");
-      sidebar.style.height = "";
-      sidebar.style.opacity = "";
-      sidebar.style.marginTop = "";
-      sidebar.style.paddingTop = "";
-      sidebar.style.paddingBottom = "";
-      sidebar.style.overflow = "";
-    }
-    if (wasOpen === open) {
-      syncStickyHeaderHeight();
-      return;
-    }
+    if (wasOpen === open) return;
     sidebar.classList.toggle("is-open", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     syncStickyHeaderHeight();
@@ -105,13 +92,12 @@
     let ignoreScrollUntil = 0;
     let userHoldOpen = false;
 
-    const bumpIgnore = (ms = 420) => {
+    const bumpIgnore = (ms = 400) => {
       ignoreScrollUntil = Date.now() + ms;
     };
 
     const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
 
-    // Как шапка: «прилипло», когда блок доехал до низа sticky-шапки
     const isStuckUnderHeader = () => {
       const header = document.querySelector(".header-sticky");
       if (!header) return window.scrollY > 8;
@@ -122,14 +108,13 @@
       return shell.getBoundingClientRect().top <= stickyLine + 1;
     };
 
-    const syncBySticky = () => {
+    const applyStickyState = () => {
       if (!isMobile()) {
         userHoldOpen = false;
         setCatalogNavOpen(true);
         return;
       }
       if (Date.now() < ignoreScrollUntil) return;
-      if (shell.classList.contains("is-drawer-dragging")) return;
 
       const stuck = isStuckUnderHeader();
       if (!stuck) {
@@ -137,220 +122,45 @@
         setCatalogNavOpen(true);
         return;
       }
-      if (userHoldOpen) {
-        setCatalogNavOpen(true);
-      } else {
+      if (!userHoldOpen) {
         setCatalogNavOpen(false);
       }
     };
 
-    // Клик / тап по ручке — открыть/закрыть
     toggle.addEventListener("click", () => {
-      if (shell.classList.contains("is-drawer-dragging")) return;
-      bumpIgnore();
+      bumpIgnore(500);
       requestAnimationFrame(() => {
         userHoldOpen = sidebar.classList.contains("is-open") && isStuckUnderHeader();
       });
     });
 
-    // Шторка follow-finger: тянем — категории едут за пальцем
+    // Простой свайп без follow-finger (без лагов): вниз — открыть, вверх — закрыть
     let drag = null;
-    let lastDragY = 0;
-    let lastDragX = 0;
-    let fullHeight = 0;
-    let rafPending = false;
-
-    const measureFullHeight = () => {
-      shell.classList.add("is-drawer-dragging");
-      const prevH = sidebar.style.height;
-      const prevO = sidebar.style.opacity;
-      sidebar.style.height = "auto";
-      sidebar.style.opacity = "0";
-      sidebar.style.overflow = "hidden";
-      const h = Math.min(
-        Math.max(sidebar.scrollHeight, 48),
-        Math.round(window.innerHeight * 0.5),
-        320
-      );
-      sidebar.style.height = prevH;
-      sidebar.style.opacity = prevO;
-      return h;
-    };
-
-    const applyDrawerProgress = (progress) => {
-      const p = Math.max(0, Math.min(1, progress));
-      const h = Math.round(fullHeight * p);
-      sidebar.style.height = `${h}px`;
-      sidebar.style.opacity = String(Math.min(1, p * 1.15));
-      sidebar.style.marginTop = p > 0.02 ? "8px" : "0px";
-      sidebar.style.paddingTop = p > 0.04 ? "8px" : "0px";
-      sidebar.style.paddingBottom = p > 0.04 ? "4px" : "0px";
-      sidebar.style.overflow = "hidden";
-      if (!rafPending) {
-        rafPending = true;
-        requestAnimationFrame(() => {
-          rafPending = false;
-          syncStickyHeaderHeight();
-        });
-      }
-      return p;
-    };
-
-    const progressFromY = (y) => {
-      if (!drag || !fullHeight) return drag && drag.startOpen ? 1 : 0;
-      const dy = y - drag.startY;
-      if (drag.startOpen) {
-        return Math.max(0, Math.min(1, 1 + dy / fullHeight));
-      }
-      return Math.max(0, Math.min(1, dy / fullHeight));
-    };
-
-    const beginDrag = (id, x, y) => {
-      if (drag) return;
-      const startOpen = sidebar.classList.contains("is-open");
-      fullHeight = measureFullHeight();
-      drag = {
-        id,
-        startX: x,
-        startY: y,
-        startOpen,
-        moved: false,
-        locked: false,
-        progress: startOpen ? 1 : 0,
-        lastY: y,
-        lastT: performance.now(),
-        velocity: 0,
-      };
-      lastDragX = x;
-      lastDragY = y;
-      shell.classList.add("is-drawer-dragging");
-      bumpIgnore(1200);
-      applyDrawerProgress(drag.progress);
-    };
-
-    const updateDrag = (x, y, event) => {
-      if (!drag) return;
-      lastDragX = x;
-      lastDragY = y;
-      const dy = y - drag.startY;
-      const dx = x - drag.startX;
-      if (Math.abs(dy) > 5 || Math.abs(dx) > 5) drag.moved = true;
-
-      const now = performance.now();
-      const dt = Math.max(now - drag.lastT, 1);
-      drag.velocity = (y - drag.lastY) / dt;
-      drag.lastY = y;
-      drag.lastT = now;
-
-      if (!drag.locked && Math.abs(dy) > 6 && Math.abs(dy) >= Math.abs(dx) * 0.85) {
-        const opening = !drag.startOpen && dy > 0;
-        const closing = drag.startOpen && dy < 0;
-        if (opening || closing) drag.locked = true;
-      }
-
-      if (!drag.locked) return;
-
-      if (event && event.cancelable) event.preventDefault();
-      bumpIgnore(1200);
-      drag.progress = applyDrawerProgress(progressFromY(y));
-    };
-
-    const finishDrag = (x, y) => {
-      if (!drag) return;
-      const wasLocked = drag.locked;
-      const wasDrag = drag.moved;
-      const startOpen = drag.startOpen;
-      const progress = wasLocked ? progressFromY(y) : startOpen ? 1 : 0;
-      const velocity = drag.velocity;
-      drag = null;
-
-      if (!wasDrag || !wasLocked) {
-        shell.classList.remove("is-drawer-dragging");
-        sidebar.style.height = "";
-        sidebar.style.opacity = "";
-        sidebar.style.marginTop = "";
-        sidebar.style.paddingTop = "";
-        sidebar.style.paddingBottom = "";
-        sidebar.style.overflow = "";
-        syncStickyHeaderHeight();
-        return;
-      }
-
-      suppressMenuToggleClick = true;
-      bumpIgnore(900);
-
-      const openByProgress = progress >= 0.28;
-      const openByVelocity = velocity > 0.35;
-      const closeByVelocity = velocity < -0.35;
-      let nextOpen = openByProgress;
-      if (openByVelocity) nextOpen = true;
-      if (closeByVelocity) nextOpen = false;
-
-      userHoldOpen = nextOpen && isStuckUnderHeader();
-      setCatalogNavOpen(nextOpen);
-    };
-
-    const onPointerDown = (event) => {
-      if (!isMobile()) return;
-      if (event.pointerType === "mouse" && event.button !== 0) return;
-      if (event.pointerType === "touch") return;
-      beginDrag(event.pointerId, event.clientX, event.clientY);
-      try {
-        toggle.setPointerCapture(event.pointerId);
-      } catch (_err) {
-        /* ignore */
-      }
-    };
-
-    const onPointerMove = (event) => {
-      if (!drag || event.pointerId !== drag.id) return;
-      updateDrag(event.clientX, event.clientY, event);
-    };
-
-    const onPointerUp = (event) => {
-      if (!drag || event.pointerId !== drag.id) return;
-      try {
-        toggle.releasePointerCapture(event.pointerId);
-      } catch (_err) {
-        /* ignore */
-      }
-      finishDrag(event.clientX, event.clientY);
-    };
-
-    const onPointerCancel = (event) => {
-      if (!drag) return;
-      if (drag.locked) {
-        finishDrag(lastDragX, lastDragY);
-      } else {
-        drag = null;
-        shell.classList.remove("is-drawer-dragging");
-        sidebar.style.height = "";
-        sidebar.style.opacity = "";
-        sidebar.style.marginTop = "";
-        sidebar.style.paddingTop = "";
-        sidebar.style.paddingBottom = "";
-        sidebar.style.overflow = "";
-      }
-      if (event && event.pointerId != null) {
-        try {
-          toggle.releasePointerCapture(event.pointerId);
-        } catch (_err) {
-          /* ignore */
-        }
-      }
-    };
+    const SWIPE_MIN = 24;
 
     const onTouchStart = (event) => {
       if (!isMobile() || event.touches.length !== 1) return;
       const t = event.touches[0];
-      beginDrag(t.identifier, t.clientX, t.clientY);
+      drag = {
+        id: t.identifier,
+        x: t.clientX,
+        y: t.clientY,
+        locked: false,
+      };
     };
 
     const onTouchMove = (event) => {
       if (!drag || event.touches.length !== 1) return;
       const t = event.touches[0];
       if (t.identifier !== drag.id) return;
-      updateDrag(t.clientX, t.clientY, event);
+      const dy = t.clientY - drag.y;
+      const dx = t.clientX - drag.x;
+      if (!drag.locked && Math.abs(dy) > 8 && Math.abs(dy) > Math.abs(dx)) {
+        drag.locked = true;
+      }
+      if (drag.locked && event.cancelable) {
+        event.preventDefault();
+      }
     };
 
     const onTouchEnd = (event) => {
@@ -360,42 +170,44 @@
         drag = null;
         return;
       }
-      finishDrag(t.clientX, t.clientY);
-    };
+      const dy = t.clientY - drag.y;
+      const dx = t.clientX - drag.x;
+      const locked = drag.locked;
+      drag = null;
+      if (!locked || Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx)) return;
 
-    const onTouchCancel = () => {
-      if (drag && drag.locked) {
-        finishDrag(lastDragX, lastDragY);
+      suppressMenuToggleClick = true;
+      bumpIgnore(600);
+      if (dy > 0) {
+        userHoldOpen = isStuckUnderHeader();
+        setCatalogNavOpen(true);
       } else {
-        drag = null;
-        shell.classList.remove("is-drawer-dragging");
-        sidebar.style.height = "";
-        sidebar.style.opacity = "";
-        sidebar.style.marginTop = "";
-        sidebar.style.paddingTop = "";
-        sidebar.style.paddingBottom = "";
-        sidebar.style.overflow = "";
+        userHoldOpen = false;
+        setCatalogNavOpen(false);
       }
     };
 
-    toggle.addEventListener("pointerdown", onPointerDown);
-    toggle.addEventListener("pointermove", onPointerMove, { passive: false });
-    toggle.addEventListener("pointerup", onPointerUp);
-    toggle.addEventListener("pointercancel", onPointerCancel);
     toggle.addEventListener("touchstart", onTouchStart, { passive: true });
     toggle.addEventListener("touchmove", onTouchMove, { passive: false });
     toggle.addEventListener("touchend", onTouchEnd);
-    toggle.addEventListener("touchcancel", onTouchCancel);
+    toggle.addEventListener("touchcancel", () => {
+      drag = null;
+    });
 
-    const onShellTouchStart = (event) => {
-      if (!isMobile() || toggle.getAttribute("aria-expanded") !== "false") return;
-      if (event.target.closest("a, button, input, select, textarea")) return;
-      onTouchStart(event);
-    };
-    shell.addEventListener("touchstart", onShellTouchStart, { passive: true });
+    shell.addEventListener(
+      "touchstart",
+      (event) => {
+        if (!isMobile() || toggle.getAttribute("aria-expanded") !== "false") return;
+        if (event.target.closest("a, button, input, select, textarea")) return;
+        onTouchStart(event);
+      },
+      { passive: true }
+    );
     shell.addEventListener("touchmove", onTouchMove, { passive: false });
     shell.addEventListener("touchend", onTouchEnd);
-    shell.addEventListener("touchcancel", onTouchCancel);
+    shell.addEventListener("touchcancel", () => {
+      drag = null;
+    });
 
     sidebar.addEventListener("click", (event) => {
       if (!isMobile()) return;
@@ -406,44 +218,40 @@
       setCatalogNavOpen(false);
     });
 
-    const onScroll = () => {
-      if (!isMobile()) {
-        userHoldOpen = false;
-        setCatalogNavOpen(true);
-        lastY = window.scrollY || 0;
-        return;
-      }
-      if (shell.classList.contains("is-drawer-dragging")) {
-        lastY = window.scrollY || 0;
-        return;
-      }
-      if (Date.now() < ignoreScrollUntil) {
-        lastY = window.scrollY || 0;
-        return;
-      }
+    window.addEventListener(
+      "scroll",
+      () => {
+        if (!isMobile()) {
+          userHoldOpen = false;
+          setCatalogNavOpen(true);
+          lastY = window.scrollY || 0;
+          return;
+        }
+        if (Date.now() < ignoreScrollUntil) {
+          lastY = window.scrollY || 0;
+          return;
+        }
 
-      const y = window.scrollY || 0;
-      const stuck = isStuckUnderHeader();
+        const y = window.scrollY || 0;
+        const stuck = isStuckUnderHeader();
 
-      if (!stuck) {
-        userHoldOpen = false;
-        if (!sidebar.classList.contains("is-open")) bumpIgnore(360);
-        setCatalogNavOpen(true);
-      } else if (userHoldOpen && y > lastY + 6) {
-        userHoldOpen = false;
-        bumpIgnore(360);
-        setCatalogNavOpen(false);
-      } else if (!userHoldOpen) {
-        if (sidebar.classList.contains("is-open")) bumpIgnore(360);
-        setCatalogNavOpen(false);
-      }
+        if (!stuck) {
+          userHoldOpen = false;
+          setCatalogNavOpen(true);
+        } else if (userHoldOpen && y > lastY + 8) {
+          userHoldOpen = false;
+          setCatalogNavOpen(false);
+        } else if (!userHoldOpen) {
+          setCatalogNavOpen(false);
+        }
 
-      lastY = y;
-    };
+        lastY = y;
+      },
+      { passive: true }
+    );
 
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", syncBySticky);
-    syncBySticky();
+    window.addEventListener("resize", applyStickyState);
+    applyStickyState();
   }
   initMobileCatalogNavCollapse();
 
