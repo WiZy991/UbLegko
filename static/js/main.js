@@ -14,14 +14,20 @@
     setTimeout(() => toast.classList.remove("is-visible"), 2200);
   }
 
+  let suppressMenuToggleClick = false;
+
   document.addEventListener("click", (event) => {
     const toggle = event.target.closest("[data-menu-toggle], #menu-toggle");
     if (!toggle) return;
+    if (suppressMenuToggleClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      suppressMenuToggleClick = false;
+      return;
+    }
     const sidebar = document.querySelector("[data-sidebar], #sidebar");
     if (!sidebar) return;
-    const open = sidebar.classList.toggle("is-open");
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    syncStickyHeaderHeight();
+    setCatalogNavOpen(!sidebar.classList.contains("is-open"));
   });
 
   function syncStickyHeaderHeight() {
@@ -76,50 +82,174 @@
   }
 
   function initMobileCatalogNavCollapse() {
+    const shell = document.querySelector("[data-catalog-nav-shell]");
+    const anchor = document.querySelector("[data-catalog-nav-anchor]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
     const sidebar = document.querySelector("[data-sidebar], #sidebar");
-    if (!toggle || !sidebar) return;
+    if (!shell || !toggle || !sidebar) return;
 
     let lastY = window.scrollY || 0;
     let ignoreScrollUntil = 0;
-    const TOP_OPEN = 48;
-    const SCROLL_HIDE = 72;
+    let userHoldOpen = false;
 
-    // После ручного открытия не сворачивать от того же жеста скролла
+    const bumpIgnore = (ms = 420) => {
+      ignoreScrollUntil = Date.now() + ms;
+    };
+
+    const isMobile = () => window.matchMedia("(max-width: 900px)").matches;
+
+    // Как шапка: «прилипло», когда блок доехал до низа sticky-шапки
+    const isStuckUnderHeader = () => {
+      const header = document.querySelector(".header-sticky");
+      if (!header) return window.scrollY > 8;
+      const stickyLine = header.getBoundingClientRect().bottom - 2;
+      // Якорь над категориями ушёл под шапку → категории уже sticky
+      if (anchor) {
+        return anchor.getBoundingClientRect().bottom <= stickyLine + 1;
+      }
+      return shell.getBoundingClientRect().top <= stickyLine + 1;
+    };
+
+    const syncBySticky = () => {
+      if (!isMobile()) {
+        userHoldOpen = false;
+        setCatalogNavOpen(true);
+        return;
+      }
+      if (Date.now() < ignoreScrollUntil) return;
+
+      const stuck = isStuckUnderHeader();
+      if (!stuck) {
+        userHoldOpen = false;
+        setCatalogNavOpen(true);
+        return;
+      }
+      // Уже под шапкой — по умолчанию ручка; держим открытым только после жеста пользователя
+      if (userHoldOpen) {
+        setCatalogNavOpen(true);
+      } else {
+        setCatalogNavOpen(false);
+      }
+    };
+
+    // Клик / тап по ручке — открыть/закрыть
     toggle.addEventListener("click", () => {
-      ignoreScrollUntil = Date.now() + 400;
+      bumpIgnore();
+      // После клика состояние уже переключено document-handler'ом
+      requestAnimationFrame(() => {
+        userHoldOpen = sidebar.classList.contains("is-open") && isStuckUnderHeader();
+      });
     });
 
-    // После выбора категории свернуть список (для обычных ссылок без scroll-spy)
+    // Свайп по ручке: вниз — открыть, вверх — закрыть
+    let drag = null;
+    const SWIPE_MIN = 28;
+
+    const onPointerDown = (event) => {
+      if (!isMobile()) return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      drag = {
+        id: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        moved: false,
+      };
+      try {
+        toggle.setPointerCapture(event.pointerId);
+      } catch (_err) {
+        /* ignore */
+      }
+    };
+
+    const onPointerMove = (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dy = event.clientY - drag.startY;
+      const dx = event.clientX - drag.startX;
+      if (Math.abs(dy) > 8 || Math.abs(dx) > 8) {
+        drag.moved = true;
+      }
+      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 6) {
+        event.preventDefault();
+      }
+    };
+
+    const onPointerUp = (event) => {
+      if (!drag || event.pointerId !== drag.id) return;
+      const dy = event.clientY - drag.startY;
+      const dx = event.clientX - drag.startX;
+      const wasDrag = drag.moved;
+      drag = null;
+      try {
+        toggle.releasePointerCapture(event.pointerId);
+      } catch (_err) {
+        /* ignore */
+      }
+
+      if (!wasDrag) return;
+      if (Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx)) return;
+
+      bumpIgnore(500);
+      suppressMenuToggleClick = true;
+      if (dy > 0) {
+        userHoldOpen = isStuckUnderHeader();
+        setCatalogNavOpen(true);
+      } else {
+        userHoldOpen = false;
+        setCatalogNavOpen(false);
+      }
+    };
+
+    toggle.addEventListener("pointerdown", onPointerDown);
+    toggle.addEventListener("pointermove", onPointerMove, { passive: false });
+    toggle.addEventListener("pointerup", onPointerUp);
+    toggle.addEventListener("pointercancel", () => {
+      drag = null;
+    });
+
     sidebar.addEventListener("click", (event) => {
-      if (!window.matchMedia("(max-width: 900px)").matches) return;
+      if (!isMobile()) return;
       const link = event.target.closest("a");
       if (!link) return;
-      // scroll-spy ссылки сворачивают меню сами перед точным скроллом
       if (link.hasAttribute("data-scroll-spy-link")) return;
+      userHoldOpen = false;
       setCatalogNavOpen(false);
     });
 
     const onScroll = () => {
-      if (!window.matchMedia("(max-width: 900px)").matches) {
+      if (!isMobile()) {
+        userHoldOpen = false;
         setCatalogNavOpen(true);
+        lastY = window.scrollY || 0;
         return;
       }
       if (Date.now() < ignoreScrollUntil) {
         lastY = window.scrollY || 0;
         return;
       }
+
       const y = window.scrollY || 0;
-      if (y <= TOP_OPEN) {
+      const stuck = isStuckUnderHeader();
+
+      if (!stuck) {
+        userHoldOpen = false;
+        if (!sidebar.classList.contains("is-open")) bumpIgnore(360);
         setCatalogNavOpen(true);
-      } else if (y > SCROLL_HIDE && y > lastY + 2) {
+      } else if (userHoldOpen && y > lastY + 6) {
+        // Открыли вручную под шапкой — при дальнейшем скролле вниз снова в ручку
+        userHoldOpen = false;
+        bumpIgnore(360);
+        setCatalogNavOpen(false);
+      } else if (!userHoldOpen) {
+        if (sidebar.classList.contains("is-open")) bumpIgnore(360);
         setCatalogNavOpen(false);
       }
+
       lastY = y;
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
+    window.addEventListener("resize", syncBySticky);
+    syncBySticky();
   }
   initMobileCatalogNavCollapse();
 
