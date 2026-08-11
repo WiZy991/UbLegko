@@ -219,6 +219,7 @@ class ProductAdmin(admin.ModelAdmin):
         'price',
         'old_price',
         'status',
+        'row_save',
         'is_visible',
         'thumb',
     )
@@ -319,6 +320,18 @@ class ProductAdmin(admin.ModelAdmin):
             '<i class="fas fa-chevron-down" aria-hidden="true"></i>'
             '</button>',
             obj.pk,
+        )
+
+    @admin.display(description='Сохранить')
+    def row_save(self, obj):
+        url = reverse('admin:catalog_product_quick_update', args=[obj.pk])
+        return format_html(
+            '<button type="button" class="product-row-save" data-product-save="{0}" '
+            'data-quick-url="{1}" disabled title="Сохранить изменения товара">'
+            'Сохранить'
+            '</button>',
+            obj.pk,
+            url,
         )
 
     def photos_html(self, obj):
@@ -430,7 +443,9 @@ class ProductAdmin(admin.ModelAdmin):
             '{}'
             '</div>'
             '<div class="product-row-detail__actions">'
-            '<button type="button" class="button default product-row-detail__save" data-quick-save data-quick-url="{}">Сохранить в строке</button>'
+            '<button type="button" class="button default product-row-save product-row-detail__save" '
+            'data-product-save="{}" data-quick-url="{}" data-quick-save disabled>'
+            'Сохранить в строке</button>'
             '<a class="button" href="{}" target="_blank" rel="noopener noreferrer">На сайте</a>'
             '<a class="button" href="{}">Полное редактирование</a>'
             '</div>'
@@ -446,6 +461,7 @@ class ProductAdmin(admin.ModelAdmin):
             obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—',
             obj.description or '',
             self.photos_html(obj),
+            obj.pk,
             quick_update_url,
             site_url,
             change_url,
@@ -534,18 +550,59 @@ class ProductAdmin(admin.ModelAdmin):
                 product.status = status
                 changed_fields.append('status')
 
+        if 'category' in payload:
+            from catalog.models import Category
+
+            raw_cat = payload.get('category')
+            try:
+                cat_id = int(raw_cat)
+            except (TypeError, ValueError):
+                return JsonResponse({'ok': False, 'error': 'Некорректная категория'}, status=400)
+            if not Category.objects.filter(pk=cat_id).exists():
+                return JsonResponse({'ok': False, 'error': 'Категория не найдена'}, status=400)
+            product.category_id = cat_id
+            changed_fields.append('category')
+
+        if 'price' in payload:
+            from decimal import Decimal, InvalidOperation
+
+            raw = str(payload.get('price') or '').replace('\u00a0', '').replace(' ', '').replace(',', '.')
+            try:
+                product.price = Decimal(raw)
+            except (InvalidOperation, TypeError, ValueError):
+                return JsonResponse({'ok': False, 'error': 'Некорректная цена'}, status=400)
+            changed_fields.append('price')
+
+        if 'old_price' in payload:
+            from decimal import Decimal, InvalidOperation
+
+            raw = str(payload.get('old_price') or '').replace('\u00a0', '').replace(' ', '').replace(',', '.')
+            if not raw:
+                product.old_price = None
+            else:
+                try:
+                    product.old_price = Decimal(raw)
+                except (InvalidOperation, TypeError, ValueError):
+                    return JsonResponse({'ok': False, 'error': 'Некорректная старая цена'}, status=400)
+            changed_fields.append('old_price')
+
+        if 'is_visible' in payload:
+            raw = payload.get('is_visible')
+            product.is_visible = str(raw).lower() in {'1', 'true', 'yes', 'on'}
+            changed_fields.append('is_visible')
+
         if 'is_featured' in payload:
             raw = payload.get('is_featured')
             product.is_featured = str(raw).lower() in {'1', 'true', 'yes', 'on'}
             changed_fields.append('is_featured')
 
         if not changed_fields:
-            return JsonResponse({'ok': False, 'error': 'Nothing to update'}, status=400)
+            return JsonResponse({'ok': True, 'message': 'Нет изменений', 'slug': product.slug})
 
         product.save()
         return JsonResponse({
             'ok': True,
-            'message': 'Сохранено',
+            'message': 'Сохранено — изменения уже на сайте',
             'slug': product.slug,
         })
 

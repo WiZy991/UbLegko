@@ -3,14 +3,15 @@
 
 {% block extrahead %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=4">
-  <script defer src="{% static 'admin/js/product_expandable.js' %}?v=3"></script>
+  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=9">
+  <script defer src="{% static 'admin/js/product_expandable.js' %}?v=6"></script>
 {% endblock %}
 
 {% block result_list %}
   <p class="product-expandable-hint">
-    Нажмите <strong>▼</strong>, чтобы раскрыть товар: править поля и управлять фото
-    (смотреть, добавлять, заменять, удалять, делать главным) прямо в таблице.
+    Нажмите <strong>▼</strong>, чтобы раскрыть товар: править поля и управлять фото.
+    Кнопка <strong>Сохранить</strong> серая, пока нет изменений; после правок становится зелёной
+    и сразу применяет изменения на сайт.
   </p>
   {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
   {% if expandable_rows %}

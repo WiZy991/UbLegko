@@ -12,10 +12,66 @@
   color: #111 !important;
 }
 
+/* Нижняя общая «Сохранить» Jazzmin (в dataTables_info) — скрыта; есть кнопки в строках */
+#changelist-form input[name="_save"],
+#changelist-form .dataTables_info input[name="_save"] {
+  display: none !important;
+}
+
 #result_list .field-expand_toggle {
   width: 44px;
   text-align: center;
   vertical-align: middle;
+}
+
+#result_list .field-row_save {
+  width: 110px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+#result_list .product-row-save,
+.product-row-detail__actions .product-row-save.button,
+.product-row-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0 !important;
+  border-radius: 6px;
+  background: #9aa6b2 !important;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: not-allowed;
+  opacity: 0.85;
+  box-shadow: none !important;
+  transition: background 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+#result_list .product-row-save.is-dirty,
+.product-row-detail__actions .product-row-save.button.is-dirty,
+.product-row-save.is-dirty {
+  background: #28a745 !important;
+  cursor: pointer;
+  opacity: 1;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.35) !important;
+}
+
+#result_list .product-row-save.is-dirty:hover,
+.product-row-detail__actions .product-row-save.button.is-dirty:hover,
+.product-row-save.is-dirty:hover {
+  background: #218838 !important;
+}
+
+.product-row-detail__actions .product-row-save {
+  min-width: 140px;
+  height: 36px;
+  font-size: 13px;
 }
 
 .product-row-expand {

@@ -1,6 +1,8 @@
 (function () {
   'use strict';
 
+  var baselines = {};
+
   function getCookie(name) {
     var matches = document.cookie.match(
       new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)')
@@ -65,6 +67,142 @@
     });
   }
 
+  function fieldValue(el) {
+    if (!el) return '';
+    if (el.type === 'checkbox') return el.checked ? '1' : '0';
+    return String(el.value == null ? '' : el.value);
+  }
+
+  function readListField(row, fieldName) {
+    var cell = row.querySelector('.field-' + fieldName);
+    if (!cell) return null;
+    var el = cell.querySelector('input, select, textarea');
+    return el ? fieldValue(el) : null;
+  }
+
+  function collectPayload(productId) {
+    var payload = {};
+    var row = document.querySelector('tr.product-row[data-product-id="' + productId + '"]');
+    var detail = document.getElementById('product-detail-' + productId);
+
+    // Сначала поля раскрытой строки, затем list_editable — они перекрывают status и т.п.
+    if (detail) {
+      detail.querySelectorAll('[data-quick-field]').forEach(function (field) {
+        var key = field.getAttribute('data-quick-field');
+        if (!key) return;
+        payload[key] = fieldValue(field);
+      });
+    }
+
+    if (row) {
+      ['category', 'price', 'old_price', 'status', 'is_visible'].forEach(function (key) {
+        var value = readListField(row, key);
+        if (value !== null) payload[key] = value;
+      });
+    }
+
+    return payload;
+  }
+
+  function syncStatusFields(source) {
+    var productId = productIdFromEventTarget(source);
+    if (!productId) return;
+    var value = fieldValue(source);
+    var row = document.querySelector('tr.product-row[data-product-id="' + productId + '"]');
+    var detail = document.getElementById('product-detail-' + productId);
+    var listStatus = row && row.querySelector('.field-status select');
+    var detailStatus = detail && detail.querySelector('[data-quick-field="status"]');
+    if (listStatus && listStatus !== source) listStatus.value = value;
+    if (detailStatus && detailStatus !== source) detailStatus.value = value;
+  }
+
+  function snapshot(productId) {
+    baselines[productId] = JSON.stringify(collectPayload(productId));
+  }
+
+  function setDirty(productId, dirty) {
+    document.querySelectorAll('[data-product-save="' + productId + '"]').forEach(function (btn) {
+      btn.classList.toggle('is-dirty', dirty);
+      btn.disabled = !dirty;
+    });
+  }
+
+  function refreshDirty(productId) {
+    if (!productId) return;
+    if (!baselines[productId]) {
+      snapshot(productId);
+    }
+    var current = JSON.stringify(collectPayload(productId));
+    setDirty(productId, current !== baselines[productId]);
+  }
+
+  function productIdFromEventTarget(target) {
+    var row = target.closest('tr.product-row');
+    if (row) return row.getAttribute('data-product-id');
+    var detail = target.closest('tr.product-row-detail');
+    if (detail && detail.id) return detail.id.replace('product-detail-', '');
+    return '';
+  }
+
+  function initBaselines() {
+    document.querySelectorAll('tr.product-row[data-product-id]').forEach(function (row) {
+      var id = row.getAttribute('data-product-id');
+      if (id) {
+        snapshot(id);
+        setDirty(id, false);
+      }
+    });
+  }
+
+  function saveProduct(productId, triggerBtn) {
+    var url = (triggerBtn && triggerBtn.getAttribute('data-quick-url')) || '';
+    if (!url) {
+      var withUrl = document.querySelector(
+        '[data-product-save="' + productId + '"][data-quick-url]'
+      );
+      url = withUrl ? withUrl.getAttribute('data-quick-url') : '';
+    }
+    if (!url) return;
+
+    var payload = collectPayload(productId);
+    var buttons = document.querySelectorAll('[data-product-save="' + productId + '"]');
+    var detail = document.getElementById('product-detail-' + productId);
+
+    buttons.forEach(function (btn) {
+      btn.disabled = true;
+    });
+    if (detail) setNotice(detail, 'Сохраняю...', 'is-loading');
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+      },
+      body: JSON.stringify(payload),
+    })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          return { ok: response.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok || !result.data.ok) {
+          throw new Error(result.data.error || 'Ошибка сохранения');
+        }
+        snapshot(productId);
+        setDirty(productId, false);
+        if (detail) {
+          setNotice(detail, result.data.message || 'Сохранено — изменения уже на сайте', 'is-success');
+        }
+      })
+      .catch(function (error) {
+        refreshDirty(productId);
+        if (detail) setNotice(detail, error.message || 'Ошибка сохранения', 'is-error');
+        else window.alert(error.message || 'Ошибка сохранения');
+      });
+  }
+
   document.addEventListener('click', function (event) {
     var btn = event.target.closest('.product-row-expand');
     if (!btn) {
@@ -85,61 +223,40 @@
     var willOpen = detail.hidden;
     detail.hidden = !willOpen;
     setExpanded(btn, willOpen);
+    if (willOpen) {
+      refreshDirty(id);
+    }
   });
 
   document.addEventListener('click', function (event) {
-    var saveBtn = event.target.closest('[data-quick-save]');
-    if (!saveBtn) {
+    var saveBtn = event.target.closest('[data-product-save]');
+    if (!saveBtn || saveBtn.disabled || !saveBtn.classList.contains('is-dirty')) {
       return;
     }
 
     event.preventDefault();
-    var detailRow = saveBtn.closest('.product-row-detail');
-    if (!detailRow) {
-      return;
+    event.stopPropagation();
+    var productId = saveBtn.getAttribute('data-product-save');
+    if (!productId) return;
+    saveProduct(productId, saveBtn);
+  });
+
+  document.addEventListener('input', function (event) {
+    var id = productIdFromEventTarget(event.target);
+    if (id) refreshDirty(id);
+  });
+
+  document.addEventListener('change', function (event) {
+    if (event.target.closest('[data-photo-upload]')) return;
+    var target = event.target;
+    if (
+      (target.matches && target.matches('[data-quick-field="status"]')) ||
+      (target.closest && target.closest('.field-status select'))
+    ) {
+      syncStatusFields(target.closest ? (target.closest('.field-status select') || target) : target);
     }
-
-    var fields = detailRow.querySelectorAll('[data-quick-field]');
-    var payload = {};
-
-    fields.forEach(function (field) {
-      var key = field.getAttribute('data-quick-field');
-      if (!key) return;
-      if (field.type === 'checkbox') {
-        payload[key] = field.checked;
-      } else {
-        payload[key] = field.value;
-      }
-    });
-
-    saveBtn.disabled = true;
-    setNotice(detailRow, 'Сохраняю...', 'is-loading');
-
-    fetch(saveBtn.getAttribute('data-quick-url'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': getCookie('csrftoken'),
-      },
-      body: JSON.stringify(payload),
-    })
-      .then(function (response) {
-        return response.json().then(function (data) {
-          return { ok: response.ok, data: data };
-        });
-      })
-      .then(function (result) {
-        if (!result.ok || !result.data.ok) {
-          throw new Error(result.data.error || 'Ошибка сохранения');
-        }
-        setNotice(detailRow, result.data.message || 'Сохранено', 'is-success');
-      })
-      .catch(function (error) {
-        setNotice(detailRow, error.message || 'Ошибка сохранения', 'is-error');
-      })
-      .finally(function () {
-        saveBtn.disabled = false;
-      });
+    var id = productIdFromEventTarget(target);
+    if (id) refreshDirty(id);
   });
 
   document.addEventListener('change', function (event) {
@@ -231,4 +348,22 @@
         setNotice(detailRow, error.message || 'Ошибка', 'is-error');
       });
   });
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initBaselines);
+  } else {
+    initBaselines();
+  }
+
+  // На всякий случай убрать общую нижнюю «Сохранить» Jazzmin
+  function removeBulkSave() {
+    document.querySelectorAll('#changelist-form input[name="_save"]').forEach(function (el) {
+      el.remove();
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', removeBulkSave);
+  } else {
+    removeBulkSave();
+  }
 })();
