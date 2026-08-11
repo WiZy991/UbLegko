@@ -2935,6 +2935,10 @@ select.form-input {
     touch-action: pan-y;
   }
 
+  .catalog-nav:has(.menu-toggle[aria-expanded="false"]) {
+    touch-action: none;
+  }
+
   .catalog-nav::before {
     content: "";
     position: absolute;
@@ -2972,7 +2976,8 @@ select.form-input {
   /* Свёрнуто при скролле: только ручка-иконка */
   .menu-toggle[aria-expanded="false"] {
     justify-content: center;
-    padding: 2px 10px;
+    padding: 10px 16px 12px;
+    min-height: 40px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -3000,11 +3005,13 @@ select.form-input {
 
   .menu-toggle[aria-expanded="false"] .menu-toggle__handle {
     display: inline-flex;
+    pointer-events: none;
   }
 
   .menu-toggle__handle-svg {
-    width: 68px;
-    height: 22px;
+    width: 72px;
+    height: 24px;
+    pointer-events: none;
   }
 
   .sidebar {

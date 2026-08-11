@@ -141,19 +141,62 @@
       });
     });
 
-    // Свайп по ручке: вниз — открыть, вверх — закрыть
+    // Свайп по шторке: вниз — открыть, вверх — закрыть
+    // (touch + pointer; preventDefault, иначе мобильный браузер уводит жест в скролл)
     let drag = null;
-    const SWIPE_MIN = 28;
+    const SWIPE_MIN = 18;
+    let lastDragY = 0;
+    let lastDragX = 0;
+
+    const beginDrag = (id, x, y) => {
+      drag = { id, startX: x, startY: y, moved: false, locked: false };
+      lastDragX = x;
+      lastDragY = y;
+    };
+
+    const updateDrag = (x, y, event) => {
+      if (!drag) return;
+      lastDragX = x;
+      lastDragY = y;
+      const dy = y - drag.startY;
+      const dx = x - drag.startX;
+      if (Math.abs(dy) > 6 || Math.abs(dx) > 6) drag.moved = true;
+      if (!drag.locked && Math.abs(dy) > 7 && Math.abs(dy) >= Math.abs(dx)) {
+        drag.locked = true;
+      }
+      if (drag.locked && event && event.cancelable) {
+        event.preventDefault();
+      }
+    };
+
+    const finishDrag = (x, y) => {
+      if (!drag) return;
+      const dy = y - drag.startY;
+      const dx = x - drag.startX;
+      const locked = drag.locked;
+      const wasDrag = drag.moved;
+      drag = null;
+
+      if (!wasDrag || !locked) return;
+      if (Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx)) return;
+
+      bumpIgnore(900);
+      suppressMenuToggleClick = true;
+      if (dy > 0) {
+        userHoldOpen = true;
+        setCatalogNavOpen(true);
+      } else {
+        userHoldOpen = false;
+        setCatalogNavOpen(false);
+      }
+    };
 
     const onPointerDown = (event) => {
       if (!isMobile()) return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
-      drag = {
-        id: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        moved: false,
-      };
+      // На touch лучше ведём через touch-события (надёжнее preventDefault)
+      if (event.pointerType === "touch") return;
+      beginDrag(event.pointerId, event.clientX, event.clientY);
       try {
         toggle.setPointerCapture(event.pointerId);
       } catch (_err) {
@@ -163,48 +206,85 @@
 
     const onPointerMove = (event) => {
       if (!drag || event.pointerId !== drag.id) return;
-      const dy = event.clientY - drag.startY;
-      const dx = event.clientX - drag.startX;
-      if (Math.abs(dy) > 8 || Math.abs(dx) > 8) {
-        drag.moved = true;
-      }
-      if (Math.abs(dy) > Math.abs(dx) && Math.abs(dy) > 6) {
-        event.preventDefault();
-      }
+      updateDrag(event.clientX, event.clientY, event);
     };
 
     const onPointerUp = (event) => {
       if (!drag || event.pointerId !== drag.id) return;
-      const dy = event.clientY - drag.startY;
-      const dx = event.clientX - drag.startX;
-      const wasDrag = drag.moved;
-      drag = null;
       try {
         toggle.releasePointerCapture(event.pointerId);
       } catch (_err) {
         /* ignore */
       }
+      finishDrag(event.clientX, event.clientY);
+    };
 
-      if (!wasDrag) return;
-      if (Math.abs(dy) < SWIPE_MIN || Math.abs(dy) < Math.abs(dx)) return;
-
-      bumpIgnore(500);
-      suppressMenuToggleClick = true;
-      if (dy > 0) {
-        userHoldOpen = isStuckUnderHeader();
-        setCatalogNavOpen(true);
+    const onPointerCancel = (event) => {
+      if (!drag) return;
+      if (drag.locked) {
+        finishDrag(lastDragX, lastDragY);
       } else {
-        userHoldOpen = false;
-        setCatalogNavOpen(false);
+        drag = null;
+      }
+      if (event && event.pointerId != null) {
+        try {
+          toggle.releasePointerCapture(event.pointerId);
+        } catch (_err) {
+          /* ignore */
+        }
+      }
+    };
+
+    const onTouchStart = (event) => {
+      if (!isMobile() || event.touches.length !== 1) return;
+      const t = event.touches[0];
+      beginDrag(t.identifier, t.clientX, t.clientY);
+    };
+
+    const onTouchMove = (event) => {
+      if (!drag || event.touches.length !== 1) return;
+      const t = event.touches[0];
+      if (t.identifier !== drag.id) return;
+      updateDrag(t.clientX, t.clientY, event);
+    };
+
+    const onTouchEnd = (event) => {
+      if (!drag) return;
+      const t = event.changedTouches[0];
+      if (!t || t.identifier !== drag.id) {
+        drag = null;
+        return;
+      }
+      finishDrag(t.clientX, t.clientY);
+    };
+
+    const onTouchCancel = () => {
+      if (drag && drag.locked) {
+        finishDrag(lastDragX, lastDragY);
+      } else {
+        drag = null;
       }
     };
 
     toggle.addEventListener("pointerdown", onPointerDown);
     toggle.addEventListener("pointermove", onPointerMove, { passive: false });
     toggle.addEventListener("pointerup", onPointerUp);
-    toggle.addEventListener("pointercancel", () => {
-      drag = null;
-    });
+    toggle.addEventListener("pointercancel", onPointerCancel);
+    toggle.addEventListener("touchstart", onTouchStart, { passive: true });
+    toggle.addEventListener("touchmove", onTouchMove, { passive: false });
+    toggle.addEventListener("touchend", onTouchEnd);
+    toggle.addEventListener("touchcancel", onTouchCancel);
+
+    // Вся полоска шторки (не только иконка) — чтобы легче поймать жест
+    const onShellTouchStart = (event) => {
+      if (!isMobile() || toggle.getAttribute("aria-expanded") !== "false") return;
+      if (event.target.closest("a, button, input, select, textarea")) return;
+      onTouchStart(event);
+    };
+    shell.addEventListener("touchstart", onShellTouchStart, { passive: true });
+    shell.addEventListener("touchmove", onTouchMove, { passive: false });
+    shell.addEventListener("touchend", onTouchEnd);
+    shell.addEventListener("touchcancel", onTouchCancel);
 
     sidebar.addEventListener("click", (event) => {
       if (!isMobile()) return;
