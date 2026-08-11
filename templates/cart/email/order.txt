@@ -8,7 +8,7 @@ Email: {{ order.email|default:"—" }}
 {% if order.address_name %}Название адреса: {{ order.address_name }}
 {% endif %}Адрес доставки: {{ order.address|default:"—" }}
 Комментарий: {{ order.comment|default:"—" }}
-Комментарий по сайту: {{ order.site_feedback|default:"—" }}
+Замечаний по сайту: {{ order.site_feedback|default:"—" }}
 Дата: {{ order.created_at|date:"d.m.Y H:i" }}
 
 Состав заявки:
