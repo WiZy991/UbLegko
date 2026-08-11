@@ -1,4 +1,5 @@
 from decimal import Decimal
+import re
 
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
@@ -9,6 +10,33 @@ from django.utils.text import slugify
 
 from catalog.search_utils import build_product_search_text
 
+
+def normalize_recommendation_codes(value: str | None) -> str:
+    """Нормализует '1, 3,1, 5' → '1,3,5'."""
+    text = str(value or '').strip()
+    if not text:
+        return ''
+    numbers: list[int] = []
+    seen: set[int] = set()
+    for part in re.split(r'[,;\s]+', text):
+        if not part:
+            continue
+        try:
+            number = int(part)
+        except ValueError:
+            continue
+        if number < 0 or number in seen:
+            continue
+        seen.add(number)
+        numbers.append(number)
+    return ','.join(str(n) for n in sorted(numbers))
+
+
+def parse_recommendation_codes(value: str | None) -> set[int]:
+    text = normalize_recommendation_codes(value)
+    if not text:
+        return set()
+    return {int(part) for part in text.split(',') if part}
 
 class Category(models.Model):
     name = models.CharField('Название', max_length=200)
@@ -100,6 +128,16 @@ class Product(models.Model):
     is_promo = models.BooleanField('Акция', default=False)
     is_visible = models.BooleanField('Показывать в каталоге', default=True)
     is_featured = models.BooleanField('Популярный', default=False)
+    recommendation_codes = models.CharField(
+        'Рекомендация',
+        max_length=100,
+        blank=True,
+        default='',
+        help_text=(
+            'Номера групп через запятую, например: 1 или 1,3,5. '
+            'Товары с общим номером показываются друг другу в рекомендациях на сайте.'
+        ),
+    )
     search_text = models.TextField('Поисковый индекс', blank=True, editable=False)
     created_at = models.DateTimeField('Создан', auto_now_add=True)
 
@@ -125,6 +163,7 @@ class Product(models.Model):
         # Старая цена → товар автоматически акционный (бэйдж на сайте)
         if self.old_price is not None and self.old_price > 0:
             self.is_promo = True
+        self.recommendation_codes = normalize_recommendation_codes(self.recommendation_codes)
         self.search_text = build_product_search_text(
             name=self.name,
             description=self.description,
@@ -132,6 +171,9 @@ class Product(models.Model):
             country=self.country,
         )
         super().save(*args, **kwargs)
+
+    def get_recommendation_code_set(self) -> set[int]:
+        return parse_recommendation_codes(self.recommendation_codes)
 
     def get_absolute_url(self):
         return reverse('catalog:product', kwargs={'slug': self.slug})

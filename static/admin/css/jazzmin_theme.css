@@ -1,12 +1,10 @@
-/* Скрываем выбор Bootswatch-темы — нужны только светлая и тёмная схема */
-#jazzmin-theme-select {
-  display: none;
-}
-
+/* Скрываем выбор Bootswatch — оставляем только светлую/тёмную схему */
+#jazzmin-theme-select,
 #jazzy-theme-chooser .dropdown-header:first-of-type,
-#jazzy-theme-chooser .dropdown-divider:nth-of-type(1),
-#jazzy-theme-chooser .dropdown-divider:nth-of-type(2) {
-  display: none;
+#jazzy-theme-chooser > .dropdown-divider:nth-of-type(1),
+#jazzy-theme-chooser > .px-3.pb-2:first-of-type,
+#jazzy-theme-chooser > .dropdown-divider:nth-of-type(2) {
+  display: none !important;
 }
 
 #jazzmin-quick-theme-toggle {
@@ -18,7 +16,184 @@
   text-align: center;
 }
 
-/* В тёмной теме делаем текст и значения белыми (кроме светлых подсказок) */
+/* ========== СВЕТЛАЯ ТЕМА: чёрный текст везде ========== */
+html[data-bs-theme="light"],
+html[data-bs-theme="light"] body,
+html[data-bs-theme="light"] .app-wrapper,
+html[data-bs-theme="light"] .app-main,
+html[data-bs-theme="light"] .app-content,
+html[data-bs-theme="light"] .content-wrapper,
+html[data-bs-theme="light"] .wrapper {
+  color: #111 !important;
+  background-color: #f4f6f9 !important;
+}
+
+html[data-bs-theme="light"] #jazzy-navbar,
+html[data-bs-theme="light"] #jazzy-navbar .nav-link,
+html[data-bs-theme="light"] #jazzy-navbar .navbar-nav,
+html[data-bs-theme="light"] #jazzy-navbar .navbar-badge {
+  color: #111 !important;
+}
+
+html[data-bs-theme="light"] #jazzy-sidebar,
+html[data-bs-theme="light"] #jazzy-sidebar .sidebar-wrapper,
+html[data-bs-theme="light"] #jazzy-sidebar .brand-link {
+  background: #f8fbfd !important;
+  color: #111 !important;
+  border-right: 1px solid #d9e8f2;
+}
+
+html[data-bs-theme="light"] #jazzy-sidebar .nav-link,
+html[data-bs-theme="light"] #jazzy-sidebar .nav-link p,
+html[data-bs-theme="light"] #jazzy-sidebar .nav-icon,
+html[data-bs-theme="light"] #jazzy-sidebar .brand-text,
+html[data-bs-theme="light"] #jazzy-sidebar .info,
+html[data-bs-theme="light"] #jazzy-sidebar .info a,
+html[data-bs-theme="light"] #jazzy-sidebar .info span,
+html[data-bs-theme="light"] #jazzy-sidebar .nav-header,
+html[data-bs-theme="light"] #jazzy-sidebar .user-panel,
+html[data-bs-theme="light"] #jazzy-sidebar .user-panel a {
+  color: #111 !important;
+}
+
+html[data-bs-theme="light"] #jazzy-sidebar .nav-link.active,
+html[data-bs-theme="light"] #jazzy-sidebar .nav-link:hover {
+  background: #e9eef2 !important;
+  color: #111 !important;
+}
+
+html[data-bs-theme="light"] .app-main,
+html[data-bs-theme="light"] .app-main .card,
+html[data-bs-theme="light"] .app-main .card-header,
+html[data-bs-theme="light"] .app-main .card-body,
+html[data-bs-theme="light"] .app-main .card-title,
+html[data-bs-theme="light"] .app-main .module,
+html[data-bs-theme="light"] .app-main .content-header,
+html[data-bs-theme="light"] .app-main .content-header *,
+html[data-bs-theme="light"] .app-main h1,
+html[data-bs-theme="light"] .app-main h2,
+html[data-bs-theme="light"] .app-main h3,
+html[data-bs-theme="light"] .app-main h4,
+html[data-bs-theme="light"] .app-main h5,
+html[data-bs-theme="light"] .app-main h6,
+html[data-bs-theme="light"] .app-main p,
+html[data-bs-theme="light"] .app-main span,
+html[data-bs-theme="light"] .app-main label,
+html[data-bs-theme="light"] .app-main li,
+html[data-bs-theme="light"] .app-main td,
+html[data-bs-theme="light"] .app-main th,
+html[data-bs-theme="light"] .app-main dt,
+html[data-bs-theme="light"] .app-main dd,
+html[data-bs-theme="light"] .app-main small,
+html[data-bs-theme="light"] .app-main .form-group,
+html[data-bs-theme="light"] .app-main .help,
+html[data-bs-theme="light"] .app-main .helptext,
+html[data-bs-theme="light"] .app-main .form-text,
+html[data-bs-theme="light"] .app-main .text-muted,
+html[data-bs-theme="light"] .app-main .text-info,
+html[data-bs-theme="light"] .app-main .text-success,
+html[data-bs-theme="light"] .app-main .text-primary,
+html[data-bs-theme="light"] .app-main .text-secondary,
+html[data-bs-theme="light"] .app-main .text-body,
+html[data-bs-theme="light"] .app-main .text-body-secondary,
+html[data-bs-theme="light"] .app-main .text-dark,
+html[data-bs-theme="light"] .app-main .text-teal,
+html[data-bs-theme="light"] .app-main .text-cyan,
+html[data-bs-theme="light"] .app-main .fieldset,
+html[data-bs-theme="light"] .app-main legend,
+html[data-bs-theme="light"] .app-main .inline-group,
+html[data-bs-theme="light"] .app-main .tabular th,
+html[data-bs-theme="light"] .app-main .tabular td,
+html[data-bs-theme="light"] .app-main .selector,
+html[data-bs-theme="light"] .app-main .selector-available,
+html[data-bs-theme="light"] .app-main .selector-chosen,
+html[data-bs-theme="light"] .app-main .timeline,
+html[data-bs-theme="light"] .app-main .description,
+html[data-bs-theme="light"] .app-main .object-tools a:not(.btn),
+html[data-bs-theme="light"] .app-main .breadcrumb,
+html[data-bs-theme="light"] .app-main .breadcrumb-item,
+html[data-bs-theme="light"] .app-main .breadcrumb-item.active,
+html[data-bs-theme="light"] .app-main .breadcrumb a,
+html[data-bs-theme="light"] .app-main .dataTables_info,
+html[data-bs-theme="light"] .app-main .paginator,
+html[data-bs-theme="light"] .app-main .quiet,
+html[data-bs-theme="light"] .app-main #changelist-filter,
+html[data-bs-theme="light"] .app-main #changelist-filter h2,
+html[data-bs-theme="light"] .app-main #changelist-filter h3,
+html[data-bs-theme="light"] .app-main #changelist-filter a,
+html[data-bs-theme="light"] .app-main #changelist-filter li,
+html[data-bs-theme="light"] .app-main #changelist-search,
+html[data-bs-theme="light"] .app-main .select2-selection__rendered,
+html[data-bs-theme="light"] .app-main .select2-results__option,
+html[data-bs-theme="light"] .app-main .select2-container--default .select2-selection--single .select2-selection__rendered,
+html[data-bs-theme="light"] .app-main input:not([type="submit"]):not([type="button"]):not(.btn),
+html[data-bs-theme="light"] .app-main select,
+html[data-bs-theme="light"] .app-main textarea {
+  color: #111 !important;
+}
+
+html[data-bs-theme="light"] .app-main a:not(.btn):not(.button):not(.nav-link):not(.page-link),
+html[data-bs-theme="light"] .app-main a:not(.btn):not(.button):not(.nav-link):not(.page-link):visited,
+html[data-bs-theme="light"] .app-main a:not(.btn):not(.button):not(.nav-link):not(.page-link):hover {
+  color: #111 !important;
+}
+
+html[data-bs-theme="light"] .app-main .card,
+html[data-bs-theme="light"] .app-main .module,
+html[data-bs-theme="light"] .app-main #changelist .results,
+html[data-bs-theme="light"] .app-main #changelist #result_list,
+html[data-bs-theme="light"] .app-main #changelist #result_list thead th,
+html[data-bs-theme="light"] .app-main #changelist #result_list tbody tr,
+html[data-bs-theme="light"] .app-main #changelist #result_list td,
+html[data-bs-theme="light"] .app-main #changelist .paginator,
+html[data-bs-theme="light"] .app-main .dataTables_info {
+  background: #fff !important;
+  color: #111 !important;
+}
+
+html[data-bs-theme="light"] .app-main #changelist #result_list tbody tr:nth-child(even) td {
+  background: #f7fbfe !important;
+}
+
+/* Обычные Django-кнопки (.button) — чёрный текст; белый только у цветных/default */
+html[data-bs-theme="light"] .app-main a.button,
+html[data-bs-theme="light"] .app-main .button:not(.default):not(.product-row-save),
+html[data-bs-theme="light"] .app-main a.button *,
+html[data-bs-theme="light"] .app-main .button:not(.default):not(.product-row-save) * {
+  color: #111 !important;
+}
+
+html[data-bs-theme="light"] .app-main .btn-info,
+html[data-bs-theme="light"] .app-main .btn-info *,
+html[data-bs-theme="light"] .app-main .btn-primary,
+html[data-bs-theme="light"] .app-main .btn-primary *,
+html[data-bs-theme="light"] .app-main .btn-success,
+html[data-bs-theme="light"] .app-main .btn-success *,
+html[data-bs-theme="light"] .app-main .btn-danger,
+html[data-bs-theme="light"] .app-main .btn-danger *,
+html[data-bs-theme="light"] .app-main .btn-warning,
+html[data-bs-theme="light"] .app-main .btn-warning *,
+html[data-bs-theme="light"] .app-main .button.default,
+html[data-bs-theme="light"] .app-main .button.default *,
+html[data-bs-theme="light"] .app-main input[type="submit"],
+html[data-bs-theme="light"] .app-main .badge,
+html[data-bs-theme="light"] .app-main .product-row-save,
+html[data-bs-theme="light"] .app-main .product-row-save * {
+  color: #fff !important;
+}
+
+html[data-bs-theme="light"] .app-main .btn-outline-secondary,
+html[data-bs-theme="light"] .app-main .btn-outline-dark,
+html[data-bs-theme="light"] .app-main .btn-light,
+html[data-bs-theme="light"] .app-main .btn-link,
+html[data-bs-theme="light"] .app-main .btn-outline-secondary *,
+html[data-bs-theme="light"] .app-main .btn-outline-dark *,
+html[data-bs-theme="light"] .app-main .btn-light *,
+html[data-bs-theme="light"] .app-main .btn-link * {
+  color: #111 !important;
+}
+
+/* ========== ТЁМНАЯ ТЕМА ========== */
 html[data-bs-theme="dark"] .app-main,
 html[data-bs-theme="dark"] .app-main .card,
 html[data-bs-theme="dark"] .app-main .module,
@@ -32,92 +207,38 @@ html[data-bs-theme="dark"] .app-main #changelist label,
 html[data-bs-theme="dark"] .app-main #changelist .help,
 html[data-bs-theme="dark"] .app-main #changelist .helptext,
 html[data-bs-theme="dark"] .app-main #changelist p:not(.product-expandable-hint):not(.category-sortable-hint),
-html[data-bs-theme="dark"] .app-main #changelist span:not(.product-expandable-hint *):not(.category-sortable-hint *) {
+html[data-bs-theme="dark"] .app-main #changelist span:not(.product-expandable-hint *):not(.category-sortable-hint *),
+html[data-bs-theme="dark"] .app-main .content-header,
+html[data-bs-theme="dark"] .app-main .content-header *,
+html[data-bs-theme="dark"] .app-main .card-title,
+html[data-bs-theme="dark"] .app-main label,
+html[data-bs-theme="dark"] .app-main .form-text,
+html[data-bs-theme="dark"] .app-main .text-muted,
+html[data-bs-theme="dark"] .app-main .text-info,
+html[data-bs-theme="dark"] .app-main .text-success,
+html[data-bs-theme="dark"] .app-main .text-primary,
+html[data-bs-theme="dark"] .app-main .text-secondary,
+html[data-bs-theme="dark"] .app-main .dataTables_info {
   color: #fff !important;
 }
 
 html[data-bs-theme="dark"] .app-main #changelist a,
 html[data-bs-theme="dark"] .app-main #changelist a:visited,
-html[data-bs-theme="dark"] .app-main #changelist a:hover {
+html[data-bs-theme="dark"] .app-main #changelist a:hover,
+html[data-bs-theme="dark"] .app-main a:not(.btn):not(.button):not(.nav-link) {
   color: #fff !important;
 }
 
 html[data-bs-theme="dark"] .app-main #changelist input,
 html[data-bs-theme="dark"] .app-main #changelist select,
-html[data-bs-theme="dark"] .app-main #changelist textarea {
+html[data-bs-theme="dark"] .app-main #changelist textarea,
+html[data-bs-theme="dark"] .app-main input:not([type="submit"]):not([type="button"]),
+html[data-bs-theme="dark"] .app-main select,
+html[data-bs-theme="dark"] .app-main textarea {
   color: #fff !important;
 }
 
-/* Светлая тема: явно делаем светлый фон и чёрный текст (без зелёного/бирюзового) */
-html[data-bs-theme="light"] #jazzy-sidebar {
-  background: #f8fbfd !important;
-  border-right: 1px solid #d9e8f2;
-}
-
-html[data-bs-theme="light"] #jazzy-sidebar .nav-link,
-html[data-bs-theme="light"] #jazzy-sidebar .brand-text,
-html[data-bs-theme="light"] #jazzy-sidebar .info a,
-html[data-bs-theme="light"] #jazzy-sidebar .info span,
-html[data-bs-theme="light"] #jazzy-sidebar .nav-header {
-  color: #111 !important;
-}
-
-html[data-bs-theme="light"] #jazzy-sidebar .nav-link.active {
-  background: #e9eef2 !important;
-  color: #111 !important;
-}
-
-html[data-bs-theme="light"] .app-main,
-html[data-bs-theme="light"] .app-main .card,
-html[data-bs-theme="light"] .app-main .module,
-html[data-bs-theme="light"] .app-main .content-header,
-html[data-bs-theme="light"] .app-main .content-header h1,
-html[data-bs-theme="light"] .app-main label,
-html[data-bs-theme="light"] .app-main .form-group,
-html[data-bs-theme="light"] .app-main p:not(.btn):not(.button),
-html[data-bs-theme="light"] .app-main td,
-html[data-bs-theme="light"] .app-main th,
-html[data-bs-theme="light"] .app-main .help,
-html[data-bs-theme="light"] .app-main .helptext,
-html[data-bs-theme="light"] .app-main .text-muted,
-html[data-bs-theme="light"] .app-main .text-info,
-html[data-bs-theme="light"] .app-main .text-success,
-html[data-bs-theme="light"] .app-main .text-primary,
-html[data-bs-theme="light"] .app-main .text-secondary {
-  color: #111 !important;
-}
-
-html[data-bs-theme="light"] .app-main #changelist .results,
-html[data-bs-theme="light"] .app-main #changelist #result_list,
-html[data-bs-theme="light"] .app-main #changelist #result_list thead th,
-html[data-bs-theme="light"] .app-main #changelist #result_list tbody tr,
-html[data-bs-theme="light"] .app-main #changelist #result_list td,
-html[data-bs-theme="light"] .app-main #changelist .paginator {
-  background: #fff !important;
-  color: #111 !important;
-}
-
-html[data-bs-theme="light"] .app-main #changelist #result_list tbody tr:nth-child(even) td {
-  background: #f7fbfe !important;
-}
-
-html[data-bs-theme="light"] .app-main a:not(.btn):not(.button):not(.nav-link),
-html[data-bs-theme="light"] .app-main a:not(.btn):not(.button):not(.nav-link):visited,
-html[data-bs-theme="light"] .app-main a:not(.btn):not(.button):not(.nav-link):hover,
-html[data-bs-theme="light"] .app-main #changelist a:not(.btn):not(.button),
-html[data-bs-theme="light"] .app-main #changelist a:not(.btn):not(.button):visited,
-html[data-bs-theme="light"] .app-main #changelist a:not(.btn):not(.button):hover {
-  color: #111 !important;
-}
-
-html[data-bs-theme="light"] .app-main .breadcrumb,
-html[data-bs-theme="light"] .app-main .breadcrumb a,
-html[data-bs-theme="light"] .app-main .breadcrumb-item,
-html[data-bs-theme="light"] .app-main .breadcrumb-item.active {
-  color: #111 !important;
-}
-
-/* Подсказки: светлый фон, чёрный текст */
+/* Подсказки: светлый фон, чёрный текст в любой теме */
 .product-expandable-hint,
 .product-expandable-hint strong,
 .category-sortable-hint,

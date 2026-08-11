@@ -1,132 +1,173 @@
 (function () {
   'use strict';
 
+  var STORAGE_KEY = 'jazzmin-theme-mode';
+  var applying = false;
+
+  function getStoredMode() {
+    return localStorage.getItem(STORAGE_KEY) || 'dark';
+  }
+
+  function resolveMode(mode) {
+    if (mode === 'auto') {
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+    }
+    return mode === 'light' ? 'light' : 'dark';
+  }
+
   function getResolvedMode() {
     return document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light';
   }
 
-  function syncAdminContainers(mode) {
+  function syncChrome(resolved) {
+    document.documentElement.style.colorScheme = resolved;
+    if (document.body) {
+      document.body.setAttribute('data-bs-theme', resolved);
+    }
+
     var sidebar = document.getElementById('jazzy-sidebar');
     if (sidebar) {
-      sidebar.setAttribute('data-bs-theme', mode);
-      sidebar.classList.toggle('sidebar-dark-info', mode === 'dark');
-      sidebar.classList.toggle('sidebar-light-info', mode === 'light');
+      sidebar.setAttribute('data-bs-theme', resolved);
+      sidebar.classList.remove(
+        'sidebar-dark-primary',
+        'sidebar-dark-info',
+        'sidebar-dark-success',
+        'sidebar-dark-warning',
+        'sidebar-dark-danger',
+        'sidebar-dark-secondary',
+        'sidebar-light-primary',
+        'sidebar-light-info',
+        'sidebar-light-success',
+        'sidebar-light-warning',
+        'sidebar-light-danger',
+        'sidebar-light-secondary'
+      );
+      sidebar.classList.add(resolved === 'dark' ? 'sidebar-dark-info' : 'sidebar-light-info');
     }
+
     var header = document.getElementById('jazzy-navbar');
     if (header) {
-      header.classList.toggle('navbar-dark', mode === 'dark');
-      header.classList.toggle('navbar-light', mode === 'light');
+      header.setAttribute('data-bs-theme', resolved);
+      header.classList.toggle('navbar-dark', resolved === 'dark');
+      header.classList.toggle('navbar-light', resolved === 'light');
+      header.classList.toggle('bg-dark', resolved === 'dark');
+      header.classList.toggle('bg-white', resolved === 'light');
+      header.classList.toggle('border-bottom', resolved === 'light');
+    }
+
+    var wrapper = document.querySelector('.app-wrapper') || document.querySelector('.wrapper');
+    if (wrapper) {
+      wrapper.setAttribute('data-bs-theme', resolved);
     }
   }
 
   function applyMode(mode) {
-    var resolved = mode;
-    if (mode === 'auto') {
-      resolved =
-        window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-          ? 'dark'
-          : 'light';
-    }
+    var stored = mode === 'auto' || mode === 'light' || mode === 'dark' ? mode : 'dark';
+    var resolved = resolveMode(stored);
+
+    applying = true;
     document.documentElement.setAttribute('data-bs-theme', resolved);
-    syncAdminContainers(resolved);
-    localStorage.setItem('jazzmin-theme-mode', mode);
+    syncChrome(resolved);
+    localStorage.setItem(STORAGE_KEY, stored);
+    applying = false;
+
+    var modeSelect = document.getElementById('jazzmin-mode-select');
+    if (modeSelect && modeSelect.value !== stored) {
+      modeSelect.value = stored;
+    }
+    updateQuickToggleIcon();
   }
 
   function localizeModeSelect() {
     var modeSelect = document.getElementById('jazzmin-mode-select');
-    if (!modeSelect) {
-      return;
-    }
+    if (!modeSelect) return;
 
     var labels = {
       light: 'Светлая',
       dark: 'Тёмная',
       auto: 'Как в системе',
     };
-
     Array.from(modeSelect.options).forEach(function (option) {
-      if (labels[option.value]) {
-        option.textContent = labels[option.value];
-      }
+      if (labels[option.value]) option.textContent = labels[option.value];
     });
 
-    var headers = document.querySelectorAll('#jazzy-theme-chooser .dropdown-header');
-    headers.forEach(function (header) {
-      if (header.textContent.trim() === 'Color Scheme') {
-        header.textContent = 'Цветовая схема';
-      }
+    document.querySelectorAll('#jazzy-theme-chooser .dropdown-header').forEach(function (header) {
+      var text = header.textContent.trim();
+      if (text === 'Color Scheme') header.textContent = 'Цветовая схема';
+      if (text === 'Theme') header.textContent = 'Тема';
     });
   }
 
   function updateQuickToggleIcon() {
     var btn = document.getElementById('jazzmin-quick-theme-toggle');
-    if (!btn) {
-      return;
-    }
+    if (!btn) return;
     var icon = btn.querySelector('i');
-    if (!icon) {
-      return;
-    }
-    icon.className = getResolvedMode() === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
-    btn.title =
-      getResolvedMode() === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+    var isDark = getResolvedMode() === 'dark';
+    if (icon) icon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+    btn.title = isDark ? 'Включить светлую тему' : 'Включить тёмную тему';
+    btn.setAttribute('aria-label', btn.title);
   }
 
   function addQuickThemeToggle() {
-    var nav = document.querySelector('#jazzy-navbar .navbar-nav.ms-auto');
-    if (!nav || document.getElementById('jazzmin-quick-theme-toggle')) {
-      return;
-    }
+    var nav =
+      document.querySelector('#jazzy-navbar .navbar-nav.ms-auto') ||
+      document.querySelector('#jazzy-navbar .navbar-nav:last-child');
+    if (!nav || document.getElementById('jazzmin-quick-theme-toggle')) return;
 
     var item = document.createElement('li');
     item.className = 'nav-item';
     item.innerHTML =
-      '<button type="button" class="nav-link btn" id="jazzmin-quick-theme-toggle" title="Тёмная тема" aria-label="Переключить тему">' +
-      '<i class="fas fa-moon" aria-hidden="true"></i>' +
-      '</button>';
+      '<button type="button" class="nav-link btn" id="jazzmin-quick-theme-toggle" ' +
+      'title="Переключить тему" aria-label="Переключить тему">' +
+      '<i class="fas fa-moon" aria-hidden="true"></i></button>';
 
-    var paletteItem = nav.querySelector('#jazzy-theme-chooser')
-      ? nav.querySelector('#jazzy-theme-chooser').closest('.nav-item')
-      : null;
-    if (paletteItem) {
+    var palette = document.getElementById('jazzy-theme-chooser');
+    var paletteItem = palette ? palette.closest('.nav-item') : null;
+    if (paletteItem && paletteItem.parentNode === nav) {
       nav.insertBefore(item, paletteItem);
     } else {
       nav.insertBefore(item, nav.firstChild);
     }
 
-    var btn = item.querySelector('button');
-    var modeSelect = document.getElementById('jazzmin-mode-select');
-
-    btn.addEventListener('click', function () {
-      var next = getResolvedMode() === 'dark' ? 'light' : 'dark';
-      applyMode(next);
-      if (modeSelect) {
-        modeSelect.value = next;
-      }
-      updateQuickToggleIcon();
+    item.querySelector('button').addEventListener('click', function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      applyMode(getResolvedMode() === 'dark' ? 'light' : 'dark');
     });
+  }
 
-    updateQuickToggleIcon();
-    syncAdminContainers(getResolvedMode());
+  function bindModeSelect() {
+    var modeSelect = document.getElementById('jazzmin-mode-select');
+    if (!modeSelect || modeSelect.dataset.ublegkoBound === '1') return;
+    modeSelect.dataset.ublegkoBound = '1';
+    modeSelect.addEventListener('change', function () {
+      applyMode(modeSelect.value);
+    });
+  }
+
+  function watchHtmlThemeAttr() {
+    if (window.__ublegkoThemeObserver) return;
+    window.__ublegkoThemeObserver = new MutationObserver(function () {
+      if (applying) return;
+      applying = true;
+      syncChrome(getResolvedMode());
+      updateQuickToggleIcon();
+      applying = false;
+    });
+    window.__ublegkoThemeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-bs-theme'],
+    });
   }
 
   function init() {
     localizeModeSelect();
     addQuickThemeToggle();
-
-    var modeSelect = document.getElementById('jazzmin-mode-select');
-    if (modeSelect) {
-      var savedMode = localStorage.getItem('jazzmin-theme-mode');
-      if (savedMode) {
-        modeSelect.value = savedMode;
-      }
-      modeSelect.addEventListener('change', function () {
-        applyMode(modeSelect.value);
-        updateQuickToggleIcon();
-      });
-    }
-
-    updateQuickToggleIcon();
+    bindModeSelect();
+    applyMode(getStoredMode());
+    watchHtmlThemeAttr();
   }
 
   if (document.readyState === 'loading') {

@@ -5,9 +5,10 @@ from django.contrib.auth.views import redirect_to_login
 from django.db.models import Case, IntegerField, When
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.utils import timezone
 from django.views.generic import DetailView, ListView
 
-from .export_xlsx import build_catalog_xlsx
+from .export_xlsx import build_catalog_xlsx, catalog_xlsx_filename
 from .filters import (
     apply_catalog_filters,
     has_active_filters,
@@ -282,13 +283,16 @@ def search_suggest(request):
 def download_catalog_xlsx(request):
     """Скачать весь видимый каталог в Excel с фото и полями с сайта."""
     payload = build_catalog_xlsx(site_origin=request.build_absolute_uri('/').rstrip('/'))
-    filename = 'Каталог-УбираемсяЛегко.xlsx'
+    filename = catalog_xlsx_filename()
+    ascii_fallback = (
+        f"price-ubiraemsya-legko-{timezone.localdate().strftime('%d-%m-%y')}.xlsx"
+    )
     response = HttpResponse(
         payload,
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
     response['Content-Disposition'] = (
-        f"attachment; filename=\"catalog.xlsx\"; filename*=UTF-8''{quote(filename)}"
+        f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(filename)}"
     )
     response['Cache-Control'] = 'no-store'
     return response

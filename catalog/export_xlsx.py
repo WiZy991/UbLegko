@@ -18,6 +18,12 @@ ROW_HEIGHT = 92
 IMAGE_DISPLAY = 88
 
 
+def catalog_xlsx_filename() -> str:
+    """Имя файла для скачивания (без двоеточия — Windows его запрещает)."""
+    today = timezone.localdate().strftime('%d. %m. %y')
+    return f'Прайс магазина Убираемся легко по состоянию {today}.xlsx'
+
+
 def _product_image_path(product: Product) -> Path | None:
     if product.image:
         path = Path(product.image.path)
@@ -55,24 +61,16 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
 
     wb = Workbook()
     ws = wb.active
-    ws.title = 'Каталог'
+    ws.title = 'Прайс'
 
     headers = [
         'Фото',
-        'Категория',
+        'Артикул',
         'Название',
-        'Код товара',
-        'Штрихкод',
         'Описание',
-        'Ед. изм.',
-        'Страна',
-        'Цена, руб',
-        'Старая цена, руб',
-        'Статус',
-        'Акция',
+        'Цена',
         'Рейтинг',
-        'Оценок',
-        'Ссылка',
+        'Страна',
     ]
     header_font = Font(bold=True, color='FFFFFF')
     header_fill = PatternFill('solid', fgColor='0F6F86')
@@ -97,7 +95,6 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
 
     # Буферы живут до wb.save — openpyxl читает их при записи
     image_buffers: list[BytesIO] = []
-    origin = (site_origin or '').rstrip('/')
 
     for row_idx, product in enumerate(products, start=2):
         path = _product_image_path(product)
@@ -110,60 +107,40 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
                 xl_img.height = IMAGE_DISPLAY
                 ws.add_image(xl_img, f'A{row_idx}')
 
-        link = product.get_absolute_url()
-        if origin:
-            link = f'{origin}{link}'
-
         values = [
             '',
-            product.category.name if product.category_id else '',
-            product.name,
             product.sku or '',
-            product.barcode or '',
+            product.name,
             product.description or '',
-            product.unit or '',
-            product.country or '',
             float(product.price) if product.price is not None else '',
-            float(product.old_price) if product.old_price is not None else '',
-            product.get_status_display(),
-            'Да' if product.is_promo else 'Нет',
             float(product.rating) if product.rating is not None else '',
-            product.reviews_count or 0,
-            link,
+            product.country or '',
         ]
         for col, value in enumerate(values, start=1):
             cell = ws.cell(row_idx, col, value)
             cell.border = thin
-            cell.alignment = center if col in (1, 9, 10, 11, 12, 13, 14) else wrap
+            cell.alignment = center if col in (1, 2, 5, 6, 7) else wrap
 
         ws.row_dimensions[row_idx].height = ROW_HEIGHT
 
     widths = {
         'A': 14,
-        'B': 22,
+        'B': 16,
         'C': 36,
-        'D': 14,
-        'E': 16,
-        'F': 42,
-        'G': 10,
-        'H': 14,
-        'I': 12,
-        'J': 14,
-        'K': 14,
-        'L': 10,
-        'M': 10,
-        'N': 10,
-        'O': 42,
+        'D': 48,
+        'E': 12,
+        'F': 10,
+        'G': 16,
     }
     for letter, width in widths.items():
         ws.column_dimensions[letter].width = width
 
     ws.oddHeader.center.text = (
-        f'Каталог · {timezone.localtime().strftime("%d.%m.%Y %H:%M")} · товаров: {len(products)}'
+        f'Прайс магазина Убираемся легко по состоянию '
+        f'{timezone.localdate().strftime("%d. %m. %y")} · товаров: {len(products)}'
     )
 
     out = BytesIO()
     wb.save(out)
-    # image_buffers referenced until here
     _ = image_buffers
     return out.getvalue()

@@ -95,7 +95,7 @@
     }
 
     if (row) {
-      ['category', 'price', 'old_price', 'status', 'is_visible'].forEach(function (key) {
+      ['name', 'category', 'price', 'old_price', 'status', 'recommendation_codes', 'is_visible'].forEach(function (key) {
         var value = readListField(row, key);
         if (value !== null) payload[key] = value;
       });
@@ -104,16 +104,20 @@
     return payload;
   }
 
-  function syncStatusFields(source) {
+  function syncSharedFields(source, fieldName) {
     var productId = productIdFromEventTarget(source);
     if (!productId) return;
     var value = fieldValue(source);
     var row = document.querySelector('tr.product-row[data-product-id="' + productId + '"]');
     var detail = document.getElementById('product-detail-' + productId);
-    var listStatus = row && row.querySelector('.field-status select');
-    var detailStatus = detail && detail.querySelector('[data-quick-field="status"]');
-    if (listStatus && listStatus !== source) listStatus.value = value;
-    if (detailStatus && detailStatus !== source) detailStatus.value = value;
+    var listEl = row && row.querySelector('.field-' + fieldName + ' input, .field-' + fieldName + ' select');
+    var detailEl = detail && detail.querySelector('[data-quick-field="' + fieldName + '"]');
+    if (listEl && listEl !== source) listEl.value = value;
+    if (detailEl && detailEl !== source) detailEl.value = value;
+  }
+
+  function syncStatusFields(source) {
+    syncSharedFields(source, 'status');
   }
 
   function snapshot(productId) {
@@ -241,19 +245,45 @@
     saveProduct(productId, saveBtn);
   });
 
-  document.addEventListener('input', function (event) {
-    var id = productIdFromEventTarget(event.target);
-    if (id) refreshDirty(id);
-  });
-
   document.addEventListener('change', function (event) {
     if (event.target.closest('[data-photo-upload]')) return;
     var target = event.target;
-    if (
-      (target.matches && target.matches('[data-quick-field="status"]')) ||
-      (target.closest && target.closest('.field-status select'))
-    ) {
-      syncStatusFields(target.closest ? (target.closest('.field-status select') || target) : target);
+    if (target.matches && target.matches('[data-quick-field="status"]')) {
+      syncSharedFields(target, 'status');
+    } else if (target.closest && target.closest('.field-status select')) {
+      syncSharedFields(target.closest('.field-status select') || target, 'status');
+    }
+    if (target.matches && target.matches('[data-quick-field="name"]')) {
+      syncSharedFields(target, 'name');
+    } else if (target.closest && target.closest('.field-name input')) {
+      syncSharedFields(target.closest('.field-name input') || target, 'name');
+    }
+    if (target.matches && target.matches('[data-quick-field="recommendation_codes"]')) {
+      syncSharedFields(target, 'recommendation_codes');
+    } else if (target.closest && target.closest('.field-recommendation_codes input')) {
+      syncSharedFields(
+        target.closest('.field-recommendation_codes input') || target,
+        'recommendation_codes'
+      );
+    }
+    var id = productIdFromEventTarget(target);
+    if (id) refreshDirty(id);
+  });
+
+  document.addEventListener('input', function (event) {
+    var target = event.target;
+    if (target.matches && target.matches('[data-quick-field="name"]')) {
+      syncSharedFields(target, 'name');
+    } else if (target.closest && target.closest('.field-name input')) {
+      syncSharedFields(target.closest('.field-name input') || target, 'name');
+    }
+    if (target.matches && target.matches('[data-quick-field="recommendation_codes"]')) {
+      syncSharedFields(target, 'recommendation_codes');
+    } else if (target.closest && target.closest('.field-recommendation_codes input')) {
+      syncSharedFields(
+        target.closest('.field-recommendation_codes input') || target,
+        'recommendation_codes'
+      );
     }
     var id = productIdFromEventTarget(target);
     if (id) refreshDirty(id);

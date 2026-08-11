@@ -18,6 +18,33 @@
   display: none !important;
 }
 
+#result_list .field-recommendation_codes {
+  min-width: 90px;
+  max-width: 140px;
+}
+
+#result_list .field-recommendation_codes input {
+  width: 100%;
+  min-width: 72px;
+  max-width: 130px;
+}
+
+#result_list .field-name {
+  min-width: 220px;
+  max-width: 360px;
+}
+
+#result_list .field-name input {
+  width: 100%;
+  min-width: 200px;
+  max-width: 340px;
+}
+
+.product-row-detail__name {
+  width: 100%;
+  max-width: 720px;
+}
+
 #result_list .field-expand_toggle {
   width: 44px;
   text-align: center;

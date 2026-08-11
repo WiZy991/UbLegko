@@ -1,14 +1,16 @@
-"""Рекомендации в духе Amazon: похожие (линейка) + «с этим берут» (инвентарь/комплект)."""
+"""Рекомендации по общим номерам групп + запасной автоподбор."""
 
 from __future__ import annotations
 
+import operator
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from functools import reduce
 
 from django.db.models import Q, QuerySet
 
-from .models import Product, ProductRecommendation
+from .models import Product
 
 DEFAULT_LIMIT = 8
 
@@ -26,7 +28,6 @@ STOP_WORDS = (
     'бумажные неароматиз',
 )
 
-# Узкие группы назначения химии
 AFFINITY_GROUPS: dict[str, tuple[str, ...]] = {
     'descaler': (
         'ржавчин', 'известков', 'налёта', 'налета', 'накип', 'кальци',
@@ -56,7 +57,6 @@ AFFINITY_GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
-# Роли инвентаря (часто покупают вместе с химией)
 ACCESSORY_ROLES: dict[str, tuple[str, ...]] = {
     'cloth': ('тряпк', 'салфет', 'микрофибр', 'губка', 'губки', 'wipe'),
     'glove': ('перчатк',),
@@ -65,7 +65,6 @@ ACCESSORY_ROLES: dict[str, tuple[str, ...]] = {
     'mop': ('vileda', 'швабр', 'насадк', 'ultramax', 'моп'),
 }
 
-# Роль источника → какие роли инвентаря подбирать в «bought together»
 CROSS_SELL: dict[str, tuple[str, ...]] = {
     'chemistry': ('cloth', 'glove', 'dispenser', 'bucket'),
     'descaler': ('cloth', 'glove', 'dispenser', 'bucket'),
@@ -76,7 +75,7 @@ CROSS_SELL: dict[str, tuple[str, ...]] = {
     'laundry': ('glove', 'cloth'),
     'dishwash': ('glove', 'cloth'),
     'auto': ('glove', 'cloth'),
-    'accessory': (),  # обратный кросс-селл отдельно
+    'accessory': (),
 }
 
 CHEMISTRY_CATEGORIES = frozenset({
@@ -179,26 +178,21 @@ def _affinity_group(product: Product) -> str | None:
 
 
 def _accessory_role(product: Product) -> str | None:
-    """Роль инвентаря. Химию с упоминанием «дозатор» в описании не считаем инвентарём."""
     name = (product.name or '').casefold()
     cat = (product.category.name if product.category_id else '').casefold()
     in_accessory_cat = 'сопутствующ' in cat
-    blob_name = name  # только название — надёжнее описания
 
     for role, keywords in ACCESSORY_ROLES.items():
-        if any(kw in blob_name for kw in keywords):
+        if any(kw in name for kw in keywords):
             return role
 
-    # В категории сопутствующих без явного типа
     if in_accessory_cat:
-        # описание только внутри категории инвентаря
         desc = (product.description or '')[:200].casefold()
         for role, keywords in ACCESSORY_ROLES.items():
             if any(kw in desc for kw in keywords):
                 return role
         return 'accessory_generic'
 
-    # Vileda / моп могут лежать в «Общая уборка»
     if any(kw in name for kw in ACCESSORY_ROLES['mop']):
         return 'mop'
     if any(kw in name for kw in ('тряпк', 'микрофибр')):
@@ -207,12 +201,9 @@ def _accessory_role(product: Product) -> str | None:
 
 
 def product_role(product: Product) -> str:
-    """Главная роль товара для кросс-сейла."""
-    # Сначала узкая химия по категории/affinity — чтобы Dishwash не стал «accessory»
     group = _affinity_group(product)
     cat = product.category.name if product.category_id else ''
     if group in ('dishwash', 'laundry', 'soap', 'sanitizer', 'auto', 'descaler', 'degreaser', 'freshener'):
-        # если это явно инвентарь по названию — всё же accessory
         acc_name = _accessory_role(product)
         if acc_name and acc_name != 'accessory_generic' and any(
             kw in (product.name or '').casefold()
@@ -253,44 +244,50 @@ def _take_unique(
             return
 
 
-def _manual_links(product: Product, limit: int) -> list[Product]:
-    forward = (
-        ProductRecommendation.objects.filter(product=product)
-        .select_related('recommended_product', 'recommended_product__category')
-        .filter(recommended_product__is_visible=True)
-        .exclude(recommended_product_id=product.id)
-        .order_by('sort_order', 'id')
+def _codes_filter(codes: set[int]) -> Q:
+    """Точное совпадение номера в списке '1,3,10' без ложного '1'→'10'."""
+    parts = []
+    for code in codes:
+        parts.append(Q(recommendation_codes__regex=rf'(^|,){code}(,|$)'))
+    return reduce(operator.or_, parts)
+
+
+def products_by_recommendation_codes(
+    product: Product,
+    *,
+    exclude_ids: set[int] | None = None,
+    limit: int = DEFAULT_LIMIT,
+) -> list[Product]:
+    """Товары, у которых есть хотя бы один общий номер рекомендации."""
+    codes = product.get_recommendation_code_set()
+    if not codes or limit <= 0:
+        return []
+
+    exclude = set(exclude_ids or ()) | {product.id}
+    qs = (
+        _visible_qs()
+        .exclude(id__in=exclude)
+        .exclude(recommendation_codes='')
+        .filter(_codes_filter(codes))
+        .order_by('name')
     )
-    reverse = (
-        ProductRecommendation.objects.filter(recommended_product=product)
-        .select_related('product', 'product__category')
-        .filter(product__is_visible=True)
-        .exclude(product_id=product.id)
-        .order_by('sort_order', 'id')
-    )
-    result: list[Product] = []
-    seen: set[int] = {product.id}
-    for row in forward:
-        p = row.recommended_product
-        if p.id in seen or _is_stop_product(p):
+
+    picked: list[Product] = []
+    seen = set(exclude)
+    own = codes
+    for candidate in qs[: max(limit * 4, 40)]:
+        if candidate.id in seen or _is_stop_product(candidate):
             continue
-        seen.add(p.id)
-        result.append(p)
-        if len(result) >= limit:
-            return result
-    for row in reverse:
-        p = row.product
-        if p.id in seen or _is_stop_product(p):
+        if not (own & candidate.get_recommendation_code_set()):
             continue
-        seen.add(p.id)
-        result.append(p)
-        if len(result) >= limit:
-            return result
-    return result
+        seen.add(candidate.id)
+        picked.append(candidate)
+        if len(picked) >= limit:
+            break
+    return picked
 
 
 def _similar_products(product: Product, exclude: set[int], limit: int) -> list[Product]:
-    """Похожие: фасовки линейки, затем бренд в родственной химии."""
     if limit <= 0:
         return []
     line = _line_token(product.name)
@@ -299,7 +296,6 @@ def _similar_products(product: Product, exclude: set[int], limit: int) -> list[P
     related = RELATED_CHEMISTRY.get(cat, CHEMISTRY_CATEGORIES)
 
     base = _visible_qs().exclude(id__in=exclude | {product.id})
-    # Похожие — химия, не инвентарь
     base = base.exclude(category__name='Сопутствующие товары')
 
     picked: list[Product] = []
@@ -324,11 +320,9 @@ def _similar_products(product: Product, exclude: set[int], limit: int) -> list[P
 
 
 def _accessories_by_roles(roles: tuple[str, ...], exclude: set[int], limit: int) -> list[Product]:
-    """По одной позиции каждого типа инвентаря (тряпка, перчатки, дозатор…)."""
     if limit <= 0 or not roles:
         return []
     base = _visible_qs().exclude(id__in=exclude)
-    # Сначала категория сопутствующих, затем явный инвентарь по названию
     accessories = list(
         base.filter(category__name='Сопутствующие товары').order_by('name')[:80]
     )
@@ -408,7 +402,6 @@ def _affinity_chemistry(product: Product, exclude: set[int], limit: int) -> list
 
 
 def _chemistry_for_accessory(product: Product, exclude: set[int], limit: int) -> list[Product]:
-    """Обратный кросс-селл: к тряпке/дозатору — популярная химия для уборки."""
     if limit <= 0:
         return []
     qs = (
@@ -425,38 +418,24 @@ def _chemistry_for_accessory(product: Product, exclude: set[int], limit: int) ->
 
 def get_recommendations_for_product(product: Product, limit: int = DEFAULT_LIMIT) -> RecommendationSet:
     """
-    Amazon-стиль:
-    - similar: фасовки / бренд
-    - bought_together: ручные связи + инвентарь по матрице + affinity-химия
+    Приоритет: общие номера «Рекомендация».
+    Если номеров нет — запасной автоподбор (линейка / инвентарь).
     """
-    role = product_role(product)
-    manual = _manual_links(product, limit=4)
+    coded = products_by_recommendation_codes(product, limit=limit)
+    if coded:
+        # Все связанные по номерам — в «С этим товаром обычно берут»
+        return RecommendationSet(similar=[], bought_together=coded[:limit])
 
+    role = product_role(product)
     similar_budget = 2
     accessories_budget = 4
     affinity_budget = 2
 
-    exclude_similar = {product.id}
-    similar = _similar_products(product, exclude_similar, similar_budget)
-
-    exclude_together = {product.id} | {p.id for p in similar} | {p.id for p in manual}
+    similar = _similar_products(product, {product.id}, similar_budget)
+    exclude_together = {product.id} | {p.id for p in similar}
     bought: list[Product] = []
     seen_together = set(exclude_together)
 
-    # 1) Ручные комплементы — в начало «с этим берут»
-    for p in manual:
-        if p.id in seen_together or _is_stop_product(p):
-            continue
-        # Ручные, которые сами по себе «похожие» (та же линейка), лучше в similar
-        if _line_token(p.name) and _line_token(p.name) == _line_token(product.name):
-            if len(similar) < similar_budget + 1 and p.id not in {s.id for s in similar}:
-                similar.append(p)
-            continue
-        seen_together.add(p.id)
-        bought.append(p)
-
-    # 2) Инвентарь / обратный кросс-селл
-    remaining = limit  # общий потолок на оба блока ниже проверим
     if role == 'accessory':
         chem = _chemistry_for_accessory(product, seen_together, accessories_budget)
         _take_unique(chem, bought, seen_together, accessories_budget)
@@ -465,12 +444,10 @@ def get_recommendations_for_product(product: Product, limit: int = DEFAULT_LIMIT
         acc = _accessories_by_roles(target_roles, seen_together, accessories_budget)
         _take_unique(acc, bought, seen_together, accessories_budget)
 
-    # 3) Химия того же назначения
     if role != 'accessory':
         aff = _affinity_chemistry(product, seen_together | {s.id for s in similar}, affinity_budget)
         _take_unique(aff, bought, seen_together, affinity_budget)
 
-    # Подрезать: similar до 3, bought_together до 5–6, суммарно ~limit+2
     similar = similar[:3]
     bought = bought[: max(4, limit - len(similar))]
     return RecommendationSet(similar=similar, bought_together=bought)
@@ -482,10 +459,28 @@ def get_recommendations_for_products(
     exclude_ids: Iterable[int] | None = None,
     limit: int = DEFAULT_LIMIT,
 ) -> list[Product]:
-    """Для корзины — приоритет bought_together, затем similar."""
+    """Для корзины — сначала по общим номерам, затем запасной автоподбор."""
     exclude = set(exclude_ids or [])
     collected: list[Product] = []
     seen: set[int] = set(exclude)
+
+    for product in products:
+        seen.add(product.id)
+        coded = products_by_recommendation_codes(
+            product,
+            exclude_ids=seen,
+            limit=limit - len(collected),
+        )
+        for rec in coded:
+            if rec.id in seen:
+                continue
+            seen.add(rec.id)
+            collected.append(rec)
+            if len(collected) >= limit:
+                return collected[:limit]
+
+    if len(collected) >= limit:
+        return collected[:limit]
 
     for product in products:
         seen.add(product.id)

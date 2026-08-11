@@ -219,25 +219,29 @@ class ProductAdmin(admin.ModelAdmin):
         'price',
         'old_price',
         'status',
+        'recommendation_codes',
         'row_save',
         'is_visible',
         'thumb',
     )
-    list_display_links = ('name',)
+    # name в list_editable — нельзя держать в list_display_links
+    list_display_links = None
     list_filter = ('category', 'status', 'is_promo', 'is_visible', 'is_featured', 'country')
     list_editable = (
+        'name',
         'category',
         'price',
         'old_price',
         'status',
+        'recommendation_codes',
         'is_visible',
     )
     list_select_related = ('category',)
     list_per_page = 50
-    search_fields = ('name', 'sku', 'barcode', 'description', 'country')
+    search_fields = ('name', 'sku', 'barcode', 'description', 'country', 'recommendation_codes')
     prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ['category']
-    inlines = [ProductImageInline, ProductRecommendationInline]
+    inlines = [ProductImageInline]
     change_list_template = 'admin/catalog/product/change_list.html'
     readonly_fields = ('rating', 'reviews_count')
     fieldsets = (
@@ -253,6 +257,7 @@ class ProductAdmin(admin.ModelAdmin):
                 'price',
                 'old_price',
                 'status',
+                'recommendation_codes',
                 'rating',
                 'reviews_count',
                 'is_promo',
@@ -262,7 +267,9 @@ class ProductAdmin(admin.ModelAdmin):
             'description': (
                 'Если указана «Старая цена», товар автоматически становится акционным '
                 'и на сайте показывается бэйдж «Акция». '
-                'В «Цена» — текущая цена, в «Старая цена» — прежняя (зачёркнутая).'
+                'В «Цена» — текущая цена, в «Старая цена» — прежняя (зачёркнутая). '
+                '«Рекомендация» — номера групп через запятую (1 или 1,3,5): товары с общим '
+                'номером показываются друг другу в блоке рекомендаций.'
             ),
         }),
     )
@@ -423,6 +430,11 @@ class ProductAdmin(admin.ModelAdmin):
         return format_html(
             '<div class="product-row-detail__inner">'
             '<div class="product-row-detail__notice" data-quick-message></div>'
+            '<div class="product-row-detail__block">'
+            '<span class="product-row-detail__label">Название</span>'
+            '<input class="vTextField product-row-detail__input product-row-detail__name" '
+            'data-quick-field="name" value="{}">'
+            '</div>'
             '<div class="product-row-detail__grid">'
             '<div><span class="product-row-detail__label">Код</span><input class="vTextField product-row-detail__input" data-quick-field="sku" value="{}"></div>'
             '<div><span class="product-row-detail__label">Штрихкод</span><input class="vTextField product-row-detail__input" data-quick-field="barcode" value="{}"></div>'
@@ -430,6 +442,9 @@ class ProductAdmin(admin.ModelAdmin):
             '<div><span class="product-row-detail__label">Ед. изм.</span><input class="vTextField product-row-detail__input" data-quick-field="unit" value="{}"></div>'
             '<div><span class="product-row-detail__label">Страна</span><input class="vTextField product-row-detail__input" data-quick-field="country" value="{}"></div>'
             '<div><span class="product-row-detail__label">Статус</span><select class="product-row-detail__input" data-quick-field="status">{}</select></div>'
+            '<div><span class="product-row-detail__label">Рекомендация</span>'
+            '<input class="vTextField product-row-detail__input" data-quick-field="recommendation_codes" '
+            'value="{}" placeholder="1 или 1,3,5" title="Номера групп через запятую"></div>'
             '<div><span class="product-row-detail__label">Рейтинг</span> {} ({} оценок)</div>'
             '<div><span class="product-row-detail__label">Создан</span> {}</div>'
             '</div>'
@@ -450,12 +465,14 @@ class ProductAdmin(admin.ModelAdmin):
             '<a class="button" href="{}">Полное редактирование</a>'
             '</div>'
             '</div>',
+            obj.name or '',
             obj.sku or '',
             obj.barcode or '',
             obj.slug or '',
             obj.unit or '',
             obj.country or '',
             status_options,
+            obj.recommendation_codes or '',
             obj.rating,
             obj.reviews_count,
             obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—',
@@ -468,12 +485,19 @@ class ProductAdmin(admin.ModelAdmin):
         )
 
     def thumb(self, obj):
+        change_url = reverse('admin:catalog_product_change', args=[obj.pk])
         if obj.image:
             return format_html(
-                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />',
+                '<a href="{}" title="Открыть товар">'
+                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />'
+                '</a>',
+                change_url,
                 obj.image.url,
             )
-        return '—'
+        return format_html(
+            '<a href="{}" title="Открыть товар">Открыть</a>',
+            change_url,
+        )
 
     thumb.short_description = 'Фото'
 
@@ -500,19 +524,28 @@ class ProductAdmin(admin.ModelAdmin):
 
     def _product_photos_response(self, product, message='Готово'):
         product.refresh_from_db()
-        thumb_html = ''
+        change_url = reverse('admin:catalog_product_change', args=[product.pk])
         if product.image:
             thumb_html = format_html(
-                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />',
+                '<a href="{}" title="Открыть товар">'
+                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />'
+                '</a>',
+                change_url,
                 product.image.url,
             )
         elif product.display_image_url:
             thumb_html = format_html(
-                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />',
+                '<a href="{}" title="Открыть товар">'
+                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />'
+                '</a>',
+                change_url,
                 product.display_image_url,
             )
         else:
-            thumb_html = '—'
+            thumb_html = format_html(
+                '<a href="{}" title="Открыть товар">Открыть</a>',
+                change_url,
+            )
         return JsonResponse({
             'ok': True,
             'message': message,
@@ -536,10 +569,19 @@ class ProductAdmin(admin.ModelAdmin):
             return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
 
         changed_fields = []
-        text_fields = ('sku', 'barcode', 'slug', 'unit', 'country', 'description')
+        text_fields = (
+            'name', 'sku', 'barcode', 'slug', 'unit', 'country',
+            'description', 'recommendation_codes',
+        )
         for field in text_fields:
             if field in payload:
                 value = str(payload.get(field) or '').strip()
+                if field == 'name' and not value:
+                    return JsonResponse({'ok': False, 'error': 'Название не может быть пустым'}, status=400)
+                if field == 'recommendation_codes':
+                    from .models import normalize_recommendation_codes
+
+                    value = normalize_recommendation_codes(value)
                 setattr(product, field, value)
                 changed_fields.append(field)
 
