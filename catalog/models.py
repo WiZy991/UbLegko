@@ -70,7 +70,6 @@ class Product(models.Model):
         related_name='products',
         verbose_name='Категория',
     )
-    short_description = models.CharField('Краткое описание', max_length=300, blank=True)
     description = models.TextField('Описание', blank=True)
     unit = models.CharField('Ед. измерения', max_length=50, blank=True, default='')
     country = models.CharField('Страна производитель', max_length=100, blank=True)
@@ -128,7 +127,6 @@ class Product(models.Model):
             self.is_promo = True
         self.search_text = build_product_search_text(
             name=self.name,
-            short_description=self.short_description,
             description=self.description,
             sku=self.sku,
             country=self.country,
@@ -146,6 +144,17 @@ class Product(models.Model):
     def display_sku(self):
         """Код товара (артикул) для карточки — только реальное поле sku."""
         return (self.sku or '').strip()
+
+    @property
+    def card_description(self):
+        """Первые 2 непустые строки полного описания для карточки каталога."""
+        text = (self.description or '').strip()
+        if not text:
+            return ''
+        lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+        if not lines:
+            return ''
+        return '\n'.join(lines[:2])
 
     def gallery_urls(self):
         """URL всех фото товара: главное + дополнительные, без дублей."""

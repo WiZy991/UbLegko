@@ -1514,10 +1514,11 @@ select {
   line-height: 1.35;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   overflow: hidden;
-  min-height: calc(0.95rem * 1.35 * 3);
+  white-space: pre-line;
+  min-height: calc(0.95rem * 1.35 * 2);
 }
 
 .product-card__meta {
@@ -3420,8 +3421,8 @@ select.form-input {
     line-height: 1.2;
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
     min-height: 0;
     margin: 0;

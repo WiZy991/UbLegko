@@ -36,6 +36,7 @@ HEADER_ALIASES = {
         'описание',
         'описание товара',
     },
+    # Только для импорта старых прайсов — в модель не пишется
     'short_description': {
         'short_description',
         'краткое описание',
@@ -234,7 +235,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
     list_select_related = ('category',)
     list_per_page = 50
-    search_fields = ('name', 'sku', 'barcode', 'short_description', 'description', 'country')
+    search_fields = ('name', 'sku', 'barcode', 'description', 'country')
     prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ['category']
     inlines = [ProductImageInline, ProductRecommendationInline]
@@ -244,7 +245,7 @@ class ProductAdmin(admin.ModelAdmin):
         (None, {
             'fields': (
                 'name', 'slug', 'category', 'sku', 'barcode',
-                'short_description', 'description',
+                'description',
                 'unit', 'country', 'image',
             ),
         }),
@@ -423,11 +424,6 @@ class ProductAdmin(admin.ModelAdmin):
             '<div><span class="product-row-detail__label">Создан</span> {}</div>'
             '</div>'
             '<div class="product-row-detail__block">'
-            '<span class="product-row-detail__label">Краткое описание</span>'
-            '<textarea class="vLargeTextField product-row-detail__input product-row-detail__textarea product-row-detail__textarea--short" '
-            'data-quick-field="short_description">{}</textarea>'
-            '</div>'
-            '<div class="product-row-detail__block">'
             '<span class="product-row-detail__label">Описание</span>'
             '<textarea class="vLargeTextField product-row-detail__input product-row-detail__textarea" '
             'data-quick-field="description">{}</textarea>'
@@ -452,7 +448,6 @@ class ProductAdmin(admin.ModelAdmin):
             obj.rating,
             obj.reviews_count,
             obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—',
-            obj.short_description or '',
             obj.description or '',
             self.photos_html(obj),
             quick_update_url,
@@ -529,12 +524,10 @@ class ProductAdmin(admin.ModelAdmin):
             return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
 
         changed_fields = []
-        text_fields = ('sku', 'barcode', 'slug', 'unit', 'country', 'short_description', 'description')
+        text_fields = ('sku', 'barcode', 'slug', 'unit', 'country', 'description')
         for field in text_fields:
             if field in payload:
                 value = str(payload.get(field) or '').strip()
-                if field == 'short_description':
-                    value = value[:300]
                 setattr(product, field, value)
                 changed_fields.append(field)
 
@@ -558,7 +551,6 @@ class ProductAdmin(admin.ModelAdmin):
             'ok': True,
             'message': 'Сохранено',
             'slug': product.slug,
-            'short_description': product.short_description,
         })
 
     def quick_photos_view(self, request, product_id):
@@ -707,9 +699,12 @@ class ProductAdmin(admin.ModelAdmin):
             raise ValueError('Пустое наименование товара')
 
         description = (row.get('description') or '').strip()
-        short_description = (row.get('short_description') or '').strip()
-        if not short_description and description:
-            short_description = description[:300]
+        # Старые файлы могли иметь «краткое описание» — дописываем в полное, если описания нет
+        legacy_short = (row.get('short_description') or '').strip()
+        if legacy_short and not description:
+            description = legacy_short
+        elif legacy_short and legacy_short not in description:
+            description = f'{legacy_short}\n{description}'.strip()
 
         explicit_category = (row.get('category') or '').strip()
         category = resolve_category(name, description, explicit_category)
@@ -751,7 +746,6 @@ class ProductAdmin(admin.ModelAdmin):
             'price': price,
             'old_price': old_price,
             'description': description,
-            'short_description': short_description,
             'unit': '',
             'country': (row.get('country') or '').strip(),
             'sku': '',

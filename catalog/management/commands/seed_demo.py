@@ -26,8 +26,11 @@ PRODUCTS = [
     {
         'name': 'Amol 0,5 л',
         'category': 'Общая уборка',
-        'short_description': 'Антижир последнего поколения, эффективно моет и чистит ско...',
-        'description': 'Профессиональное средство Amol для удаления жировых загрязнений на кухне и в пищевом производстве.',
+        'description': (
+            'Антижир последнего поколения, эффективно моет и чистит.\n'
+            'Профессиональное средство Amol для удаления жировых загрязнений '
+            'на кухне и в пищевом производстве.'
+        ),
         'price': Decimal('650'),
         'is_promo': True,
         'is_featured': True,
@@ -35,8 +38,10 @@ PRODUCTS = [
     {
         'name': 'Pro-Brite Universal 1 л',
         'category': 'Общая уборка',
-        'short_description': 'Универсальное моющее средство для ежедневной уборки.',
-        'description': 'Подходит для пола, стен и твёрдых поверхностей.',
+        'description': (
+            'Универсальное моющее средство для ежедневной уборки.\n'
+            'Подходит для пола, стен и твёрдых поверхностей.'
+        ),
         'price': Decimal('490'),
         'is_promo': False,
         'is_featured': True,
@@ -44,8 +49,10 @@ PRODUCTS = [
     {
         'name': 'Carpet Clean 1 л',
         'category': 'Химчистка',
-        'short_description': 'Шампунь для химчистки ковров и мягкой мебели.',
-        'description': 'Удаляет пятна и неприятные запахи, подходит для экстракторной чистки.',
+        'description': (
+            'Шампунь для химчистки ковров и мягкой мебели.\n'
+            'Удаляет пятна и неприятные запахи, подходит для экстракторной чистки.'
+        ),
         'price': Decimal('780'),
         'is_promo': True,
         'is_featured': False,
@@ -53,8 +60,10 @@ PRODUCTS = [
     {
         'name': 'Wash Soft 5 л',
         'category': 'Для стирки',
-        'short_description': 'Жидкое средство для стирки белья.',
-        'description': 'Эффективно при низких температурах, подходит для цветного и белого белья.',
+        'description': (
+            'Жидкое средство для стирки белья.\n'
+            'Эффективно при низких температурах, подходит для цветного и белого белья.'
+        ),
         'price': Decimal('1200'),
         'is_promo': False,
         'is_featured': False,
@@ -62,8 +71,10 @@ PRODUCTS = [
     {
         'name': 'Dish Pro 5 л',
         'category': 'Для посудомоечных машин',
-        'short_description': 'Средство для профессиональных посудомоечных машин.',
-        'description': 'Предотвращает образование налёта и обеспечивает блеск посуды.',
+        'description': (
+            'Средство для профессиональных посудомоечных машин.\n'
+            'Предотвращает образование налёта и обеспечивает блеск посуды.'
+        ),
         'price': Decimal('1450'),
         'is_promo': False,
         'is_featured': True,
@@ -71,8 +82,10 @@ PRODUCTS = [
     {
         'name': 'Sanit Gel 0,5 л',
         'category': 'Антисептики',
-        'short_description': 'Антисептический гель для рук.',
-        'description': 'Быстро испаряется, не требует смывания.',
+        'description': (
+            'Антисептический гель для рук.\n'
+            'Быстро испаряется, не требует смывания.'
+        ),
         'price': Decimal('320'),
         'is_promo': True,
         'is_featured': False,
@@ -89,7 +102,6 @@ class Command(BaseCommand):
         if not site.max_channel_url:
             site.max_channel_url = 'https://max.ru/join/5n4w4WgqNIhX-fh4J5fjF5-NeJ_q728An7crUD3gF08'
             site.save(update_fields=['max_channel_url'])
-        # Города России — отдельной командой seed_cities; здесь только default
         City.objects.filter(name='Уссурийск').update(is_default=True)
         City.objects.exclude(name='Уссурийск').update(is_default=False)
         categories = {}
@@ -107,7 +119,6 @@ class Command(BaseCommand):
                 name=data['name'],
                 category=category,
                 defaults={
-                    'short_description': data['short_description'],
                     'description': data['description'],
                     'price': data['price'],
                     'is_promo': data['is_promo'],

@@ -36,14 +36,13 @@ class SearchUtilsTests(SimpleTestCase):
 
     def test_rank_prefix_first_description_after_name(self):
         class P:
-            def __init__(self, name, short_description='', description=''):
+            def __init__(self, name, description=''):
                 self.name = name
-                self.short_description = short_description
                 self.description = description
 
         products = [
             P('CLF 1л', description='пятновыводители для ковров'),
-            P('Пятновыводитель Pro', short_description=''),
+            P('Пятновыводитель Pro', description=''),
         ]
         ranked = rank_prefix_first(products, 'пятновыводитель')
         self.assertEqual(ranked[0].name, 'Пятновыводитель Pro')
@@ -60,7 +59,7 @@ class ProductSlugTests(TestCase):
             category=self.category,
             price='100.00',
         )
-        product.short_description = 'Обновление при загрузке фото'
+        product.description = 'Обновление при загрузке фото'
         product.save()
         product.refresh_from_db()
         self.assertEqual(product.slug, 'alfa-20-1л')

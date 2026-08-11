@@ -63,7 +63,6 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
         'Название',
         'Код товара',
         'Штрихкод',
-        'Краткое описание',
         'Описание',
         'Ед. изм.',
         'Страна',
@@ -121,7 +120,6 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
             product.name,
             product.sku or '',
             product.barcode or '',
-            product.short_description or '',
             product.description or '',
             product.unit or '',
             product.country or '',
@@ -136,7 +134,7 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
         for col, value in enumerate(values, start=1):
             cell = ws.cell(row_idx, col, value)
             cell.border = thin
-            cell.alignment = center if col in (1, 10, 11, 12, 13, 14, 15) else wrap
+            cell.alignment = center if col in (1, 9, 10, 11, 12, 13, 14) else wrap
 
         ws.row_dimensions[row_idx].height = ROW_HEIGHT
 
@@ -146,17 +144,16 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
         'C': 36,
         'D': 14,
         'E': 16,
-        'F': 28,
-        'G': 40,
-        'H': 10,
-        'I': 14,
-        'J': 12,
+        'F': 42,
+        'G': 10,
+        'H': 14,
+        'I': 12,
+        'J': 14,
         'K': 14,
-        'L': 14,
+        'L': 10,
         'M': 10,
         'N': 10,
-        'O': 10,
-        'P': 42,
+        'O': 42,
     }
     for letter, width in widths.items():
         ws.column_dimensions[letter].width = width

@@ -36,13 +36,13 @@ _SEARCH_FIELD = 'search_text'
 def build_product_search_text(
     *,
     name: str = '',
-    short_description: str = '',
     description: str = '',
     sku: str = '',
     country: str = '',
+    short_description: str = '',  # совместимость со старыми вызовами
 ) -> str:
     """Нормализованный текст для поиска без учёта регистра (SQLite + кириллица)."""
-    parts = (name, short_description, description, sku, country)
+    parts = (name, description, sku, country, short_description)
     return ' '.join(p.strip() for p in parts if p and p.strip()).casefold()
 
 
@@ -217,7 +217,6 @@ def rank_prefix_first(products, q: str):
 
     def score(product):
         name = (product.name or '').casefold()
-        short = (product.short_description or '').casefold()
         desc = (product.description or '').casefold()
 
         for i, v in enumerate(variants):
@@ -229,19 +228,15 @@ def rank_prefix_first(products, q: str):
                 return (2, i, name)
 
         for i, v in enumerate(variants):
-            if v in short:
-                return (3, i, name)
             if v in desc:
-                return (4, i, name)
+                return (3, i, name)
 
         for i, v in enumerate(token_variants):
             for stem in stem_variants(v):
                 s = stem.casefold()
-                if s in short:
-                    return (5, i, name)
                 if s in desc:
-                    return (6, i, name)
+                    return (4, i, name)
 
-        return (7, 99, name)
+        return (5, 99, name)
 
     return sorted(list(products), key=score)

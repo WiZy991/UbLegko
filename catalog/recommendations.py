@@ -132,7 +132,6 @@ class RecommendationSet:
 def _text_blob(product: Product) -> str:
     parts = [
         product.name or '',
-        product.short_description or '',
         (product.description or '')[:400],
         product.category.name if product.category_id else '',
     ]
@@ -193,7 +192,7 @@ def _accessory_role(product: Product) -> str | None:
     # В категории сопутствующих без явного типа
     if in_accessory_cat:
         # описание только внутри категории инвентаря
-        desc = ((product.short_description or '') + ' ' + (product.description or '')[:200]).casefold()
+        desc = (product.description or '')[:200].casefold()
         for role, keywords in ACCESSORY_ROLES.items():
             if any(kw in desc for kw in keywords):
                 return role
@@ -393,7 +392,7 @@ def _affinity_chemistry(product: Product, exclude: set[int], limit: int) -> list
     related = RELATED_CHEMISTRY.get(cat, CHEMISTRY_CATEGORIES)
     q = Q()
     for kw in keywords:
-        q |= Q(name__icontains=kw) | Q(short_description__icontains=kw) | Q(description__icontains=kw)
+        q |= Q(name__icontains=kw) | Q(description__icontains=kw)
     qs = (
         _visible_qs()
         .exclude(id__in=exclude | {product.id})
