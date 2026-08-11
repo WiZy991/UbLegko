@@ -82,30 +82,57 @@
       document.querySelector("[data-catalog-sheet]") ||
       document.querySelector("[data-sidebar], #sidebar");
     if (!toggle || !panel) return;
-    if (shell) {
-      shell.classList.remove("is-pulling");
-      panel.style.maxHeight = "";
-      panel.style.opacity = "";
-      panel.style.transition = "";
-    }
+
+    if (shell) shell.classList.remove("is-pulling");
+    panel.style.height = "";
+    panel.style.maxHeight = "";
+    panel.style.opacity = "";
+    panel.style.transition = "";
+
     const wasOpen = panel.classList.contains("is-open");
     if (wasOpen === open) {
       syncStickyHeaderHeight();
       return;
     }
-    // При авто-сворачивании по скроллу без анимации — иначе фильтры «дотягиваются»
-    if (!animate && shell) {
-      shell.classList.add("is-instant");
-      panel.style.transition = "none";
+
+    const isMobile = window.matchMedia("(max-width: 900px)").matches;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const useAnimate = animate && isMobile && !reduceMotion;
+
+    if (panel._ublegkoSheetSettle) {
+      panel.removeEventListener("transitionend", panel._ublegkoSheetSettle);
+      panel._ublegkoSheetSettle = null;
     }
+
+    if (!useAnimate) {
+      if (shell) shell.classList.add("is-instant");
+      panel.classList.toggle("is-open", open);
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      void panel.offsetHeight;
+      if (shell) shell.classList.remove("is-instant");
+      skipStickySync = false;
+      syncStickyHeaderHeight();
+      return;
+    }
+
+    // Только CSS grid-template-rows; sticky sync — после анимации
+    skipStickySync = true;
     panel.classList.toggle("is-open", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    if (!animate && shell) {
-      void panel.offsetHeight;
-      panel.style.transition = "";
-      shell.classList.remove("is-instant");
-    }
-    syncStickyHeaderHeight();
+
+    let settled = false;
+    const settle = (evt) => {
+      if (settled) return;
+      if (evt && evt.propertyName && evt.propertyName !== "grid-template-rows") return;
+      settled = true;
+      panel.removeEventListener("transitionend", settle);
+      panel._ublegkoSheetSettle = null;
+      skipStickySync = false;
+      syncStickyHeaderHeight();
+    };
+    panel._ublegkoSheetSettle = settle;
+    panel.addEventListener("transitionend", settle);
+    setTimeout(settle, 520);
   }
 
   let catalogNavCollapseCleanup = null;
@@ -174,30 +201,34 @@
         setCatalogNavOpen(true, { animate: false });
         return;
       }
-      if (drag || Date.now() < ignoreScrollUntil) return;
+      if (drag || skipStickySync || Date.now() < ignoreScrollUntil) return;
       const stuck = isStuckUnderHeader();
       if (!stuck) {
         userHoldOpen = false;
-        setCatalogNavOpen(true, { animate: false });
+        if (!panel.classList.contains("is-open")) {
+          bumpIgnore(500);
+          setCatalogNavOpen(true);
+        }
         return;
       }
-      if (!userHoldOpen) setCatalogNavOpen(false, { animate: false });
+      if (!userHoldOpen && panel.classList.contains("is-open")) {
+        bumpIgnore(500);
+        setCatalogNavOpen(false);
+      }
     };
 
     const measureFullH = () => {
-      const prevMax = panel.style.maxHeight;
-      const prevOp = panel.style.opacity;
+      const clip = panel.querySelector(".catalog-sheet__clip") || panel;
       const wasPulling = shell.classList.contains("is-pulling");
+      const prevHeight = panel.style.height;
       shell.classList.add("is-pulling");
-      panel.style.maxHeight = "none";
-      panel.style.opacity = "0";
+      panel.style.height = "auto";
       const h = Math.min(
-        Math.max(panel.scrollHeight, 120),
+        Math.max(clip.scrollHeight || panel.scrollHeight, 80),
         Math.round(window.innerHeight * 0.7),
         480
       );
-      panel.style.maxHeight = prevMax;
-      panel.style.opacity = prevOp;
+      panel.style.height = prevHeight;
       if (!wasPulling) shell.classList.remove("is-pulling");
       return h;
     };
@@ -208,18 +239,15 @@
       rafId = requestAnimationFrame(() => {
         rafId = 0;
         if (pendingH == null || !drag) return;
-        const px = pendingH;
+        panel.style.height = `${pendingH}px`;
         pendingH = null;
-        const p = Math.min(1, px / Math.max(fullH, 1));
-        panel.style.maxHeight = `${px}px`;
-        panel.style.opacity = String(0.35 + p * 0.65);
       });
     };
 
     const clearDragStyles = () => {
       shell.classList.remove("is-pulling");
-      panel.style.maxHeight = "";
-      panel.style.opacity = "";
+      panel.style.height = "";
+      panel.style.transition = "";
       skipStickySync = false;
       stopScrollFreeze();
     };
@@ -316,7 +344,7 @@
       if (!locked) {
         clearDragStyles();
         suppressMenuToggleClick = true;
-        bumpIgnore(500);
+        bumpIgnore(420);
         const next = !startOpen;
         setCatalogNavOpen(next);
         userHoldOpen = next && isStuckUnderHeader();
@@ -324,45 +352,41 @@
       }
 
       suppressMenuToggleClick = true;
-      bumpIgnore(600);
+      bumpIgnore(420);
 
       const shouldOpen = startOpen ? h > fullH * 0.45 : h >= fullH * 0.2 || dy > 36;
-
       const from = Math.max(0, h);
-      panel.style.maxHeight = `${from}px`;
-      panel.style.opacity = from > 0 ? "1" : "0";
-      panel.style.transition =
-        "max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease";
+      const to = shouldOpen ? fullH : 0;
+
+      skipStickySync = true;
+      panel.style.height = `${from}px`;
+      panel.style.transition = "height 0.45s cubic-bezier(0.33, 1, 0.32, 1)";
 
       let settled = false;
       const settle = (evt) => {
         if (settled) return;
-        if (evt && evt.propertyName && evt.propertyName !== "max-height") return;
+        if (evt && evt.propertyName && evt.propertyName !== "height") return;
         settled = true;
         panel.removeEventListener("transitionend", settle);
-        panel.style.transition = "";
+        if (shouldOpen) {
+          panel.classList.add("is-open");
+          toggle.setAttribute("aria-expanded", "true");
+          userHoldOpen = isStuckUnderHeader();
+        } else {
+          panel.classList.remove("is-open");
+          toggle.setAttribute("aria-expanded", "false");
+          userHoldOpen = false;
+        }
         clearDragStyles();
         syncStickyHeaderHeight();
       };
 
       requestAnimationFrame(() => {
-        if (shouldOpen) {
-          panel.classList.add("is-open");
-          toggle.setAttribute("aria-expanded", "true");
-          panel.style.maxHeight = `${fullH}px`;
-          panel.style.opacity = "1";
-          userHoldOpen = isStuckUnderHeader();
-        } else {
-          panel.classList.remove("is-open");
-          toggle.setAttribute("aria-expanded", "false");
-          panel.style.maxHeight = "0px";
-          panel.style.opacity = "0";
-          userHoldOpen = false;
-        }
+        panel.style.height = `${to}px`;
       });
 
       panel.addEventListener("transitionend", settle);
-      setTimeout(() => settle(), 380);
+      setTimeout(() => settle(), 500);
     };
 
     const onTouchCancel = () => {
@@ -378,35 +402,51 @@
       if (!link) return;
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
-      setCatalogNavOpen(false, { animate: false });
+      bumpIgnore(500);
+      setCatalogNavOpen(false);
     };
 
+    let scrollTicking = false;
     const onWindowScroll = () => {
-      if (!isMobile()) {
-        userHoldOpen = false;
-        setCatalogNavOpen(true, { animate: false });
-        lastY = window.scrollY || 0;
-        return;
-      }
-      if (drag || Date.now() < ignoreScrollUntil) {
-        lastY = window.scrollY || 0;
-        return;
-      }
+      if (scrollTicking) return;
+      scrollTicking = true;
+      requestAnimationFrame(() => {
+        scrollTicking = false;
 
-      const y = window.scrollY || 0;
-      const stuck = isStuckUnderHeader();
+        if (!isMobile()) {
+          userHoldOpen = false;
+          setCatalogNavOpen(true, { animate: false });
+          lastY = window.scrollY || 0;
+          return;
+        }
+        if (drag || Date.now() < ignoreScrollUntil || skipStickySync) {
+          lastY = window.scrollY || 0;
+          return;
+        }
 
-      if (!stuck) {
-        userHoldOpen = false;
-        setCatalogNavOpen(true, { animate: false });
-      } else if (userHoldOpen && y > lastY + 8) {
-        userHoldOpen = false;
-        setCatalogNavOpen(false, { animate: false });
-      } else if (!userHoldOpen) {
-        setCatalogNavOpen(false, { animate: false });
-      }
+        const y = window.scrollY || 0;
+        const stuck = isStuckUnderHeader();
+        const isOpen = panel.classList.contains("is-open");
 
-      lastY = y;
+        if (!stuck) {
+          userHoldOpen = false;
+          if (!isOpen) {
+            bumpIgnore(500);
+            setCatalogNavOpen(true);
+          }
+        } else if (userHoldOpen && y > lastY + 8) {
+          userHoldOpen = false;
+          if (isOpen) {
+            bumpIgnore(500);
+            setCatalogNavOpen(false);
+          }
+        } else if (!userHoldOpen && isOpen) {
+          bumpIgnore(500);
+          setCatalogNavOpen(false);
+        }
+
+        lastY = y;
+      });
     };
 
     document.addEventListener("touchmove", onDocTouchMove, { passive: false, capture: true });
@@ -860,16 +900,12 @@
       };
 
       if (isMobile && panel && panel.classList.contains("is-open")) {
-        // Мгновенно сворачиваем шторку, чтобы offset не считался по открытой панели
-        panel.style.transition = "none";
-        setCatalogNavOpen(false);
-        // force reflow
-        void panel.offsetHeight;
-        panel.style.transition = "";
+        // Перед прыжком к секции сворачиваем без анимации — иначе offset врёт
+        setCatalogNavOpen(false, { animate: false });
         requestAnimationFrame(() => requestAnimationFrame(doScroll));
         return;
       }
-      if (isMobile) setCatalogNavOpen(false);
+      if (isMobile) setCatalogNavOpen(false, { animate: false });
       requestAnimationFrame(() => requestAnimationFrame(doScroll));
     }
 

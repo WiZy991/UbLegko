@@ -907,7 +907,8 @@ select {
   min-width: 0;
 }
 
-.catalog-sheet {
+.catalog-sheet,
+.catalog-sheet__clip {
   display: contents;
 }
 
@@ -2962,10 +2963,6 @@ select.form-input {
     display: contents;
   }
 
-  .catalog-sheet {
-    display: block;
-  }
-
   .page {
     padding-top: 6px;
   }
@@ -3077,44 +3074,49 @@ select.form-input {
     background: #8a96a0;
   }
 
+  /* grid 0fr→1fr дешевле max-height и меньше лагов со sticky */
   .catalog-sheet {
     order: 1;
+    display: grid;
+    grid-template-rows: 0fr;
     box-sizing: border-box;
     width: 100%;
-    max-height: 0;
     margin: 0;
     padding: 0;
     overflow: hidden;
-    opacity: 0;
     pointer-events: none;
     background: transparent;
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    transition:
-      max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 0.22s ease,
-      padding 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: grid-template-rows 0.48s cubic-bezier(0.33, 1, 0.32, 1);
   }
 
   .catalog-sheet.is-open {
-    max-height: min(70vh, 480px);
+    grid-template-rows: 1fr;
     padding: 4px 0 2px;
-    overflow: auto;
-    opacity: 1;
     pointer-events: auto;
   }
 
-  .catalog-nav.is-pulling .catalog-sheet,
-  .catalog-nav.is-instant .catalog-sheet {
+  .catalog-sheet__clip {
+    display: block;
+    min-height: 0;
     overflow: hidden;
+  }
+
+  .catalog-nav.is-instant .catalog-sheet {
     transition: none !important;
   }
 
+  /* Жест тянем через height — без opacity и без ResizeObserver sync */
   .catalog-nav.is-pulling .catalog-sheet {
-    opacity: 1;
-    pointer-events: none;
+    display: block;
+    grid-template-rows: none;
+    height: 0;
     padding: 4px 0 2px;
+    overflow: hidden;
+    pointer-events: none;
+    transition: none !important;
   }
 
   .catalog-sheet .sidebar {
