@@ -1560,6 +1560,14 @@ select {
   white-space: nowrap;
 }
 
+.product-detail__description {
+  white-space: pre-line;
+  margin: 16px 0;
+  font-size: 1.15rem;
+  line-height: 1.55;
+  color: #1b2228;
+}
+
 .product-card__meta--price {
   align-items: center;
   justify-content: flex-start;

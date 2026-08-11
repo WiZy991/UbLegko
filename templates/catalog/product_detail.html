@@ -115,13 +115,8 @@
             <span class="product-detail__sku">Артикул: {{ product.sku }}</span>
           {% endif %}
         </div>
-        {% if product.short_description %}
-          <p style="color:var(--text-muted);">{{ product.short_description }}</p>
-        {% endif %}
-        {% if product.description and product.description != product.short_description %}
-          <div style="white-space:pre-line;margin:16px 0;">{{ product.description }}</div>
-        {% elif product.description and not product.short_description %}
-          <div style="white-space:pre-line;margin:16px 0;">{{ product.description }}</div>
+        {% if product.description %}
+          <div class="product-detail__description">{{ product.description }}</div>
         {% endif %}
         <form
           action="{% url 'cart:update' product.id %}"
