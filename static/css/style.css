@@ -3028,17 +3028,18 @@ select.form-input {
     width: 100%;
   }
 
-  /* Зацеп сразу под фильтрами — без лишнего воздуха */
+  /* Зацеп: крупная зона пальца (~48px), полоска по центру */
   .catalog-nav .menu-toggle {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     order: 3;
+    position: relative;
     width: 100%;
     margin: 0;
-    min-height: 0;
-    padding: 4px 0 6px;
+    min-height: 48px;
+    padding: 12px 0 14px;
     border: 0;
     border-radius: 0;
     background: transparent;
@@ -3052,35 +3053,45 @@ select.form-input {
     -webkit-user-select: none;
   }
 
+  /* Доп. зона захвата чуть выше (наезжает на фильтры), без увеличения визуала */
+  .catalog-nav .menu-toggle::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -12px;
+    bottom: 0;
+  }
+
   .catalog-nav .menu-toggle:active {
     cursor: grabbing;
   }
 
   .catalog-nav .menu-toggle__handle {
+    position: relative;
+    z-index: 1;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 100%;
-    /* Увеличенная зона нажатия без визуального зазора */
-    padding: 6px 0 2px;
-    margin: -6px 0 0;
+    min-height: 24px;
   }
 
   .catalog-nav .menu-toggle__grip {
     display: block;
-    width: 40px;
-    height: 4px;
+    width: 56px;
+    height: 5px;
     border-radius: 999px;
-    background: #8a96a0;
+    background: #6b7882;
   }
 
-  /* grid 0fr→1fr дешевле max-height и меньше лагов со sticky */
+  /* Высота + WAAPI (iOS-кривая) — без grid/opacity лагов */
   .catalog-sheet {
     order: 1;
-    display: grid;
-    grid-template-rows: 0fr;
+    display: block;
     box-sizing: border-box;
     width: 100%;
+    height: 0;
     margin: 0;
     padding: 0;
     overflow: hidden;
@@ -3089,34 +3100,24 @@ select.form-input {
     border: 0;
     border-radius: 0;
     box-shadow: none;
-    transition: grid-template-rows 0.48s cubic-bezier(0.33, 1, 0.32, 1);
+    transform: translateZ(0);
   }
 
   .catalog-sheet.is-open {
-    grid-template-rows: 1fr;
+    height: auto;
     padding: 4px 0 2px;
     pointer-events: auto;
   }
 
   .catalog-sheet__clip {
     display: block;
-    min-height: 0;
-    overflow: hidden;
   }
 
-  .catalog-nav.is-instant .catalog-sheet {
-    transition: none !important;
-  }
-
-  /* Жест тянем через height — без opacity и без ResizeObserver sync */
-  .catalog-nav.is-pulling .catalog-sheet {
-    display: block;
-    grid-template-rows: none;
-    height: 0;
+  .catalog-nav.is-pulling .catalog-sheet,
+  .catalog-nav.is-sheet-animating .catalog-sheet {
     padding: 4px 0 2px;
-    overflow: hidden;
     pointer-events: none;
-    transition: none !important;
+    will-change: height;
   }
 
   .catalog-sheet .sidebar {

@@ -74,6 +74,91 @@
     window.__ublegkoObserveToolbar = observeToolbar;
   }
 
+  // Как системные шторки iOS
+  const IOS_SHEET_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
+  const IOS_SHEET_MS = 560;
+
+  function cancelSheetAnimation(panel) {
+    if (!panel || !panel._ublegkoAnim) return;
+    try {
+      panel._ublegkoAnim.cancel();
+    } catch (_) {
+      /* ignore */
+    }
+    panel._ublegkoAnim = null;
+  }
+
+  function measureSheetHeight(panel) {
+    const clip = panel.querySelector(".catalog-sheet__clip") || panel;
+    const shell = document.querySelector("[data-catalog-nav-shell]");
+    const prevHeight = panel.style.height;
+    const wasOpen = panel.classList.contains("is-open");
+    const wasPulling = shell && shell.classList.contains("is-pulling");
+    if (shell) shell.classList.add("is-pulling");
+    panel.classList.add("is-open");
+    panel.style.height = "auto";
+    const h = Math.min(
+      Math.max(clip.scrollHeight || panel.scrollHeight, 80),
+      Math.round(window.innerHeight * 0.7),
+      480
+    );
+    panel.style.height = prevHeight;
+    if (!wasOpen) panel.classList.remove("is-open");
+    if (shell && !wasPulling) shell.classList.remove("is-pulling");
+    return h;
+  }
+
+  function animateSheetHeight(panel, { from, to, open }) {
+    const shell = document.querySelector("[data-catalog-nav-shell]");
+    const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
+    cancelSheetAnimation(panel);
+    skipStickySync = true;
+    if (shell) {
+      shell.classList.remove("is-pulling");
+      shell.classList.add("is-sheet-animating");
+    }
+
+    if (open) panel.classList.add("is-open");
+    panel.style.height = `${Math.max(0, from)}px`;
+    if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+
+    const anim = panel.animate(
+      [{ height: `${Math.max(0, from)}px` }, { height: `${Math.max(0, to)}px` }],
+      {
+        duration: IOS_SHEET_MS,
+        easing: IOS_SHEET_EASING,
+        fill: "forwards",
+      }
+    );
+    panel._ublegkoAnim = anim;
+
+    let done = false;
+    const finish = () => {
+      if (done || panel._ublegkoAnim !== anim) return;
+      done = true;
+      panel._ublegkoAnim = null;
+      try {
+        anim.cancel();
+      } catch (_) {
+        /* ignore */
+      }
+      if (open) {
+        panel.classList.add("is-open");
+        panel.style.height = "";
+      } else {
+        panel.classList.remove("is-open");
+        panel.style.height = "";
+      }
+      if (shell) shell.classList.remove("is-sheet-animating");
+      skipStickySync = false;
+      syncStickyHeaderHeight();
+    };
+
+    anim.finished.then(finish, finish);
+    setTimeout(finish, IOS_SHEET_MS + 80);
+    return anim;
+  }
+
   function setCatalogNavOpen(open, options = {}) {
     const animate = options.animate !== false;
     const shell = document.querySelector("[data-catalog-nav-shell]");
@@ -83,14 +168,9 @@
       document.querySelector("[data-sidebar], #sidebar");
     if (!toggle || !panel) return;
 
-    if (shell) shell.classList.remove("is-pulling");
-    panel.style.height = "";
-    panel.style.maxHeight = "";
-    panel.style.opacity = "";
-    panel.style.transition = "";
-
     const wasOpen = panel.classList.contains("is-open");
-    if (wasOpen === open) {
+    // Уже в нужном состоянии и не в середине жеста/анимации
+    if (wasOpen === open && !panel._ublegkoAnim && !(shell && shell.classList.contains("is-pulling"))) {
       syncStickyHeaderHeight();
       return;
     }
@@ -99,40 +179,26 @@
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const useAnimate = animate && isMobile && !reduceMotion;
 
-    if (panel._ublegkoSheetSettle) {
-      panel.removeEventListener("transitionend", panel._ublegkoSheetSettle);
-      panel._ublegkoSheetSettle = null;
-    }
-
     if (!useAnimate) {
-      if (shell) shell.classList.add("is-instant");
+      cancelSheetAnimation(panel);
+      if (shell) {
+        shell.classList.remove("is-pulling", "is-sheet-animating");
+      }
+      panel.style.height = "";
       panel.classList.toggle("is-open", open);
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
-      void panel.offsetHeight;
-      if (shell) shell.classList.remove("is-instant");
       skipStickySync = false;
       syncStickyHeaderHeight();
       return;
     }
 
-    // Только CSS grid-template-rows; sticky sync — после анимации
-    skipStickySync = true;
-    panel.classList.toggle("is-open", open);
-    toggle.setAttribute("aria-expanded", open ? "true" : "false");
-
-    let settled = false;
-    const settle = (evt) => {
-      if (settled) return;
-      if (evt && evt.propertyName && evt.propertyName !== "grid-template-rows") return;
-      settled = true;
-      panel.removeEventListener("transitionend", settle);
-      panel._ublegkoSheetSettle = null;
-      skipStickySync = false;
-      syncStickyHeaderHeight();
-    };
-    panel._ublegkoSheetSettle = settle;
-    panel.addEventListener("transitionend", settle);
-    setTimeout(settle, 520);
+    const from = panel.getBoundingClientRect().height;
+    if (open) {
+      const to = measureSheetHeight(panel);
+      animateSheetHeight(panel, { from, to, open: true });
+    } else {
+      animateSheetHeight(panel, { from: from || measureSheetHeight(panel), to: 0, open: false });
+    }
   }
 
   let catalogNavCollapseCleanup = null;
@@ -206,31 +272,15 @@
       if (!stuck) {
         userHoldOpen = false;
         if (!panel.classList.contains("is-open")) {
-          bumpIgnore(500);
+          bumpIgnore(IOS_SHEET_MS);
           setCatalogNavOpen(true);
         }
         return;
       }
       if (!userHoldOpen && panel.classList.contains("is-open")) {
-        bumpIgnore(500);
+        bumpIgnore(IOS_SHEET_MS);
         setCatalogNavOpen(false);
       }
-    };
-
-    const measureFullH = () => {
-      const clip = panel.querySelector(".catalog-sheet__clip") || panel;
-      const wasPulling = shell.classList.contains("is-pulling");
-      const prevHeight = panel.style.height;
-      shell.classList.add("is-pulling");
-      panel.style.height = "auto";
-      const h = Math.min(
-        Math.max(clip.scrollHeight || panel.scrollHeight, 80),
-        Math.round(window.innerHeight * 0.7),
-        480
-      );
-      panel.style.height = prevHeight;
-      if (!wasPulling) shell.classList.remove("is-pulling");
-      return h;
     };
 
     const paintH = (h) => {
@@ -246,9 +296,7 @@
 
     const clearDragStyles = () => {
       shell.classList.remove("is-pulling");
-      panel.style.height = "";
-      panel.style.transition = "";
-      skipStickySync = false;
+      // height чистит animateSheetHeight / setCatalogNavOpen
       stopScrollFreeze();
     };
 
@@ -272,12 +320,17 @@
       if (event.cancelable) event.preventDefault();
 
       const t = event.touches[0];
+      cancelSheetAnimation(panel);
+      shell.classList.remove("is-sheet-animating");
+
       const startOpen = panel.classList.contains("is-open");
+      const fromH = startOpen ? panel.getBoundingClientRect().height : 0;
 
       startScrollFreeze();
       skipStickySync = true;
-      fullH = measureFullH();
+      fullH = measureSheetHeight(panel);
       shell.classList.add("is-pulling");
+      if (startOpen) panel.classList.add("is-open");
 
       drag = {
         id: t.identifier,
@@ -285,7 +338,10 @@
         y: t.clientY,
         startOpen,
         locked: false,
-        h: startOpen ? fullH : 0,
+        h: startOpen ? fromH || fullH : 0,
+        lastY: t.clientY,
+        lastT: performance.now(),
+        velocity: 0,
       };
       bumpIgnore(2000);
       paintH(drag.h);
@@ -298,8 +354,13 @@
 
       if (event.cancelable) event.preventDefault();
 
+      const now = performance.now();
       const dy = t.clientY - drag.y;
       const dx = t.clientX - drag.x;
+      const dt = Math.max(1, now - drag.lastT);
+      drag.velocity = (t.clientY - drag.lastY) / dt;
+      drag.lastY = t.clientY;
+      drag.lastT = now;
 
       if (!drag.locked && Math.abs(dy) > 4 && Math.abs(dy) >= Math.abs(dx) * 0.8) {
         const opening = !drag.startOpen && dy > 0;
@@ -325,6 +386,7 @@
       if (!t || t.identifier !== drag.id) {
         drag = null;
         clearDragStyles();
+        skipStickySync = false;
         syncStickyHeaderHeight();
         return;
       }
@@ -333,6 +395,7 @@
       const locked = drag.locked;
       const h = drag.h;
       const startOpen = drag.startOpen;
+      const velocity = drag.velocity;
       drag = null;
 
       if (rafId) {
@@ -344,7 +407,7 @@
       if (!locked) {
         clearDragStyles();
         suppressMenuToggleClick = true;
-        bumpIgnore(420);
+        bumpIgnore(IOS_SHEET_MS);
         const next = !startOpen;
         setCatalogNavOpen(next);
         userHoldOpen = next && isStuckUnderHeader();
@@ -352,47 +415,26 @@
       }
 
       suppressMenuToggleClick = true;
-      bumpIgnore(420);
+      bumpIgnore(IOS_SHEET_MS);
 
-      const shouldOpen = startOpen ? h > fullH * 0.45 : h >= fullH * 0.2 || dy > 36;
+      // iOS-like: учитываем скорость жеста
+      let shouldOpen;
+      if (velocity > 0.45) shouldOpen = true;
+      else if (velocity < -0.45) shouldOpen = false;
+      else shouldOpen = startOpen ? h > fullH * 0.45 : h >= fullH * 0.2 || dy > 36;
+
       const from = Math.max(0, h);
       const to = shouldOpen ? fullH : 0;
-
-      skipStickySync = true;
-      panel.style.height = `${from}px`;
-      panel.style.transition = "height 0.45s cubic-bezier(0.33, 1, 0.32, 1)";
-
-      let settled = false;
-      const settle = (evt) => {
-        if (settled) return;
-        if (evt && evt.propertyName && evt.propertyName !== "height") return;
-        settled = true;
-        panel.removeEventListener("transitionend", settle);
-        if (shouldOpen) {
-          panel.classList.add("is-open");
-          toggle.setAttribute("aria-expanded", "true");
-          userHoldOpen = isStuckUnderHeader();
-        } else {
-          panel.classList.remove("is-open");
-          toggle.setAttribute("aria-expanded", "false");
-          userHoldOpen = false;
-        }
-        clearDragStyles();
-        syncStickyHeaderHeight();
-      };
-
-      requestAnimationFrame(() => {
-        panel.style.height = `${to}px`;
-      });
-
-      panel.addEventListener("transitionend", settle);
-      setTimeout(() => settle(), 500);
+      clearDragStyles();
+      userHoldOpen = shouldOpen && isStuckUnderHeader();
+      animateSheetHeight(panel, { from, to, open: shouldOpen });
     };
 
     const onTouchCancel = () => {
       if (!drag) return;
       drag = null;
       clearDragStyles();
+      skipStickySync = false;
       syncStickyHeaderHeight();
     };
 
@@ -402,7 +444,7 @@
       if (!link) return;
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
-      bumpIgnore(500);
+      bumpIgnore(IOS_SHEET_MS);
       setCatalogNavOpen(false);
     };
 
@@ -431,17 +473,17 @@
         if (!stuck) {
           userHoldOpen = false;
           if (!isOpen) {
-            bumpIgnore(500);
+            bumpIgnore(IOS_SHEET_MS);
             setCatalogNavOpen(true);
           }
         } else if (userHoldOpen && y > lastY + 8) {
           userHoldOpen = false;
           if (isOpen) {
-            bumpIgnore(500);
+            bumpIgnore(IOS_SHEET_MS);
             setCatalogNavOpen(false);
           }
         } else if (!userHoldOpen && isOpen) {
-          bumpIgnore(500);
+          bumpIgnore(IOS_SHEET_MS);
           setCatalogNavOpen(false);
         }
 
