@@ -3008,9 +3008,9 @@ select.form-input {
 
   .catalog-nav .catalog-toolbar {
     order: 2;
-    position: static;
+    position: relative;
     top: auto;
-    z-index: auto;
+    z-index: 2;
     width: 100%;
     margin: 0;
     padding: 8px 0 0;
@@ -3031,7 +3031,7 @@ select.form-input {
     width: 100%;
   }
 
-  /* Зацеп: мало воздуха, широкая невидимая зона касания */
+  /* Зацеп: зона касания вниз/в стороны, не перекрывает фильтры сверху */
   .catalog-nav .menu-toggle {
     display: flex;
     flex-direction: column;
@@ -3039,6 +3039,7 @@ select.form-input {
     justify-content: center;
     order: 3;
     position: relative;
+    z-index: 1;
     width: 100%;
     margin: 0;
     min-height: 0;
@@ -3061,8 +3062,8 @@ select.form-input {
     position: absolute;
     left: 0;
     right: 0;
-    top: -18px;
-    bottom: -6px;
+    top: 0;
+    bottom: -16px;
     z-index: 0;
   }
 
@@ -3078,7 +3079,7 @@ select.form-input {
     justify-content: center;
     width: 100%;
     min-height: 0;
-    padding: 6px 0 2px;
+    padding: 8px 0 6px;
   }
 
   .catalog-nav .menu-toggle__grip {
