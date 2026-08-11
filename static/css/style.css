@@ -889,28 +889,50 @@ select {
   line-height: 0;
 }
 
+.menu-toggle__label {
+  display: none;
+}
+
+.menu-toggle__grip {
+  display: none;
+}
+
 .menu-toggle__handle-svg {
   display: block;
 }
 
-/* Десктоп: сайдбар в первой колонке, без display:contents */
+/* Десктоп: сайдбар слева, фильтры над товарами */
 .catalog-nav {
-  display: block;
+  display: contents;
   min-width: 0;
+}
+
+.catalog-sheet {
+  display: contents;
 }
 
 .catalog-nav-anchor {
   display: none;
 }
 
-.layout > .catalog-nav {
+.layout > .catalog-main {
+  display: contents;
+}
+
+.layout .sidebar {
   grid-column: 1;
+  grid-row: 1 / span 2;
+}
+
+.layout .catalog-toolbar {
+  grid-column: 2;
   grid-row: 1;
 }
 
-.layout > .catalog-main {
+.layout .catalog-body {
   grid-column: 2;
-  grid-row: 1;
+  grid-row: 2;
+  min-width: 0;
 }
 
 .catalog-toolbar {
@@ -2929,32 +2951,32 @@ select.form-input {
     max-width: 100%;
   }
 
+  .layout .sidebar,
+  .layout .catalog-toolbar,
+  .layout .catalog-body {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
   .catalog-main {
     display: contents;
+  }
+
+  .catalog-sheet {
+    display: block;
   }
 
   .page {
     padding-top: 6px;
   }
 
-  .catalog-main > .category-block__title,
-  .catalog-main > .category-block__line {
+  .catalog-body > .category-block__title,
+  .catalog-body > .category-block__line {
     order: 0;
   }
 
-  .catalog-toolbar {
-    order: 1;
-    position: sticky;
-    top: calc(var(--header-sticky-height) - 2px);
-    z-index: 46;
-    margin: 0;
-    padding: 6px 0 4px;
-    background: var(--bg);
-    border-bottom: 1px solid var(--line);
-  }
-
   .catalog-nav-anchor {
-    order: 2;
+    order: 1;
     display: block;
     height: 1px;
     margin: 0;
@@ -2965,17 +2987,20 @@ select.form-input {
     pointer-events: none;
   }
 
+  /* Категории + фильтры в одной sticky-шторке; зацеп СНИЗУ */
   .catalog-nav {
-    order: 3;
-    display: block !important;
+    order: 2;
+    display: flex !important;
+    flex-direction: column;
     position: sticky;
-    top: calc(var(--header-sticky-height) + var(--catalog-toolbar-height, 0px) - 2px);
+    top: calc(var(--header-sticky-height) - 2px);
     z-index: 45;
-    width: 100% !important;
-    max-width: 100% !important;
+    box-sizing: border-box;
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin: 0 calc(50% - 50vw);
+    padding: 0 var(--page-pad);
     background: var(--bg);
-    margin: 0;
-    padding: 0;
     border-bottom: 1px solid var(--line);
     touch-action: none;
     overscroll-behavior: none;
@@ -2986,23 +3011,31 @@ select.form-input {
   }
 
   .catalog-body {
-    order: 4;
+    order: 3;
+    width: 100%;
   }
 
-  /* Только зацеп — без кнопки «Категории» */
+  /* Зацеп внизу шторки */
   .menu-toggle {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 4px;
+    order: 2;
     width: 100%;
     margin: 0;
-    min-height: 52px;
-    padding: 10px 16px 12px;
+    min-height: 36px;
+    padding: 4px 0 10px;
     border: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
-    color: #0a5f73;
+    color: #44505a;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     -webkit-tap-highlight-color: transparent;
     touch-action: none;
     overscroll-behavior: none;
@@ -3015,69 +3048,102 @@ select.form-input {
     cursor: grabbing;
   }
 
+  .menu-toggle__label {
+    display: none;
+  }
+
+  .menu-toggle[aria-expanded="false"] .menu-toggle__label {
+    display: block;
+  }
+
   .menu-toggle__handle {
     display: inline-flex;
-    transform: translateZ(0);
+    align-items: center;
+    justify-content: center;
+    width: 100%;
   }
 
-  .menu-toggle__handle-svg {
-    width: 96px;
-    height: 32px;
-    filter: drop-shadow(0 2px 4px rgba(10, 95, 115, 0.22));
+  .menu-toggle__grip {
+    display: block;
+    width: 44px;
+    height: 4px;
+    border-radius: 999px;
+    background: #8a96a0;
   }
 
-  /* Шторка на всю ширину экрана */
-  .sidebar {
+  /* Панель без «белой карточки» — один фон со страницей */
+  .catalog-sheet {
+    order: 1;
+    box-sizing: border-box;
+    width: 100%;
+    max-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    transition:
+      max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.22s ease,
+      padding 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .catalog-sheet.is-open {
+    max-height: min(70vh, 480px);
+    padding: 6px 0 2px;
+    overflow: auto;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .catalog-nav.is-pulling .catalog-sheet {
+    overflow: hidden;
+    opacity: 1;
+    pointer-events: none;
+    padding: 6px 0 2px;
+    transition: none !important;
+  }
+
+  .catalog-sheet .sidebar {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: wrap !important;
     align-items: flex-start;
     align-content: flex-start;
     gap: 8px 10px;
-    position: absolute !important;
-    left: 0 !important;
-    right: 0 !important;
-    top: 100%;
-    z-index: 6;
-    box-sizing: border-box;
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    right: auto !important;
+    z-index: auto;
     width: 100% !important;
     max-width: none !important;
-    max-height: 0;
-    margin: 0 !important;
-    padding: 0 10px;
-    overflow: hidden;
-    border: 1px solid transparent;
-    border-radius: 0 0 16px 16px;
-    background: #fff;
-    box-shadow: none;
-    opacity: 0;
-    pointer-events: none;
-    transition:
-      max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 0.22s ease,
-      padding 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-      box-shadow 0.28s ease,
-      border-color 0.22s ease;
+    max-height: none !important;
+    margin: 0 0 8px !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
   }
 
-  .sidebar.is-open {
-    max-height: min(48vh, 320px);
-    padding: 12px 10px 14px;
-    overflow: auto;
-    opacity: 1;
-    pointer-events: auto;
-    border-color: rgba(10, 95, 115, 0.12);
-    box-shadow: 0 12px 28px rgba(15, 30, 40, 0.16);
-  }
-
-  .catalog-nav.is-pulling .sidebar {
-    overflow: hidden;
-    opacity: 1;
-    pointer-events: none;
-    padding: 12px 10px 14px;
-    border-color: rgba(10, 95, 115, 0.12);
-    box-shadow: 0 12px 28px rgba(15, 30, 40, 0.16);
-    transition: none !important;
+  .catalog-sheet .catalog-toolbar {
+    position: static !important;
+    top: auto !important;
+    z-index: auto;
+    order: unset;
+    margin: 0;
+    padding: 8px 0 2px;
+    background: transparent;
+    border-bottom: 0;
+    border-top: 1px solid var(--line);
   }
 
   .sidebar__body {

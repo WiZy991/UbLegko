@@ -40,8 +40,9 @@
     const headerH = sticky ? Math.round(sticky.getBoundingClientRect().height) : 0;
     const isMobile = window.matchMedia("(max-width: 900px)").matches;
     const navH = isMobile && catalogNav ? Math.round(catalogNav.getBoundingClientRect().height) : 0;
-    const toolbarH = toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0;
-    // -2px: следующий sticky наезжает на предыдущий, закрывая субпиксельный просвет
+    // На мобилке фильтры внутри шторки — не дублируем высоту
+    const toolbarH =
+      !isMobile && toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0;
     const overlap = navH || toolbarH ? 2 : 0;
     document.documentElement.style.setProperty("--header-sticky-height", `${headerH}px`);
     document.documentElement.style.setProperty("--catalog-nav-height", `${navH}px`);
@@ -76,19 +77,21 @@
   function setCatalogNavOpen(open) {
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
-    const sidebar = document.querySelector("[data-sidebar], #sidebar");
-    if (!toggle || !sidebar) return;
+    const panel =
+      document.querySelector("[data-catalog-sheet]") ||
+      document.querySelector("[data-sidebar], #sidebar");
+    if (!toggle || !panel) return;
     if (shell) {
       shell.classList.remove("is-pulling");
-      sidebar.style.maxHeight = "";
-      sidebar.style.opacity = "";
+      panel.style.maxHeight = "";
+      panel.style.opacity = "";
     }
-    const wasOpen = sidebar.classList.contains("is-open");
+    const wasOpen = panel.classList.contains("is-open");
     if (wasOpen === open) {
       syncStickyHeaderHeight();
       return;
     }
-    sidebar.classList.toggle("is-open", open);
+    panel.classList.toggle("is-open", open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
     syncStickyHeaderHeight();
   }
@@ -97,8 +100,10 @@
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const anchor = document.querySelector("[data-catalog-nav-anchor]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
-    const sidebar = document.querySelector("[data-sidebar], #sidebar");
-    if (!shell || !toggle || !sidebar) return;
+    const panel =
+      document.querySelector("[data-catalog-sheet]") ||
+      document.querySelector("[data-sidebar], #sidebar");
+    if (!shell || !toggle || !panel) return;
 
     let lastY = window.scrollY || 0;
     let ignoreScrollUntil = 0;
@@ -136,11 +141,8 @@
 
     const isStuckUnderHeader = () => {
       const header = document.querySelector(".header-sticky");
-      const toolbar = document.querySelector("[data-catalog-toolbar]");
       if (!header) return window.scrollY > 8;
-      const stickyLine = toolbar
-        ? toolbar.getBoundingClientRect().bottom - 2
-        : header.getBoundingClientRect().bottom - 2;
+      const stickyLine = header.getBoundingClientRect().bottom - 2;
       if (anchor) {
         return anchor.getBoundingClientRect().bottom <= stickyLine + 1;
       }
@@ -164,19 +166,19 @@
     };
 
     const measureFullH = () => {
-      const prevMax = sidebar.style.maxHeight;
-      const prevOp = sidebar.style.opacity;
+      const prevMax = panel.style.maxHeight;
+      const prevOp = panel.style.opacity;
       const wasPulling = shell.classList.contains("is-pulling");
       shell.classList.add("is-pulling");
-      sidebar.style.maxHeight = "none";
-      sidebar.style.opacity = "0";
+      panel.style.maxHeight = "none";
+      panel.style.opacity = "0";
       const h = Math.min(
-        Math.max(sidebar.scrollHeight, 80),
-        Math.round(window.innerHeight * 0.45),
-        300
+        Math.max(panel.scrollHeight, 120),
+        Math.round(window.innerHeight * 0.7),
+        480
       );
-      sidebar.style.maxHeight = prevMax;
-      sidebar.style.opacity = prevOp;
+      panel.style.maxHeight = prevMax;
+      panel.style.opacity = prevOp;
       if (!wasPulling) shell.classList.remove("is-pulling");
       return h;
     };
@@ -190,15 +192,15 @@
         const px = pendingH;
         pendingH = null;
         const p = Math.min(1, px / Math.max(fullH, 1));
-        sidebar.style.maxHeight = `${px}px`;
-        sidebar.style.opacity = String(0.35 + p * 0.65);
+        panel.style.maxHeight = `${px}px`;
+        panel.style.opacity = String(0.35 + p * 0.65);
       });
     };
 
     const clearDragStyles = () => {
       shell.classList.remove("is-pulling");
-      sidebar.style.maxHeight = "";
-      sidebar.style.opacity = "";
+      panel.style.maxHeight = "";
+      panel.style.opacity = "";
       skipStickySync = false;
       stopScrollFreeze();
     };
@@ -207,7 +209,7 @@
       if (drag) return;
       bumpIgnore(500);
       requestAnimationFrame(() => {
-        userHoldOpen = sidebar.classList.contains("is-open") && isStuckUnderHeader();
+        userHoldOpen = panel.classList.contains("is-open") && isStuckUnderHeader();
       });
     });
 
@@ -223,7 +225,7 @@
       if (event.cancelable) event.preventDefault();
 
       const t = event.touches[0];
-      const startOpen = sidebar.classList.contains("is-open");
+      const startOpen = panel.classList.contains("is-open");
 
       startScrollFreeze();
       skipStickySync = true;
@@ -292,7 +294,6 @@
       }
       pendingH = null;
 
-      // Тап (без свайпа): переключаем сами — preventDefault на start убивает click
       if (!locked) {
         clearDragStyles();
         suppressMenuToggleClick = true;
@@ -309,9 +310,9 @@
       const shouldOpen = startOpen ? h > fullH * 0.45 : h >= fullH * 0.2 || dy > 36;
 
       const from = Math.max(0, h);
-      sidebar.style.maxHeight = `${from}px`;
-      sidebar.style.opacity = from > 0 ? "1" : "0";
-      sidebar.style.transition =
+      panel.style.maxHeight = `${from}px`;
+      panel.style.opacity = from > 0 ? "1" : "0";
+      panel.style.transition =
         "max-height 0.34s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease";
 
       let settled = false;
@@ -319,29 +320,29 @@
         if (settled) return;
         if (evt && evt.propertyName && evt.propertyName !== "max-height") return;
         settled = true;
-        sidebar.removeEventListener("transitionend", settle);
-        sidebar.style.transition = "";
+        panel.removeEventListener("transitionend", settle);
+        panel.style.transition = "";
         clearDragStyles();
         syncStickyHeaderHeight();
       };
 
       requestAnimationFrame(() => {
         if (shouldOpen) {
-          sidebar.classList.add("is-open");
+          panel.classList.add("is-open");
           toggle.setAttribute("aria-expanded", "true");
-          sidebar.style.maxHeight = `${fullH}px`;
-          sidebar.style.opacity = "1";
+          panel.style.maxHeight = `${fullH}px`;
+          panel.style.opacity = "1";
           userHoldOpen = isStuckUnderHeader();
         } else {
-          sidebar.classList.remove("is-open");
+          panel.classList.remove("is-open");
           toggle.setAttribute("aria-expanded", "false");
-          sidebar.style.maxHeight = "0px";
-          sidebar.style.opacity = "0";
+          panel.style.maxHeight = "0px";
+          panel.style.opacity = "0";
           userHoldOpen = false;
         }
       });
 
-      sidebar.addEventListener("transitionend", settle);
+      panel.addEventListener("transitionend", settle);
       setTimeout(() => settle(), 380);
     };
 
@@ -358,9 +359,9 @@
     toggle.addEventListener("touchend", onTouchEnd);
     toggle.addEventListener("touchcancel", onTouchCancel);
 
-    sidebar.addEventListener("click", (event) => {
+    panel.addEventListener("click", (event) => {
       if (!isMobile()) return;
-      const link = event.target.closest("a");
+      const link = event.target.closest("a[data-scroll-spy-link], a[data-catalog-nav]");
       if (!link) return;
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
