@@ -74,27 +74,18 @@
     window.__ublegkoObserveToolbar = observeToolbar;
   }
 
-  // Как системные шторки iOS
+  // iOS-кривая; анимируем без sticky-пересчётов (fixed + spacer)
   const IOS_SHEET_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
-  const IOS_SHEET_MS = 560;
-
-  function cancelSheetAnimation(panel) {
-    if (!panel || !panel._ublegkoAnim) return;
-    try {
-      panel._ublegkoAnim.cancel();
-    } catch (_) {
-      /* ignore */
-    }
-    panel._ublegkoAnim = null;
-  }
+  const IOS_SHEET_MS = 480;
+  let catalogNavLock = null;
 
   function measureSheetHeight(panel) {
     const clip = panel.querySelector(".catalog-sheet__clip") || panel;
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const prevHeight = panel.style.height;
+    const prevTransition = panel.style.transition;
     const wasOpen = panel.classList.contains("is-open");
-    const wasPulling = shell && shell.classList.contains("is-pulling");
-    if (shell) shell.classList.add("is-pulling");
+    panel.style.transition = "none";
     panel.classList.add("is-open");
     panel.style.height = "auto";
     const h = Math.min(
@@ -103,60 +94,143 @@
       480
     );
     panel.style.height = prevHeight;
+    panel.style.transition = prevTransition;
     if (!wasOpen) panel.classList.remove("is-open");
-    if (shell && !wasPulling) shell.classList.remove("is-pulling");
+    if (shell) shell.classList.remove("is-pulling");
     return h;
+  }
+
+  function lockCatalogNav(shell) {
+    if (!shell) return null;
+    if (catalogNavLock && catalogNavLock.shell === shell) return catalogNavLock;
+    unlockCatalogNav();
+    const rect = shell.getBoundingClientRect();
+    const ph = document.createElement("div");
+    ph.setAttribute("data-catalog-nav-ph", "1");
+    // Spacer на всю ширину контейнера, без фона — только высота
+    ph.style.cssText =
+      "display:block;width:100%;height:" +
+      Math.round(rect.height) +
+      "px;margin:0;padding:0;border:0;background:transparent;pointer-events:none;";
+    shell.parentNode.insertBefore(ph, shell);
+    shell.classList.add("is-nav-fixed");
+    // На всю ширину вьюпорта — иначе справа остаётся «щель»/белый хвост
+    shell.style.position = "fixed";
+    shell.style.top = `${Math.round(rect.top)}px`;
+    shell.style.left = "0";
+    shell.style.right = "0";
+    shell.style.width = "100%";
+    shell.style.maxWidth = "100%";
+    shell.style.margin = "0";
+    shell.style.zIndex = "60";
+    shell.style.boxSizing = "border-box";
+    catalogNavLock = { placeholder: ph, shell };
+    return catalogNavLock;
+  }
+
+  function setNavPlaceholderHeight(px) {
+    if (catalogNavLock && catalogNavLock.placeholder) {
+      catalogNavLock.placeholder.style.height = `${Math.max(0, Math.round(px))}px`;
+    }
+  }
+
+  function unlockCatalogNav() {
+    if (!catalogNavLock) return;
+    const { placeholder, shell } = catalogNavLock;
+    shell.classList.remove("is-nav-fixed");
+    shell.style.position = "";
+    shell.style.top = "";
+    shell.style.left = "";
+    shell.style.right = "";
+    shell.style.width = "";
+    shell.style.maxWidth = "";
+    shell.style.zIndex = "";
+    shell.style.margin = "";
+    shell.style.boxSizing = "";
+    if (placeholder && placeholder.parentNode) placeholder.remove();
+    catalogNavLock = null;
+  }
+
+  function clearSheetInline(panel) {
+    if (!panel) return;
+    panel.style.height = "";
+    panel.style.transition = "";
+    panel.style.overflow = "";
+    panel.style.background = "";
+    panel.style.willChange = "";
+  }
+
+  function cancelSheetAnimation(panel) {
+    if (!panel) return;
+    if (panel._ublegkoSheetTimer) {
+      clearTimeout(panel._ublegkoSheetTimer);
+      panel._ublegkoSheetTimer = 0;
+    }
+    if (panel._ublegkoSheetFinish) {
+      panel.removeEventListener("transitionend", panel._ublegkoSheetFinish);
+      panel._ublegkoSheetFinish = null;
+    }
+    panel._ublegkoBusy = false;
+    panel.style.transition = "none";
   }
 
   function animateSheetHeight(panel, { from, to, open }) {
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
+    if (!shell || !panel) return;
+
     cancelSheetAnimation(panel);
+    // Без position:fixed — иначе при возврате вверх шторка секунду лежит поверх товаров
+    unlockCatalogNav();
     skipStickySync = true;
-    if (shell) {
-      shell.classList.remove("is-pulling");
-      shell.classList.add("is-sheet-animating");
-    }
+    shell.classList.remove("is-pulling");
+    shell.classList.add("is-sheet-animating");
 
-    if (open) panel.classList.add("is-open");
-    panel.style.height = `${Math.max(0, from)}px`;
+    const start = Math.max(0, from);
+    const end = Math.max(0, to);
+
+    panel.style.transition = "none";
+    panel.style.overflow = "hidden";
+    panel.style.background = "var(--bg)";
+    panel.style.willChange = "height";
+    panel.style.height = `${start}px`;
+    if (open || end > 0) panel.classList.add("is-open");
     if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    void panel.offsetHeight;
 
-    const anim = panel.animate(
-      [{ height: `${Math.max(0, from)}px` }, { height: `${Math.max(0, to)}px` }],
-      {
-        duration: IOS_SHEET_MS,
-        easing: IOS_SHEET_EASING,
-        fill: "forwards",
-      }
-    );
-    panel._ublegkoAnim = anim;
+    panel._ublegkoBusy = true;
+    panel.style.transition = `height ${IOS_SHEET_MS}ms ${IOS_SHEET_EASING}`;
 
     let done = false;
-    const finish = () => {
-      if (done || panel._ublegkoAnim !== anim) return;
+    const finish = (evt) => {
+      if (done) return;
+      if (evt && evt.target !== panel) return;
+      if (evt && evt.propertyName && evt.propertyName !== "height") return;
       done = true;
-      panel._ublegkoAnim = null;
-      try {
-        anim.cancel();
-      } catch (_) {
-        /* ignore */
+      panel._ublegkoBusy = false;
+      if (panel._ublegkoSheetFinish) {
+        panel.removeEventListener("transitionend", panel._ublegkoSheetFinish);
+        panel._ublegkoSheetFinish = null;
       }
-      if (open) {
-        panel.classList.add("is-open");
-        panel.style.height = "";
-      } else {
-        panel.classList.remove("is-open");
-        panel.style.height = "";
+      if (panel._ublegkoSheetTimer) {
+        clearTimeout(panel._ublegkoSheetTimer);
+        panel._ublegkoSheetTimer = 0;
       }
-      if (shell) shell.classList.remove("is-sheet-animating");
+
+      if (open) panel.classList.add("is-open");
+      else panel.classList.remove("is-open");
+      clearSheetInline(panel);
+      shell.classList.remove("is-sheet-animating", "is-pulling");
       skipStickySync = false;
       syncStickyHeaderHeight();
     };
+    panel._ublegkoSheetFinish = finish;
+    panel.addEventListener("transitionend", finish);
+    panel._ublegkoSheetTimer = setTimeout(finish, IOS_SHEET_MS + 60);
 
-    anim.finished.then(finish, finish);
-    setTimeout(finish, IOS_SHEET_MS + 80);
-    return anim;
+    requestAnimationFrame(() => {
+      panel.style.height = `${end}px`;
+    });
   }
 
   function setCatalogNavOpen(open, options = {}) {
@@ -169,8 +243,11 @@
     if (!toggle || !panel) return;
 
     const wasOpen = panel.classList.contains("is-open");
-    // Уже в нужном состоянии и не в середине жеста/анимации
-    if (wasOpen === open && !panel._ublegkoAnim && !(shell && shell.classList.contains("is-pulling"))) {
+    if (
+      wasOpen === open &&
+      !panel._ublegkoBusy &&
+      !(shell && shell.classList.contains("is-pulling"))
+    ) {
       syncStickyHeaderHeight();
       return;
     }
@@ -181,10 +258,9 @@
 
     if (!useAnimate) {
       cancelSheetAnimation(panel);
-      if (shell) {
-        shell.classList.remove("is-pulling", "is-sheet-animating");
-      }
-      panel.style.height = "";
+      if (shell) shell.classList.remove("is-pulling", "is-sheet-animating");
+      unlockCatalogNav();
+      clearSheetInline(panel);
       panel.classList.toggle("is-open", open);
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
       skipStickySync = false;
@@ -194,10 +270,13 @@
 
     const from = panel.getBoundingClientRect().height;
     if (open) {
-      const to = measureSheetHeight(panel);
-      animateSheetHeight(panel, { from, to, open: true });
+      animateSheetHeight(panel, { from, to: measureSheetHeight(panel), open: true });
     } else {
-      animateSheetHeight(panel, { from: from || measureSheetHeight(panel), to: 0, open: false });
+      animateSheetHeight(panel, {
+        from: from || measureSheetHeight(panel),
+        to: 0,
+        open: false,
+      });
     }
   }
 
@@ -253,12 +332,12 @@
 
     const isStuckUnderHeader = () => {
       const header = document.querySelector(".header-sticky");
-      if (!header) return window.scrollY > 8;
-      const stickyLine = header.getBoundingClientRect().bottom - 2;
+      const stickyLine = header ? header.getBoundingClientRect().bottom - 2 : 0;
       if (anchor) {
         return anchor.getBoundingClientRect().bottom <= stickyLine + 1;
       }
-      return shell.getBoundingClientRect().top <= stickyLine + 1;
+      if (shell.getBoundingClientRect().top <= stickyLine + 1) return true;
+      return (window.scrollY || 0) > 24;
     };
 
     const applyStickyState = () => {
@@ -267,13 +346,13 @@
         setCatalogNavOpen(true, { animate: false });
         return;
       }
-      if (drag || skipStickySync || Date.now() < ignoreScrollUntil) return;
+      if (drag || panel._ublegkoBusy || Date.now() < ignoreScrollUntil) return;
       const stuck = isStuckUnderHeader();
       if (!stuck) {
         userHoldOpen = false;
         if (!panel.classList.contains("is-open")) {
-          bumpIgnore(IOS_SHEET_MS);
-          setCatalogNavOpen(true);
+          bumpIgnore(120);
+          setCatalogNavOpen(true, { animate: false });
         }
         return;
       }
@@ -296,7 +375,6 @@
 
     const clearDragStyles = () => {
       shell.classList.remove("is-pulling");
-      // height чистит animateSheetHeight / setCatalogNavOpen
       stopScrollFreeze();
     };
 
@@ -309,7 +387,8 @@
     };
 
     const onDocTouchMove = (event) => {
-      if (!drag) return;
+      // Блокируем скролл страницы только пока тянем зацеп
+      if (!drag || !drag.locked) return;
       if (event.cancelable) event.preventDefault();
       if (window.scrollY !== freezeY) window.scrollTo(0, freezeY);
     };
@@ -328,8 +407,12 @@
 
       startScrollFreeze();
       skipStickySync = true;
+      unlockCatalogNav();
       fullH = measureSheetHeight(panel);
       shell.classList.add("is-pulling");
+      panel.style.transition = "none";
+      panel.style.overflow = "hidden";
+      panel.style.background = "var(--bg)";
       if (startOpen) panel.classList.add("is-open");
 
       drag = {
@@ -417,11 +500,10 @@
       suppressMenuToggleClick = true;
       bumpIgnore(IOS_SHEET_MS);
 
-      // iOS-like: учитываем скорость жеста
       let shouldOpen;
-      if (velocity > 0.45) shouldOpen = true;
-      else if (velocity < -0.45) shouldOpen = false;
-      else shouldOpen = startOpen ? h > fullH * 0.45 : h >= fullH * 0.2 || dy > 36;
+      if (velocity > 0.4) shouldOpen = true;
+      else if (velocity < -0.4) shouldOpen = false;
+      else shouldOpen = startOpen ? h > fullH * 0.4 : h >= fullH * 0.18 || dy > 28;
 
       const from = Math.max(0, h);
       const to = shouldOpen ? fullH : 0;
@@ -434,6 +516,8 @@
       if (!drag) return;
       drag = null;
       clearDragStyles();
+      unlockCatalogNav();
+      clearSheetInline(panel);
       skipStickySync = false;
       syncStickyHeaderHeight();
     };
@@ -461,7 +545,9 @@
           lastY = window.scrollY || 0;
           return;
         }
-        if (drag || Date.now() < ignoreScrollUntil || skipStickySync) {
+        // Не блокируем скролл-сворачивание из‑за skipStickySync (он для ResizeObserver).
+        // Блокируем только жест/идущую анимацию шторки.
+        if (drag || panel._ublegkoBusy || Date.now() < ignoreScrollUntil) {
           lastY = window.scrollY || 0;
           return;
         }
@@ -473,8 +559,9 @@
         if (!stuck) {
           userHoldOpen = false;
           if (!isOpen) {
-            bumpIgnore(IOS_SHEET_MS);
-            setCatalogNavOpen(true);
+            // Вверху открываем сразу в потоке — без «накрывания» товаров
+            bumpIgnore(120);
+            setCatalogNavOpen(true, { animate: false });
           }
         } else if (userHoldOpen && y > lastY + 8) {
           userHoldOpen = false;
@@ -505,6 +592,8 @@
     catalogNavCollapseCleanup = () => {
       drag = null;
       clearDragStyles();
+      cancelSheetAnimation(panel);
+      unlockCatalogNav();
       document.removeEventListener("touchmove", onDocTouchMove, { capture: true });
       toggle.removeEventListener("touchstart", onTouchStart);
       toggle.removeEventListener("touchmove", onTouchMove);
