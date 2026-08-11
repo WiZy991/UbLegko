@@ -1385,7 +1385,8 @@ select {
 .product-detail__media > .fav-heart {
   position: absolute;
   top: 12px;
-  right: 12px;
+  left: 12px;
+  right: auto;
   z-index: 2;
 }
 
@@ -2969,6 +2970,16 @@ select.form-input {
     top: 4px;
     left: auto;
     right: 8px;
+    z-index: 5;
+  }
+
+  .product-detail__media .product-card__fav,
+  .product-detail__media > .fav-heart,
+  .product-detail__image .product-card__fav,
+  .product-detail__image > .fav-heart {
+    top: 10px !important;
+    left: 10px !important;
+    right: auto !important;
     z-index: 5;
   }
 
