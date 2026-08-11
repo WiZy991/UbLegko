@@ -73,6 +73,12 @@
         {% if form.comment.errors %}<div class="messages"><li class="error">{{ form.comment.errors|striptags }}</li></div>{% endif %}
       </div>
 
+      <div class="form-group">
+        <label for="{{ form.site_feedback.id_for_label }}">{{ form.site_feedback.label }}</label>
+        {{ form.site_feedback }}
+        {% if form.site_feedback.errors %}<div class="messages"><li class="error">{{ form.site_feedback.errors|striptags }}</li></div>{% endif %}
+      </div>
+
       <button class="btn btn-primary" type="submit">Отправить заявку</button>
     </form>
   </div>

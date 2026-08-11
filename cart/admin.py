@@ -40,6 +40,7 @@ class OrderAdmin(admin.ModelAdmin):
         'address_name',
         'city',
         'comment',
+        'site_feedback',
         'created_at',
     )
     inlines = [OrderItemInline]

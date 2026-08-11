@@ -97,6 +97,15 @@ class CheckoutForm(forms.Form):
             'placeholder': 'Комментарий к заявке',
         }),
     )
+    site_feedback = forms.CharField(
+        label='Комментарий по сайту',
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-input',
+            'rows': 3,
+            'placeholder': 'Если нашли баг, ошибку или есть идея, как улучшить сайт',
+        }),
+    )
 
     def __init__(self, *args, user=None, **kwargs):
         self.user = user

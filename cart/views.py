@@ -175,6 +175,7 @@ def checkout(request):
                 address_name=form.cleaned_data.get('address_name', ''),
                 city=city_label,
                 comment=form.cleaned_data['comment'],
+                site_feedback=form.cleaned_data.get('site_feedback', ''),
             )
             if selected_city and not extract_city_from_address(address):
                 request.session['selected_city_id'] = selected_city.pk
