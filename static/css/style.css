@@ -1532,10 +1532,32 @@ select {
   flex-wrap: nowrap;
   overflow: visible;
   min-height: 32px;
+  gap: 8px;
+  align-items: center;
 }
 
 .product-card__meta--status .status-pill {
   flex: 0 0 auto;
+}
+
+.product-card__sku {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #3a4550;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-detail__sku {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #3a4550;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .product-card__meta--price {
@@ -3337,6 +3359,10 @@ select.form-input {
     justify-content: center;
     align-self: center;
     align-items: center;
+  }
+
+  .product-card__sku {
+    display: none;
   }
 
   .product-card__meta--status .status-pill {

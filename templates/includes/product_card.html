@@ -89,6 +89,9 @@
 
   <div class="product-card__meta product-card__meta--status">
     <span class="status-pill{% if product.status_modifier %} status-pill--{{ product.status_modifier }}{% endif %}">{{ product.get_status_display }}</span>
+    {% if product.sku %}
+      <span class="product-card__sku" title="Артикул: {{ product.sku }}">Артикул: {{ product.sku }}</span>
+    {% endif %}
   </div>
 
   <form

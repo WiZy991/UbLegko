@@ -111,6 +111,9 @@
         </div>
         <div class="product-card__meta" style="justify-content:flex-start;gap:10px;margin-bottom:12px;">
           {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
+          {% if product.sku %}
+            <span class="product-detail__sku">Артикул: {{ product.sku }}</span>
+          {% endif %}
         </div>
         {% if product.short_description %}
           <p style="color:var(--text-muted);">{{ product.short_description }}</p>

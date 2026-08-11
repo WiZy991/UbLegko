@@ -142,6 +142,11 @@ class Product(models.Model):
     def price_display(self):
         return f'{self.price:.0f} руб'
 
+    @property
+    def display_sku(self):
+        """Код товара (артикул) для карточки — только реальное поле sku."""
+        return (self.sku or '').strip()
+
     def gallery_urls(self):
         """URL всех фото товара: главное + дополнительные, без дублей."""
         urls = []
