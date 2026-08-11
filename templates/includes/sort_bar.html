@@ -1,31 +1,27 @@
 {% load catalog_extras %}
 <nav class="sort-bar" aria-label="Сортировка и фильтры">
-  <div class="sort-bar__options">
-    {% for key, value in sort_options.items %}
-      <a href="{% catalog_query sort=key %}" class="{% if sort == key %}is-active{% endif %}" data-catalog-nav>
-        {{ value.0 }}
-      </a>
-    {% endfor %}
+  {% for key, value in sort_options.items %}
+    <a href="{% catalog_query sort=key %}" class="{% if sort == key %}is-active{% endif %}" data-catalog-nav>
+      {{ value.0 }}
+    </a>
+  {% endfor %}
 
-    {% if filters.in_stock %}
-      <a class="sort-bar__filter is-active" href="{% catalog_query in_stock='' %}" aria-pressed="true" data-catalog-nav>В наличии</a>
-    {% else %}
-      <a class="sort-bar__filter" href="{% catalog_query in_stock='1' %}" aria-pressed="false" data-catalog-nav>В наличии</a>
-    {% endif %}
+  {% if filters.in_stock %}
+    <a class="sort-bar__filter is-active" href="{% catalog_query in_stock='' %}" aria-pressed="true" data-catalog-nav>В наличии</a>
+  {% else %}
+    <a class="sort-bar__filter" href="{% catalog_query in_stock='1' %}" aria-pressed="false" data-catalog-nav>В наличии</a>
+  {% endif %}
 
-    {% if filters.promo %}
-      <a class="sort-bar__filter is-active" href="{% catalog_query promo='' %}" aria-pressed="true" data-catalog-nav>Акции</a>
-    {% else %}
-      <a class="sort-bar__filter" href="{% catalog_query promo='1' %}" aria-pressed="false" data-catalog-nav>Акции</a>
-    {% endif %}
-  </div>
+  {% if filters.promo %}
+    <a class="sort-bar__filter is-active" href="{% catalog_query promo='' %}" aria-pressed="true" data-catalog-nav>Акции</a>
+  {% else %}
+    <a class="sort-bar__filter" href="{% catalog_query promo='1' %}" aria-pressed="false" data-catalog-nav>Акции</a>
+  {% endif %}
 
-  <div class="sort-bar__actions">
-    <a
-      class="sort-bar__reset{% if has_active_filters %} is-active{% else %} is-disabled{% endif %}"
-      href="{% catalog_clear_filters %}"
-      data-catalog-nav
-      {% if not has_active_filters %}aria-disabled="true" tabindex="-1"{% endif %}
-    >Сбросить фильтры</a>
-  </div>
+  <a
+    class="sort-bar__reset{% if has_active_filters %} is-active{% else %} is-disabled{% endif %}"
+    href="{% catalog_clear_filters %}"
+    data-catalog-nav
+    {% if not has_active_filters %}aria-disabled="true" tabindex="-1"{% endif %}
+  >Сбросить фильтры</a>
 </nav>

@@ -78,7 +78,9 @@
   const IOS_SHEET_EASING = "cubic-bezier(0.32, 0.72, 0, 1)";
   const IOS_SHEET_MS = 480;
   // Глушим только программный sync после AJAX — скролл пользователя анимируется
-  const SHEET_OPEN_TOP_PX = 64;
+  // Гистерезис: на Android bounce иначе открывает/закрывает дважды
+  const SHEET_OPEN_TOP_PX = 48;
+  const SHEET_CLOSE_TOP_PX = 130;
   let sheetSyncQuietUntil = 0;
   let sheetQuietTimer = 0;
   let pendingSheetTopOpen = false;
@@ -112,6 +114,7 @@
 
   function flushPendingSheetTopOpen() {
     if (!window.matchMedia("(max-width: 900px)").matches) return;
+    if (!pendingSheetTopOpen) return;
     if (!isNearCatalogTop()) {
       pendingSheetTopOpen = false;
       return;
@@ -119,11 +122,9 @@
     const panel =
       document.querySelector("[data-catalog-sheet]") ||
       document.querySelector("[data-sidebar], #sidebar");
-    if (!panel || panel.classList.contains("is-open") || panel._ublegkoBusy) {
-      pendingSheetTopOpen = false;
-      return;
-    }
+    if (!panel || panel._ublegkoBusy) return;
     pendingSheetTopOpen = false;
+    if (panel.classList.contains("is-open") && currentSheetHeight(panel) > 8) return;
     setCatalogNavOpen(true, { animate: true });
   }
 
@@ -669,26 +670,31 @@
         }
 
         const dy = y - lastY;
-        const stuck = isStuckUnderHeader();
         const isOpen = panel.classList.contains("is-open");
 
-        // У верха всегда раскрываем (без !stuck — после фильтров/«Все товары» stuck врёт)
-        if (nearTop) {
+        // Открыть только у самого верха; закрыть только заметно ниже —
+        // иначе Android overscroll дважды дёргает разворот.
+        if (y <= SHEET_OPEN_TOP_PX) {
           userHoldOpen = false;
           pendingSheetTopOpen = false;
           if (!isOpen) {
-            bumpIgnore(IOS_SHEET_MS);
-            bumpSheetGate();
+            bumpIgnore(IOS_SHEET_MS + 120);
+            bumpSheetGate(IOS_SHEET_MS + 320);
             setCatalogNavOpen(true, { animate: true });
           }
-        } else if (isOpen && !userHoldOpen && stuck && dy >= 2) {
-          bumpIgnore(IOS_SHEET_MS);
-          bumpSheetGate();
+        } else if (
+          isOpen &&
+          !userHoldOpen &&
+          y >= SHEET_CLOSE_TOP_PX &&
+          dy > 3
+        ) {
+          bumpIgnore(IOS_SHEET_MS + 120);
+          bumpSheetGate(IOS_SHEET_MS + 320);
           setCatalogNavOpen(false, { animate: true });
-        } else if (userHoldOpen && isOpen && stuck && dy > 10) {
+        } else if (userHoldOpen && isOpen && y >= SHEET_CLOSE_TOP_PX && dy > 10) {
           userHoldOpen = false;
-          bumpIgnore(IOS_SHEET_MS);
-          bumpSheetGate();
+          bumpIgnore(IOS_SHEET_MS + 120);
+          bumpSheetGate(IOS_SHEET_MS + 320);
           setCatalogNavOpen(false, { animate: true });
         }
 

@@ -967,25 +967,12 @@ select {
 
 .sort-bar {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  margin-bottom: 20px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.sort-bar__options {
-  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 16px;
-}
-
-.sort-bar__actions {
-  display: flex;
-  justify-content: flex-end;
-  min-height: 1.2em;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 .sort-bar a {
@@ -1019,6 +1006,7 @@ select {
 }
 
 .sort-bar__reset {
+  margin-left: auto;
   font-weight: 600;
   color: var(--cyan);
   text-decoration: underline;
@@ -3224,23 +3212,15 @@ select.form-input {
 
   .catalog-nav .catalog-toolbar .sort-bar,
   .catalog-nav .sort-bar {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: stretch;
-    gap: 4px;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
     padding: 0;
     margin: 0;
     border-bottom: 0;
     font-size: 0.82rem;
-  }
-
-  .catalog-nav .sort-bar__options {
-    gap: 4px 12px;
-  }
-
-  .catalog-nav .sort-bar__actions {
-    justify-content: flex-end;
-    min-height: 1.15em;
   }
 
   .catalog-nav .sort-bar a,
@@ -3259,8 +3239,9 @@ select.form-input {
     font-weight: 600;
   }
 
+  /* Справа в ряду, чуть выше к «В наличии» */
   .catalog-nav .sort-bar__reset {
-    margin: 0;
+    margin: -6px 0 0 auto;
     padding: 0;
     position: relative;
     z-index: 3;
