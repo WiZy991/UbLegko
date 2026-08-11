@@ -85,6 +85,10 @@
   let sheetQuietTimer = 0;
   let pendingSheetTopOpen = false;
 
+  let sheetNavLockUntil = 0;
+  let sheetLastOpenAt = 0;
+  let sheetLastCloseAt = 0;
+
   function quietSheetSync(ms = 900) {
     sheetSyncQuietUntil = Math.max(sheetSyncQuietUntil, Date.now() + ms);
     if (sheetQuietTimer) clearTimeout(sheetQuietTimer);
@@ -96,6 +100,15 @@
   }
   function isSheetSyncQuiet() {
     return Date.now() < sheetSyncQuietUntil;
+  }
+  function lockSheetAfterNav(ms = 2000) {
+    // Только глушит scroll-toggle. НЕ закрывает шторку сама по себе.
+    sheetNavLockUntil = Math.max(sheetNavLockUntil, Date.now() + ms);
+    if (!isNearCatalogTop()) pendingSheetTopOpen = false;
+    quietSheetSync(ms);
+  }
+  function isSheetNavLocked() {
+    return Date.now() < sheetNavLockUntil;
   }
 
   function isCatalogNavStuck() {
@@ -115,6 +128,8 @@
   function flushPendingSheetTopOpen() {
     if (!window.matchMedia("(max-width: 900px)").matches) return;
     if (!pendingSheetTopOpen) return;
+    // После фильтра/категории не автооткрываем — только ручной скролл к y≈0
+    if (isSheetNavLocked()) return;
     if (!isNearCatalogTop()) {
       pendingSheetTopOpen = false;
       return;
@@ -125,6 +140,7 @@
     if (!panel || panel._ublegkoBusy) return;
     pendingSheetTopOpen = false;
     if (panel.classList.contains("is-open") && currentSheetHeight(panel) > 8) return;
+    if (Date.now() - sheetLastOpenAt < 800) return;
     setCatalogNavOpen(true, { animate: true });
   }
 
@@ -136,18 +152,21 @@
       if (panel) setCatalogNavOpen(true, { animate: false });
       return;
     }
-    // У верха всегда открываем — stuck после AJAX часто врёт
-    setCatalogNavOpen(isNearCatalogTop(), { animate: Boolean(animate) });
+    // Lock = без анимации от скролла; состояние всё равно по позиции (верх = открыта)
+    setCatalogNavOpen(isNearCatalogTop(), {
+      animate: Boolean(animate) && !isSheetNavLocked(),
+    });
   }
 
-  function settleSheetAfterScroll(ms = 900) {
+  function settleSheetAfterScroll(ms = 1200) {
     quietSheetSync(ms);
     let settled = false;
     const done = () => {
       if (settled) return;
       settled = true;
-      syncCatalogSheetToScroll({ animate: false });
-      if (isNearCatalogTop()) pendingSheetTopOpen = false;
+      pendingSheetTopOpen = false;
+      // Как есть по скроллу: наверху открыта, ниже — закрыта
+      setCatalogNavOpen(isNearCatalogTop(), { animate: false });
     };
     if ("onscrollend" in window) {
       window.addEventListener("scrollend", done, { once: true });
@@ -233,6 +252,7 @@
 
   function setCatalogNavOpen(open, options = {}) {
     const animate = options.animate !== false;
+    const force = options.force === true;
     const shell = document.querySelector("[data-catalog-nav-shell]");
     const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
     const panel =
@@ -245,6 +265,17 @@
     const isMobile = window.matchMedia("(max-width: 900px)").matches;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const useAnimate = animate && isMobile && !reduceMotion;
+
+    // Анти-двойная шторка (Android): не перезапускаем ту же сторону
+    // (жест/тап — force, противоположное направление всегда можно)
+    if (useAnimate && !force) {
+      const sameOpen = open && (wasOpen || panel._ublegkoBusy) && Date.now() - sheetLastOpenAt < 1000;
+      const sameClose = !open && (!wasOpen || panel._ublegkoBusy) && Date.now() - sheetLastCloseAt < 1000;
+      if (sameOpen || sameClose) {
+        syncStickyHeaderHeight();
+        return;
+      }
+    }
 
     if (
       wasOpen === open &&
@@ -269,6 +300,8 @@
       toggle.setAttribute("aria-expanded", open ? "true" : "false");
       void panel.offsetHeight;
       if (shell) shell.classList.remove("is-instant", "is-sheet-animating");
+      if (open) sheetLastOpenAt = Date.now();
+      else sheetLastCloseAt = Date.now();
       skipStickySync = false;
       syncStickyHeaderHeight();
       return;
@@ -276,6 +309,10 @@
 
     const fullH = measureSheetHeight(panel);
     const to = open ? fullH : 0;
+
+    // Метка сразу — иначе повторный scroll/resize перезапустит анимацию
+    if (open) sheetLastOpenAt = Date.now();
+    else sheetLastCloseAt = Date.now();
 
     skipStickySync = true;
     panel._ublegkoBusy = true;
@@ -587,7 +624,7 @@
         suppressMenuToggleClick = true;
         bumpIgnore(IOS_SHEET_MS);
         const next = !startOpen;
-        setCatalogNavOpen(next);
+        setCatalogNavOpen(next, { force: true });
         userHoldOpen = next && isStuckUnderHeader();
         return;
       }
@@ -605,7 +642,7 @@
       clearDragStyles();
       panel.style.height = `${Math.max(0, h)}px`;
       panel.classList.toggle("is-open", startOpen || h > 0);
-      setCatalogNavOpen(shouldOpen);
+      setCatalogNavOpen(shouldOpen, { force: true });
     };
 
     const onTouchCancel = () => {
@@ -624,6 +661,7 @@
       // Не трогаем шторку тут — loadCatalog синхронизирует без двойной анимации
       if (link.hasAttribute("data-scroll-spy-link")) return;
       userHoldOpen = false;
+      // Только тишина от scroll-toggle; наверху шторка должна остаться открытой
       quietSheetSync(900);
     };
 
@@ -643,16 +681,18 @@
 
         const y = window.scrollY || 0;
         const nearTop = y <= SHEET_OPEN_TOP_PX;
+        const navLocked = isSheetNavLocked();
 
         if (
           drag ||
           panel._ublegkoBusy ||
           Date.now() < ignoreScrollUntil ||
           Date.now() < sheetGateUntil ||
-          isSheetSyncQuiet()
+          isSheetSyncQuiet() ||
+          navLocked
         ) {
-          // Доезд до верха во время блокировки — откроем сразу после неё
-          if (nearTop) pendingSheetTopOpen = true;
+          // Во время lock после фильтра/категории не копим pending-open
+          if (nearTop && !navLocked) pendingSheetTopOpen = true;
           lastY = y;
           return;
         }
@@ -660,9 +700,9 @@
         if (pendingSheetTopOpen && nearTop) {
           pendingSheetTopOpen = false;
           userHoldOpen = false;
-          if (!panel.classList.contains("is-open")) {
+          if (!panel.classList.contains("is-open") && Date.now() - sheetLastOpenAt >= 900) {
             bumpIgnore(IOS_SHEET_MS);
-            bumpSheetGate();
+            bumpSheetGate(IOS_SHEET_MS + 400);
             setCatalogNavOpen(true, { animate: true });
           }
           lastY = y;
@@ -677,9 +717,9 @@
         if (y <= SHEET_OPEN_TOP_PX) {
           userHoldOpen = false;
           pendingSheetTopOpen = false;
-          if (!isOpen) {
-            bumpIgnore(IOS_SHEET_MS + 120);
-            bumpSheetGate(IOS_SHEET_MS + 320);
+          if (!isOpen && Date.now() - sheetLastOpenAt >= 900) {
+            bumpIgnore(IOS_SHEET_MS + 160);
+            bumpSheetGate(IOS_SHEET_MS + 400);
             setCatalogNavOpen(true, { animate: true });
           }
         } else if (
@@ -688,13 +728,13 @@
           y >= SHEET_CLOSE_TOP_PX &&
           dy > 3
         ) {
-          bumpIgnore(IOS_SHEET_MS + 120);
-          bumpSheetGate(IOS_SHEET_MS + 320);
+          bumpIgnore(IOS_SHEET_MS + 160);
+          bumpSheetGate(IOS_SHEET_MS + 400);
           setCatalogNavOpen(false, { animate: true });
         } else if (userHoldOpen && isOpen && y >= SHEET_CLOSE_TOP_PX && dy > 10) {
           userHoldOpen = false;
-          bumpIgnore(IOS_SHEET_MS + 120);
-          bumpSheetGate(IOS_SHEET_MS + 320);
+          bumpIgnore(IOS_SHEET_MS + 160);
+          bumpSheetGate(IOS_SHEET_MS + 400);
           setCatalogNavOpen(false, { animate: true });
         }
 
@@ -709,8 +749,14 @@
     toggle.addEventListener("touchcancel", onTouchCancel);
     toggle.addEventListener("click", onToggleClick);
     shell.addEventListener("click", onNavClick);
+    const onViewportResize = () => {
+      // Только высота sticky. НЕ трогаем шторку — на Android адресная строка
+      // шлёт resize при каждом скролле и открывала шторку повторно.
+      syncStickyHeaderHeight();
+    };
+
     window.addEventListener("scroll", onWindowScroll, { passive: true });
-    window.addEventListener("resize", () => applyStickyState({ animate: false }));
+    window.addEventListener("resize", onViewportResize);
     applyStickyState({ animate: false });
 
     catalogNavCollapseCleanup = () => {
@@ -726,7 +772,7 @@
       toggle.removeEventListener("click", onToggleClick);
       shell.removeEventListener("click", onNavClick);
       window.removeEventListener("scroll", onWindowScroll);
-      window.removeEventListener("resize", applyStickyState);
+      window.removeEventListener("resize", onViewportResize);
     };
   }
   initMobileCatalogNavCollapse();
@@ -1053,7 +1099,19 @@
 
   function restoreScrollAfterCatalogFilter(categoryId, prevScrollY) {
     categorySpyLockUntil = Date.now() + 1200;
+    const wasAtTop = Number.isFinite(prevScrollY) && prevScrollY <= SHEET_OPEN_TOP_PX;
     const run = () => {
+      // Были наверху — остаёмся наверху, шторка открыта (не прыгаем к секции)
+      if (wasAtTop) {
+        window.scrollTo({ top: 0, behavior: "auto" });
+        if (location.hash) {
+          const url = new URL(window.location.href);
+          url.hash = "";
+          history.replaceState({ catalogAjax: true }, "", `${url.pathname}${url.search}`);
+        }
+        return;
+      }
+
       let target = categoryId ? document.getElementById(categoryId) : null;
       if (!target) {
         target = document.querySelector("[data-category-section]");
@@ -1153,7 +1211,6 @@
       categorySpyLockUntil = Date.now() + 1400;
       setActive(id);
       const isMobile = window.matchMedia("(max-width: 900px)").matches;
-      const panel = document.querySelector("[data-catalog-sheet]");
 
       const doScroll = () => {
         syncStickyHeaderHeight();
@@ -1162,13 +1219,26 @@
       };
 
       if (isMobile) {
-        quietSheetSync(900);
-        // Перед прыжком к секции сворачиваем без анимации — иначе offset врёт
-        setCatalogNavOpen(false, { animate: false });
+        // stickyStackBottomPx уже считает offset как у свёрнутой шторки —
+        // закрываем заранее только если уйдём с верха страницы
+        const mark = target.querySelector(".category-block__title") || target;
+        const approxTop = Math.max(
+          0,
+          mark.getBoundingClientRect().top + window.scrollY - (stickyStackBottomPx() + 12)
+        );
+        quietSheetSync(1200);
+        if (approxTop > SHEET_CLOSE_TOP_PX) {
+          setCatalogNavOpen(false, { animate: false });
+        }
+        // На Android smooth даёт пачку scroll/resize → двойная шторка
+        const android = /Android/i.test(navigator.userAgent || "");
+        const scrollBehavior = android ? "auto" : behavior;
         requestAnimationFrame(() =>
           requestAnimationFrame(() => {
-            doScroll();
-            settleSheetAfterScroll(900);
+            syncStickyHeaderHeight();
+            scrollToCategorySection(target, { behavior: scrollBehavior });
+            history.replaceState(null, "", `#${id}`);
+            settleSheetAfterScroll(1000);
           })
         );
         return;
@@ -1232,7 +1302,7 @@
       const nextPanel = next.querySelector("[data-catalog-sheet]");
       const nextToggle = next.querySelector("[data-menu-toggle], #menu-toggle");
       if (isMobile && nextPanel) {
-        const wantOpen = enteredCategoryPage ? true : prevScrollY <= 24;
+        const wantOpen = enteredCategoryPage ? true : prevScrollY <= SHEET_OPEN_TOP_PX;
         nextPanel.classList.toggle("is-open", wantOpen);
         if (nextToggle) nextToggle.setAttribute("aria-expanded", wantOpen ? "true" : "false");
         if (!wantOpen) {
@@ -1264,7 +1334,7 @@
         categorySpyLockUntil = Date.now() + 900;
         window.scrollTo({ top: 0, behavior: "auto" });
         quietSheetSync(900);
-        syncCatalogSheetToScroll({ animate: false });
+        setCatalogNavOpen(true, { animate: false });
       } else {
         restoreScrollAfterCatalogFilter(preferCategoryId, prevScrollY);
       }
