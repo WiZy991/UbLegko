@@ -21,18 +21,26 @@
     if (!sidebar) return;
     const open = sidebar.classList.toggle("is-open");
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    syncStickyHeaderHeight();
   });
 
   function syncStickyHeaderHeight() {
     const sticky = document.querySelector(".header-sticky");
+    const catalogNav = document.querySelector("[data-catalog-nav-shell]");
     const toolbar = document.querySelector("[data-catalog-toolbar]");
     const headerH = sticky ? Math.round(sticky.getBoundingClientRect().height) : 0;
+    const isMobile = window.matchMedia("(max-width: 900px)").matches;
+    const navH = isMobile && catalogNav ? Math.round(catalogNav.getBoundingClientRect().height) : 0;
     const toolbarH = toolbar ? Math.round(toolbar.getBoundingClientRect().height) : 0;
-    // -2px: toolbar наезжает на шапку, закрывая субпиксельный просвет
-    const overlap = toolbarH ? 2 : 0;
+    // -2px: следующий sticky наезжает на предыдущий, закрывая субпиксельный просвет
+    const overlap = navH || toolbarH ? 2 : 0;
     document.documentElement.style.setProperty("--header-sticky-height", `${headerH}px`);
+    document.documentElement.style.setProperty("--catalog-nav-height", `${navH}px`);
     document.documentElement.style.setProperty("--catalog-toolbar-height", `${toolbarH}px`);
-    document.documentElement.style.setProperty("--sticky-offset", `${Math.max(headerH + toolbarH - overlap, headerH)}px`);
+    document.documentElement.style.setProperty(
+      "--sticky-offset",
+      `${Math.max(headerH + navH + toolbarH - overlap, headerH)}px`
+    );
   }
   syncStickyHeaderHeight();
   window.addEventListener("resize", syncStickyHeaderHeight);
@@ -42,15 +50,75 @@
     const stickyObserver = new ResizeObserver(syncStickyHeaderHeight);
     const sticky = document.querySelector(".header-sticky");
     if (sticky) stickyObserver.observe(sticky);
+    const catalogNav = document.querySelector("[data-catalog-nav-shell]");
+    if (catalogNav) stickyObserver.observe(catalogNav);
     const toolbar = document.querySelector("[data-catalog-toolbar]");
     if (toolbar) stickyObserver.observe(toolbar);
     // Re-bind toolbar after AJAX catalog swaps
     const observeToolbar = () => {
       const next = document.querySelector("[data-catalog-toolbar]");
       if (next) stickyObserver.observe(next);
+      const nextNav = document.querySelector("[data-catalog-nav-shell]");
+      if (nextNav) stickyObserver.observe(nextNav);
     };
     window.__ublegkoObserveToolbar = observeToolbar;
   }
+
+  function setCatalogNavOpen(open) {
+    const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
+    const sidebar = document.querySelector("[data-sidebar], #sidebar");
+    if (!toggle || !sidebar) return;
+    const wasOpen = sidebar.classList.contains("is-open");
+    if (wasOpen === open) return;
+    sidebar.classList.toggle("is-open", open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    syncStickyHeaderHeight();
+  }
+
+  function initMobileCatalogNavCollapse() {
+    const toggle = document.querySelector("[data-menu-toggle], #menu-toggle");
+    const sidebar = document.querySelector("[data-sidebar], #sidebar");
+    if (!toggle || !sidebar) return;
+
+    let lastY = window.scrollY || 0;
+    let ignoreScrollUntil = 0;
+    const TOP_OPEN = 48;
+    const SCROLL_HIDE = 72;
+
+    // После ручного открытия не сворачивать от того же жеста скролла
+    toggle.addEventListener("click", () => {
+      ignoreScrollUntil = Date.now() + 400;
+    });
+
+    // После выбора категории свернуть список
+    sidebar.addEventListener("click", (event) => {
+      if (!window.matchMedia("(max-width: 900px)").matches) return;
+      if (!event.target.closest("a")) return;
+      setCatalogNavOpen(false);
+    });
+
+    const onScroll = () => {
+      if (!window.matchMedia("(max-width: 900px)").matches) {
+        setCatalogNavOpen(true);
+        return;
+      }
+      if (Date.now() < ignoreScrollUntil) {
+        lastY = window.scrollY || 0;
+        return;
+      }
+      const y = window.scrollY || 0;
+      if (y <= TOP_OPEN) {
+        setCatalogNavOpen(true);
+      } else if (y > SCROLL_HIDE && y > lastY + 2) {
+        setCatalogNavOpen(false);
+      }
+      lastY = y;
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+  initMobileCatalogNavCollapse();
 
   const cartQtyState = new WeakMap();
 

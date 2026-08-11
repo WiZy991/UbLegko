@@ -1,33 +1,45 @@
 {% load catalog_extras %}
-<button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="true" data-menu-toggle>Категории</button>
-<aside class="sidebar is-open" id="sidebar" data-sidebar>
-  <p class="sidebar__title">Каталог</p>
-  <a
-    href="{% url 'catalog:home' %}{% catalog_query %}"
-    class="{% if not current_category %}is-active{% endif %}"
-    data-catalog-nav
-    data-scroll-spy-home
-  >Все товары</a>
-  {% if scroll_spy_categories %}
-    {% for category in categories %}
-      <a
-        href="#category-{{ category.slug }}"
-        class="sidebar__link{% if current_category and current_category.id == category.id %} is-active{% endif %}"
-        data-scroll-spy-link="category-{{ category.slug }}"
-        data-category-path="{{ category.get_absolute_url }}"
-      >{{ category.name }}</a>
-    {% empty %}
-      <p style="padding:12px 16px;color:#888;">Категории пока не добавлены</p>
-    {% endfor %}
-  {% else %}
-    {% for category in categories %}
-      <a
-        href="{{ category.get_absolute_url }}{% catalog_query %}"
-        class="{% if current_category and current_category.id == category.id %}is-active{% endif %}"
-        data-catalog-nav
-      >{{ category.name }}</a>
-    {% empty %}
-      <p style="padding:12px 16px;color:#888;">Категории пока не добавлены</p>
-    {% endfor %}
-  {% endif %}
-</aside>
+<div class="catalog-nav" data-catalog-nav-shell>
+  <button
+    type="button"
+    class="menu-toggle"
+    id="menu-toggle"
+    aria-expanded="true"
+    aria-controls="sidebar"
+    data-menu-toggle
+  >
+    <span class="menu-toggle__label">Категории</span>
+    <span class="menu-toggle__chevron" aria-hidden="true"></span>
+  </button>
+  <aside class="sidebar is-open" id="sidebar" data-sidebar>
+    <p class="sidebar__title">Каталог</p>
+    <a
+      href="{% url 'catalog:home' %}{% catalog_query %}"
+      class="{% if not current_category %}is-active{% endif %}"
+      data-catalog-nav
+      data-scroll-spy-home
+    >Все товары</a>
+    {% if scroll_spy_categories %}
+      {% for category in categories %}
+        <a
+          href="#category-{{ category.slug }}"
+          class="sidebar__link{% if current_category and current_category.id == category.id %}is-active{% endif %}"
+          data-scroll-spy-link="category-{{ category.slug }}"
+          data-category-path="{{ category.get_absolute_url }}"
+        >{{ category.name }}</a>
+      {% empty %}
+        <p style="padding:12px 16px;color:#888;">Категории пока не добавлены</p>
+      {% endfor %}
+    {% else %}
+      {% for category in categories %}
+        <a
+          href="{{ category.get_absolute_url }}{% catalog_query %}"
+          class="{% if current_category and current_category.id == category.id %}is-active{% endif %}"
+          data-catalog-nav
+        >{{ category.name }}</a>
+      {% empty %}
+        <p style="padding:12px 16px;color:#888;">Категории пока не добавлены</p>
+      {% endfor %}
+    {% endif %}
+  </aside>
+</div>

@@ -13,6 +13,7 @@
   --page-pad: clamp(20px, 4vw, 72px);
   --header-sticky-height: 130px;
   --catalog-toolbar-height: 0px;
+  --catalog-nav-height: 0px;
   --sticky-offset: var(--header-sticky-height);
   --font: "Manrope", "Segoe UI", sans-serif;
 }
@@ -854,6 +855,30 @@ select {
   border-radius: var(--radius);
   padding: 12px 14px;
   cursor: pointer;
+}
+
+.menu-toggle__label {
+  font-weight: 700;
+}
+
+.menu-toggle__chevron {
+  display: inline-block;
+  width: 0.55em;
+  height: 0.55em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 0.2s ease;
+  margin-top: -0.2em;
+}
+
+.menu-toggle[aria-expanded="true"] .menu-toggle__chevron {
+  transform: rotate(-135deg);
+  margin-top: 0.25em;
+}
+
+.catalog-nav {
+  display: contents;
 }
 
 .catalog-toolbar {
@@ -2861,22 +2886,57 @@ select.form-input {
     grid-template-columns: 1fr;
   }
 
+  .catalog-nav {
+    display: block;
+    position: sticky;
+    top: calc(var(--header-sticky-height) - 2px);
+    z-index: 45;
+    background: var(--bg);
+    margin: 0 0 10px;
+    padding: 6px 0 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .catalog-nav::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -4px;
+    height: 6px;
+    background: var(--bg);
+    pointer-events: none;
+  }
+
   .menu-toggle {
-    display: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    margin: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--bg-panel);
+    color: var(--text);
+    font: inherit;
+    font-weight: 700;
+    box-shadow: 0 1px 4px rgba(15, 30, 40, 0.06);
   }
 
   .sidebar {
-    display: flex;
+    display: none;
     flex-wrap: wrap;
     align-items: baseline;
     gap: 8px 14px;
     position: static;
-    max-height: none;
-    overflow: visible;
+    max-height: min(50vh, 320px);
+    overflow: auto;
     top: auto;
     width: 100%;
-    margin: 0 0 8px;
-    padding: 4px 0 10px;
+    margin: 8px 0 0;
+    padding: 8px 2px 4px;
     border: 0;
     background: transparent;
     box-shadow: none;
@@ -2914,6 +2974,7 @@ select.form-input {
   .catalog-toolbar {
     margin-bottom: 8px;
     padding: 6px 0 2px;
+    top: calc(var(--header-sticky-height) + var(--catalog-nav-height, 0px) - 2px);
   }
 
   .catalog-toolbar .sort-bar,
