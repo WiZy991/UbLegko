@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from io import BytesIO
+from itertools import groupby
 from pathlib import Path
 
 from django.conf import settings
@@ -27,7 +28,9 @@ COL_WIDTHS = {
     'G': 10,
     'H': 14,
 }
+NUM_COLS = 8
 ROW_HEIGHT = 100
+CATEGORY_ROW_HEIGHT = 26
 PHOTO_THUMB = (78, 78)
 BADGE_THUMB = (40, 40)
 # Картинка занимает не больше этой доли ячейки — иначе Excel рисует поверх границ
@@ -79,7 +82,6 @@ def _thumb_png_bytes(path: Path, thumb_size: tuple[int, int]) -> tuple[BytesIO, 
         with PILImage.open(path) as img:
             img = img.convert('RGBA')
             img.thumbnail(thumb_size, PILImage.Resampling.LANCZOS)
-            # Белый квадрат ровно под картинку — без лишних полей
             out = PILImage.new('RGB', img.size, (255, 255, 255))
             out.paste(img, (0, 0), img)
             buf = BytesIO()
@@ -126,6 +128,90 @@ def _add_image_centered_in_cell(
     size = XDRPositiveSize2D(pixels_to_EMU(disp_w), pixels_to_EMU(disp_h))
     img.anchor = OneCellAnchor(_from=marker, ext=size)
     ws.add_image(img)
+
+
+def _write_category_banner(ws, row_idx: int, title: str, *, thin: Border) -> None:
+    """Горизонтальная полоса на всю ширину таблицы с названием категории."""
+    category_font = Font(bold=True, color='FFFFFF', size=13)
+    category_fill = PatternFill('solid', fgColor='0A4F61')
+    category_align = Alignment(horizontal='left', vertical='center', indent=1)
+
+    ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=NUM_COLS)
+    cell = ws.cell(row_idx, 1, title)
+    cell.font = category_font
+    cell.fill = category_fill
+    cell.alignment = category_align
+    cell.border = thin
+
+    for col in range(2, NUM_COLS + 1):
+        side = ws.cell(row_idx, col)
+        side.fill = category_fill
+        side.border = thin
+
+    ws.row_dimensions[row_idx].height = CATEGORY_ROW_HEIGHT
+
+
+def _write_product_row(
+    ws,
+    row_idx: int,
+    product: Product,
+    *,
+    thin: Border,
+    wrap: Alignment,
+    center: Alignment,
+    image_buffers: list[BytesIO],
+    badge_path: Path | None,
+) -> None:
+    is_promo = bool(product.is_promo or (product.old_price and product.old_price > 0))
+    path = _product_image_path(product)
+    if path:
+        result = _thumb_png_bytes(path, PHOTO_THUMB)
+        if result:
+            buf, iw, ih = result
+            image_buffers.append(buf)
+            _add_image_centered_in_cell(
+                ws,
+                buf,
+                col_idx=1,
+                row_idx=row_idx,
+                col_width_excel=COL_WIDTHS['A'],
+                row_height_pt=ROW_HEIGHT,
+                img_w=iw,
+                img_h=ih,
+            )
+
+    if is_promo and badge_path:
+        result = _thumb_png_bytes(badge_path, BADGE_THUMB)
+        if result:
+            buf, iw, ih = result
+            image_buffers.append(buf)
+            _add_image_centered_in_cell(
+                ws,
+                buf,
+                col_idx=6,
+                row_idx=row_idx,
+                col_width_excel=COL_WIDTHS['F'],
+                row_height_pt=ROW_HEIGHT,
+                img_w=iw,
+                img_h=ih,
+            )
+
+    values = [
+        '',
+        product.sku or '',
+        product.name,
+        product.description or '',
+        float(product.price) if product.price is not None else '',
+        '',
+        float(product.rating) if product.rating is not None else '',
+        product.country or '',
+    ]
+    for col, value in enumerate(values, start=1):
+        cell = ws.cell(row_idx, col, value)
+        cell.border = thin
+        cell.alignment = center if col in (1, 2, 5, 6, 7, 8) else wrap
+
+    ws.row_dimensions[row_idx].height = ROW_HEIGHT
 
 
 def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
@@ -176,58 +262,35 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
 
     image_buffers: list[BytesIO] = []
     badge_path = _badge_akciya_path()
+    row_idx = 2
 
-    for row_idx, product in enumerate(products, start=2):
-        is_promo = bool(product.is_promo or (product.old_price and product.old_price > 0))
-        path = _product_image_path(product)
-        if path:
-            result = _thumb_png_bytes(path, PHOTO_THUMB)
-            if result:
-                buf, iw, ih = result
-                image_buffers.append(buf)
-                _add_image_centered_in_cell(
-                    ws,
-                    buf,
-                    col_idx=1,
-                    row_idx=row_idx,
-                    col_width_excel=COL_WIDTHS['A'],
-                    row_height_pt=ROW_HEIGHT,
-                    img_w=iw,
-                    img_h=ih,
-                )
+    for category_key, group in groupby(
+        products,
+        key=lambda p: (
+            p.category_id,
+            p.category.name if p.category_id else 'Без категории',
+        ),
+    ):
+        _category_id, category_name = category_key
+        category_products = list(group)
+        if not category_products:
+            continue
 
-        if is_promo and badge_path:
-            result = _thumb_png_bytes(badge_path, BADGE_THUMB)
-            if result:
-                buf, iw, ih = result
-                image_buffers.append(buf)
-                _add_image_centered_in_cell(
-                    ws,
-                    buf,
-                    col_idx=6,
-                    row_idx=row_idx,
-                    col_width_excel=COL_WIDTHS['F'],
-                    row_height_pt=ROW_HEIGHT,
-                    img_w=iw,
-                    img_h=ih,
-                )
+        _write_category_banner(ws, row_idx, category_name, thin=thin)
+        row_idx += 1
 
-        values = [
-            '',
-            product.sku or '',
-            product.name,
-            product.description or '',
-            float(product.price) if product.price is not None else '',
-            '',
-            float(product.rating) if product.rating is not None else '',
-            product.country or '',
-        ]
-        for col, value in enumerate(values, start=1):
-            cell = ws.cell(row_idx, col, value)
-            cell.border = thin
-            cell.alignment = center if col in (1, 2, 5, 6, 7, 8) else wrap
-
-        ws.row_dimensions[row_idx].height = ROW_HEIGHT
+        for product in category_products:
+            _write_product_row(
+                ws,
+                row_idx,
+                product,
+                thin=thin,
+                wrap=wrap,
+                center=center,
+                image_buffers=image_buffers,
+                badge_path=badge_path,
+            )
+            row_idx += 1
 
     ws.oddHeader.center.text = (
         f'Прайс магазина Убираемся легко по состоянию на '
