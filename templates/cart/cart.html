@@ -93,7 +93,6 @@
 
 {% if recommendations %}
   <h2 class="section-title">С этими товарами обычно берут</h2>
-  <p style="color:var(--text-muted);margin:-8px 0 16px;">Инвентарь и средства, которые логично покупают вместе</p>
   <div class="product-grid">
     {% for product in recommendations %}
       {% include "includes/product_card.html" with favorite_ids=favorite_ids %}
