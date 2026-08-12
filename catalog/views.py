@@ -16,6 +16,7 @@ from .filters import (
 )
 from .forms import ProductReviewForm
 from .models import Category, Product, ProductReview
+from .pack_pricing import attach_price_per_liter
 from .recommendations import get_recommendations_for_product
 from .search_utils import filter_products_by_query, rank_prefix_first
 
@@ -70,6 +71,9 @@ class CatalogMixin:
             context['favorite_ids'] = set(
                 Favorite.objects.filter(user=self.request.user).values_list('product_id', flat=True)
             )
+        products = context.get('products') or context.get('object_list')
+        if products is not None:
+            attach_price_per_liter(products)
         return context
 
 
@@ -179,6 +183,9 @@ class ProductDetailView(DetailView):
         else:
             context['favorite_ids'] = set()
             context['review_form'] = None
+        attach_price_per_liter(
+            [self.object, *context['similar_products'], *context['bought_together']]
+        )
         return context
 
     def post(self, request, *args, **kwargs):

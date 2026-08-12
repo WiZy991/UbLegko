@@ -10,6 +10,7 @@ from django.views.decorators.http import require_POST
 import logging
 
 from catalog.models import Category, Product
+from catalog.pack_pricing import attach_price_per_liter
 from catalog.recommendations import get_recommendations_for_products
 from accounts.models import Profile
 from core.context_processors import get_selected_city
@@ -39,6 +40,7 @@ def cart_detail(request):
         exclude_ids=cart.product_ids(),
         limit=8,
     )
+    attach_price_per_liter([*cart_products, *recommendations.all()])
     favorite_ids = set()
     if request.user.is_authenticated:
         favorite_ids = set(
@@ -303,6 +305,7 @@ def favorites(request):
         .order_by('-created_at')
     )
     products = [f.product for f in favs if f.product.is_visible]
+    attach_price_per_liter(products)
     return render(
         request,
         'cart/favorites.html',
