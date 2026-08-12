@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260811desc3">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260812stain2">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -80,8 +80,12 @@
           >2ГИС</a>
         </div>
         <div class="topbar__center">
-          <div class="topbar__slogan">{{ site_settings.slogan }}</div>
-          <a class="topbar__phone" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">тел. {{ site_settings.phone }}</a>
+          <button
+            type="button"
+            class="stain-help-trigger"
+            data-stain-help-open
+            aria-haspopup="dialog"
+          >{{ site_settings.slogan }} <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span></button>
         </div>
         <div class="topbar__right">
           <a
@@ -183,8 +187,12 @@
   <div class="account-bar">
     <div class="container account-bar__inner">
       <div class="account-bar__contact">
-        <div class="account-bar__slogan">{{ site_settings.slogan }}</div>
-        <a class="account-bar__phone" href="tel:{{ site_settings.phone|cut:' '|cut:'-' }}">тел. {{ site_settings.phone }}</a>
+        <button
+          type="button"
+          class="stain-help-trigger stain-help-trigger--mobile"
+          data-stain-help-open
+          aria-haspopup="dialog"
+        >{{ site_settings.slogan }} <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span></button>
       </div>
     </div>
   </div>
@@ -296,7 +304,70 @@
   </footer>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script src="{% static 'js/main.js' %}?v=20260811fix7"></script>
+
+  <div class="stain-help-modal" data-stain-help-modal hidden>
+    <div class="stain-help-modal__backdrop" data-stain-help-close tabindex="-1"></div>
+    <div
+      class="stain-help-modal__dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="stain-help-title"
+    >
+      <button type="button" class="stain-help-modal__close" data-stain-help-close aria-label="Закрыть">×</button>
+      <h2 class="stain-help-modal__title" id="stain-help-title">{{ site_settings.slogan }}</h2>
+      <p class="stain-help-modal__lead">Напишите, что не отмывается — подскажем, чем лучше справиться.</p>
+      <form class="stain-help-form" data-stain-help-form action="{% url 'core:stain_help' %}" method="post" novalidate>
+        {% csrf_token %}
+        <label class="stain-help-form__field">
+          <span class="stain-help-form__label">Что не отмывается</span>
+          <textarea
+            class="form-input"
+            name="problem"
+            rows="4"
+            required
+            placeholder="Опишите пятно или поверхность, что уже пробовали…"
+          ></textarea>
+          <span class="field-error" data-error-for="problem" hidden></span>
+        </label>
+        <div class="stain-help-form__row">
+          <label class="stain-help-form__field">
+            <span class="stain-help-form__label">Имя</span>
+            <input class="form-input" type="text" name="full_name" required placeholder="Иван" autocomplete="given-name">
+            <span class="field-error" data-error-for="full_name" hidden></span>
+          </label>
+          <label class="stain-help-form__field">
+            <span class="stain-help-form__label">Телефон</span>
+            <input
+              class="form-input"
+              type="tel"
+              name="phone"
+              required
+              placeholder="+7 (999) 000-00-00"
+              inputmode="tel"
+              autocomplete="tel"
+              data-phone-mask="1"
+            >
+            <span class="field-error" data-error-for="phone" hidden></span>
+          </label>
+        </div>
+        <label class="stain-help-form__field">
+          <span class="stain-help-form__label">Способ связи</span>
+          <input
+            class="form-input"
+            type="text"
+            name="contact_method"
+            required
+            placeholder="Звонок по телефону, WhatsApp, Telegram, MAX…"
+          >
+          <span class="field-error" data-error-for="contact_method" hidden></span>
+        </label>
+        <p class="stain-help-form__status" data-stain-help-status hidden></p>
+        <button class="btn btn-primary stain-help-form__submit" type="submit">Отправить</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="{% static 'js/main.js' %}?v=20260812stain1"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

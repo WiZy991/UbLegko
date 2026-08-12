@@ -2067,4 +2067,131 @@
       else if (event.key === "ArrowRight") show(index + 1);
     });
   }
+
+  // Модалка «Что-то не отмывается»
+  (function initStainHelpModal() {
+    const modal = document.querySelector("[data-stain-help-modal]");
+    const form = document.querySelector("[data-stain-help-form]");
+    if (!modal || !form) return;
+
+    const statusEl = form.querySelector("[data-stain-help-status]");
+    const submitBtn = form.querySelector(".stain-help-form__submit");
+    let lastFocus = null;
+
+    function clearErrors() {
+      form.querySelectorAll("[data-error-for]").forEach((el) => {
+        el.textContent = "";
+        el.hidden = true;
+      });
+      form.querySelectorAll(".form-input").forEach((input) => {
+        input.classList.remove("is-invalid");
+      });
+      if (statusEl) {
+        statusEl.hidden = true;
+        statusEl.textContent = "";
+        statusEl.classList.remove("is-error", "is-success");
+      }
+    }
+
+    function showFieldError(name, message) {
+      const box = form.querySelector(`[data-error-for="${name}"]`);
+      const input = form.querySelector(`[name="${name}"]`);
+      if (box) {
+        box.textContent = message || "";
+        box.hidden = !message;
+      }
+      if (input) input.classList.toggle("is-invalid", Boolean(message));
+    }
+
+    function openModal() {
+      lastFocus = document.activeElement;
+      clearErrors();
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+      const first = form.querySelector("[name='problem']");
+      if (first) first.focus();
+    }
+
+    function closeModal() {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+      if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
+    }
+
+    document.querySelectorAll("[data-stain-help-open]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        openModal();
+      });
+    });
+
+    modal.addEventListener("click", (event) => {
+      if (event.target.closest("[data-stain-help-close]")) {
+        closeModal();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (modal.hidden) return;
+      if (event.key === "Escape") closeModal();
+    });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      clearErrors();
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Отправляем…";
+      }
+
+      try {
+        const response = await fetch(form.action, {
+          method: "POST",
+          headers: {
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: new FormData(form),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.ok) {
+          if (data.errors) {
+            Object.entries(data.errors).forEach(([field, messages]) => {
+              showFieldError(field, Array.isArray(messages) ? messages[0] : String(messages));
+            });
+          }
+          if (statusEl) {
+            statusEl.textContent =
+              data.error || "Проверьте поля и попробуйте ещё раз.";
+            statusEl.classList.add("is-error");
+            statusEl.hidden = false;
+          }
+          return;
+        }
+
+        form.reset();
+        if (statusEl) {
+          statusEl.textContent = data.message || "Спасибо! Мы получили обращение.";
+          statusEl.classList.add("is-success");
+          statusEl.hidden = false;
+        }
+        if (typeof showToast === "function") {
+          showToast(data.message || "Обращение отправлено");
+        }
+        window.setTimeout(closeModal, 1600);
+      } catch (_err) {
+        if (statusEl) {
+          statusEl.textContent = "Сеть недоступна. Попробуйте позже или позвоните.";
+          statusEl.classList.add("is-error");
+          statusEl.hidden = false;
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Отправить";
+        }
+      }
+    });
+  })();
 })();

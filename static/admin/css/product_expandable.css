@@ -1,3 +1,75 @@
+/* Подсказки поиска в админке */
+.admin-search-suggest-wrap {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  max-width: 100%;
+}
+
+.admin-search-suggest-wrap #searchbar,
+.admin-search-suggest-wrap input[name="q"] {
+  width: 100%;
+  min-width: 250px;
+}
+
+.admin-search-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 1050;
+  max-height: 320px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #c5d3dc;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(15, 28, 36, 0.16);
+}
+
+.admin-search-suggest__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  color: #111 !important;
+  text-decoration: none !important;
+  border-bottom: 1px solid #edf2f5;
+}
+
+.admin-search-suggest__item:last-child {
+  border-bottom: 0;
+}
+
+.admin-search-suggest__item:hover,
+.admin-search-suggest__item.is-active {
+  background: #e8f6fb;
+}
+
+.admin-search-suggest__name {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111;
+}
+
+.admin-search-suggest__meta {
+  font-size: 12px;
+  color: #5a6b75;
+}
+
+.admin-search-suggest__empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #5a6b75;
+}
+
+/* Скрыть подсказку под поиском */
+#changelist-search .form-text,
+#toolbar form .help,
+#change-list-filters .form-text,
+.search-help {
+  display: none !important;
+}
+
 .product-expandable-hint {
   margin: 0 0 12px;
   padding: 10px 12px;

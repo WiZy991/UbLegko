@@ -448,18 +448,39 @@ select {
   line-height: 1.25;
 }
 
-.account-bar__slogan {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #1b2228;
-}
-
-.account-bar__phone {
-  display: inline-block;
-  margin-top: 2px;
-  font-size: 0.82rem;
+.stain-help-trigger {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
   font-weight: 700;
   color: #1b2228;
+  line-height: 1.3;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.stain-help-trigger:hover,
+.stain-help-trigger:focus-visible {
+  color: #0a6f86;
+}
+
+.stain-help-trigger:focus-visible {
+  outline: 3px solid rgba(0, 172, 215, 0.55);
+  outline-offset: 2px;
+}
+
+.stain-help-trigger__phone {
+  white-space: nowrap;
+}
+
+.topbar__center .stain-help-trigger {
+  font-size: inherit;
+  text-align: center;
 }
 
 .account-bar__actions {
@@ -468,17 +489,6 @@ select {
   justify-content: flex-end;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.topbar__slogan {
-  font-weight: 700;
-  color: #1b2228;
-  line-height: 1.25;
-}
-
-.topbar__phone {
-  font-weight: 600;
-  color: #1b2228;
 }
 
 .pill-link,
@@ -3724,9 +3734,7 @@ select.form-input {
     min-width: 0;
   }
 
-  .topbar__center,
-  .topbar__slogan,
-  .topbar__phone {
+  .topbar__center {
     display: none;
   }
 
@@ -3795,15 +3803,10 @@ select.form-input {
     min-width: 0;
   }
 
-  .account-bar__slogan {
+  .stain-help-trigger--mobile {
     font-size: 0.95rem;
     line-height: 1.35;
-  }
-
-  .account-bar__phone {
-    margin-top: 2px;
-    font-size: 1rem;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .account-bar__actions {
@@ -3985,10 +3988,6 @@ select.form-input {
   .topbar__inner {
     padding-block: 6px;
     gap: 3px;
-  }
-
-  .topbar__phone {
-    font-size: 0.85rem;
   }
 
   .city-selector__toggle,
@@ -4269,6 +4268,129 @@ select.form-input {
 
   .cart-total {
     text-align: left;
+    font-size: 1.1rem;
+  }
+}
+
+/* Модалка «Что-то не отмывается» */
+.stain-help-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.stain-help-modal[hidden] {
+  display: none !important;
+}
+
+.stain-help-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 28, 36, 0.45);
+}
+
+.stain-help-modal__dialog {
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
+  max-height: min(92vh, 720px);
+  overflow: auto;
+  background: #fff;
+  border-radius: 16px;
+  padding: 22px 20px 20px;
+  box-shadow: 0 18px 50px rgba(15, 28, 36, 0.25);
+}
+
+.stain-help-modal__close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: #334;
+  cursor: pointer;
+}
+
+.stain-help-modal__title {
+  margin: 0 28px 8px 0;
+  font-size: 1.25rem;
+  line-height: 1.3;
+  color: #111;
+}
+
+.stain-help-modal__lead {
+  margin: 0 0 16px;
+  color: #5a6b75;
+  font-size: 0.95rem;
+}
+
+.stain-help-form__field {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.stain-help-form__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #1b2228;
+}
+
+.stain-help-form__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.stain-help-form__status {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+}
+
+.stain-help-form__status.is-error {
+  color: #b02a37;
+}
+
+.stain-help-form__status.is-success {
+  color: #176b2e;
+}
+
+.stain-help-form__submit {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.stain-help-form .field-error {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: #b02a37;
+}
+
+.stain-help-form .field-error[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .stain-help-form__row {
+    grid-template-columns: 1fr;
+  }
+
+  .stain-help-modal__dialog {
+    padding: 18px 14px 16px;
+    border-radius: 14px;
+  }
+
+  .stain-help-modal__title {
     font-size: 1.1rem;
   }
 }

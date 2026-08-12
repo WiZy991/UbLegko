@@ -22,6 +22,7 @@ from pathlib import Path
 
 from .categorize import resolve_category
 from .models import Category, Product, ProductImage, ProductRecommendation, ProductReview
+from .search_utils import filter_products_by_query, rank_prefix_first
 
 HEADER_ALIASES = {
     'name': {
@@ -282,7 +283,18 @@ class ProductAdmin(admin.ModelAdmin):
             .prefetch_related('images')
         )
 
+    def get_search_results(self, request, queryset, search_term):
+        """Тот же поиск, что на сайте: название, описание, артикул, раскладка, стемминг."""
+        search_term = (search_term or '').strip()
+        if not search_term:
+            return queryset, False
+        return filter_products_by_query(queryset, search_term, prefix_only=False), False
+
     def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['product_search_suggest_url'] = reverse(
+            'admin:catalog_product_search_suggest'
+        )
         response = super().changelist_view(request, extra_context=extra_context)
         if not hasattr(response, 'context_data'):
             return response
@@ -515,12 +527,41 @@ class ProductAdmin(admin.ModelAdmin):
                 name='catalog_product_quick_photos',
             ),
             path(
+                'search-suggest/',
+                self.admin_site.admin_view(self.search_suggest_view),
+                name='catalog_product_search_suggest',
+            ),
+            path(
                 'import/',
                 self.admin_site.admin_view(self.import_view),
                 name='catalog_product_import',
             ),
         ]
         return custom + urls
+
+    def search_suggest_view(self, request):
+        """Подсказки поиска в админке — как на сайте."""
+        if not (self.has_view_permission(request) or self.has_change_permission(request)):
+            return JsonResponse({'results': []}, status=403)
+
+        q = (request.GET.get('q') or '').strip()
+        if len(q) < 1:
+            return JsonResponse({'results': []})
+
+        qs = self.get_queryset(request)
+        qs = filter_products_by_query(qs, q, prefix_only=True)
+        ranked = rank_prefix_first(list(qs[:40]), q)[:12]
+        results = [
+            {
+                'id': p.id,
+                'name': p.name,
+                'sku': p.sku or '',
+                'category': p.category.name if p.category_id else '',
+                'url': reverse('admin:catalog_product_change', args=[p.pk]),
+            }
+            for p in ranked
+        ]
+        return JsonResponse({'results': results})
 
     def _product_photos_response(self, product, message='Готово'):
         product.refresh_from_db()
