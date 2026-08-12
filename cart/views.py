@@ -40,7 +40,7 @@ def cart_detail(request):
         exclude_ids=cart.product_ids(),
         limit=8,
     )
-    attach_price_per_liter([*cart_products, *recommendations.all()])
+    attach_price_per_liter([*cart_products, *recommendations])
     favorite_ids = set()
     if request.user.is_authenticated:
         favorite_ids = set(
