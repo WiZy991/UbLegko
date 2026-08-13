@@ -24,18 +24,15 @@
     }
   }
 
-  function paintStatusSelect(select) {
-    if (!select) return;
-    select.classList.remove('status-select--new', 'status-select--processed');
-    var value = String(select.value || '');
-    if (value === 'new') {
-      select.classList.add('status-select--new');
-    } else if (value === 'processed') {
-      select.classList.add('status-select--processed');
-    }
-    var row = select.closest('tr.inbox-row');
+  function paintStatusGroup(group, status) {
+    if (!group) return;
+    group.setAttribute('data-inbox-status', status);
+    group.querySelectorAll('.inbox-status-btn').forEach(function (btn) {
+      btn.classList.toggle('is-active', btn.getAttribute('data-status') === status);
+    });
+    var row = group.closest('tr.inbox-row');
     if (row) {
-      row.setAttribute('data-inbox-status', value);
+      row.setAttribute('data-inbox-status', status);
     }
   }
 
@@ -93,23 +90,28 @@
       }
     }
 
-    var kind = document.querySelector('.inbox-status-select[data-inbox-kind]');
-    if (kind) {
+    var kindEl = document.querySelector('.inbox-status-btns[data-inbox-kind]');
+    if (kindEl) {
       var base =
-        kind.getAttribute('data-inbox-kind') === 'order' ? 'Заявки' : 'Запросы';
+        kindEl.getAttribute('data-inbox-kind') === 'order' ? 'Заявки' : 'Запросы';
       var count =
-        kind.getAttribute('data-inbox-kind') === 'order' ? orders : requests;
+        kindEl.getAttribute('data-inbox-kind') === 'order' ? orders : requests;
       document.title = base + (count > 0 ? ' (' + count + ')' : '') + ' | Убираемся Легко';
     }
   }
 
-  function saveStatus(select) {
-    var url = select.getAttribute('data-inbox-quick-url');
+  function saveStatus(group, status) {
+    var url = group.getAttribute('data-inbox-quick-url');
     if (!url) return;
 
-    var previous = select.getAttribute('data-inbox-prev') || select.value;
-    select.disabled = true;
-    select.classList.add('inbox-status-select--saving');
+    var previous = group.getAttribute('data-inbox-status') || 'new';
+    if (previous === status) return;
+
+    group.classList.add('is-saving');
+    group.querySelectorAll('.inbox-status-btn').forEach(function (btn) {
+      btn.disabled = true;
+    });
+    paintStatusGroup(group, status);
 
     fetch(url, {
       method: 'POST',
@@ -119,7 +121,7 @@
         'X-CSRFToken': getCookie('csrftoken'),
         Accept: 'application/json',
       },
-      body: JSON.stringify({ status: select.value }),
+      body: JSON.stringify({ status: status }),
     })
       .then(function (response) {
         return response.json().then(function (data) {
@@ -128,53 +130,47 @@
       })
       .then(function (result) {
         if (!result.ok) {
-          select.value = previous;
-          paintStatusSelect(select);
+          paintStatusGroup(group, previous);
           window.alert((result.data && result.data.error) || 'Не удалось сохранить статус');
           return;
         }
-        select.setAttribute('data-inbox-prev', select.value);
-        paintStatusSelect(select);
+        var saved = result.data.status || status;
+        paintStatusGroup(group, saved);
         applyCounts(result.data);
       })
       .catch(function () {
-        select.value = previous;
-        paintStatusSelect(select);
+        paintStatusGroup(group, previous);
         window.alert('Не удалось сохранить статус');
       })
       .finally(function () {
-        select.disabled = false;
-        select.classList.remove('inbox-status-select--saving');
+        group.classList.remove('is-saving');
+        group.querySelectorAll('.inbox-status-btn').forEach(function (btn) {
+          btn.disabled = false;
+        });
       });
   }
 
   document.addEventListener('click', function (event) {
-    var btn = event.target.closest('.inbox-row-expand');
-    if (!btn) return;
+    var expandBtn = event.target.closest('.inbox-row-expand');
+    if (expandBtn) {
+      event.preventDefault();
+      var id = expandBtn.getAttribute('data-inbox-id');
+      if (!id) return;
+      var detail = document.getElementById('inbox-detail-' + id);
+      if (!detail) return;
+      var open = detail.hasAttribute('hidden');
+      detail.hidden = !open;
+      setExpanded(expandBtn, open);
+      return;
+    }
+
+    var statusBtn = event.target.closest('.inbox-status-btn');
+    if (!statusBtn) return;
     event.preventDefault();
-    var id = btn.getAttribute('data-inbox-id');
-    if (!id) return;
-    var detail = document.getElementById('inbox-detail-' + id);
-    if (!detail) return;
-    var open = detail.hasAttribute('hidden');
-    detail.hidden = !open;
-    setExpanded(btn, open);
+    var group = statusBtn.closest('.inbox-status-btns');
+    if (!group || group.classList.contains('is-saving')) return;
+    var status = statusBtn.getAttribute('data-status');
+    if (!status) return;
+    saveStatus(group, status);
   });
-
-  function initStatusControls() {
-    document.querySelectorAll('.inbox-status-select').forEach(function (select) {
-      select.setAttribute('data-inbox-prev', select.value);
-      paintStatusSelect(select);
-      select.addEventListener('change', function () {
-        paintStatusSelect(select);
-        saveStatus(select);
-      });
-    });
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initStatusControls);
-  } else {
-    initStatusControls();
-  }
 })();

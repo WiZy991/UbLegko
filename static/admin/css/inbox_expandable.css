@@ -1,4 +1,4 @@
-/* Заявки / Запросы: статус, раскрытие, адаптив */
+/* Заявки / Запросы: статус, раскрытие, компактная таблица */
 
 .inbox-expandable-hint {
   margin: 0 0 12px;
@@ -10,23 +10,62 @@
   font-size: 13px;
 }
 
-#result_list .field-expand_toggle {
-  width: 44px;
+#result_list {
+  width: 100%;
+  table-layout: auto;
+}
+
+#result_list th,
+#result_list td {
+  vertical-align: middle !important;
+  line-height: 1.25;
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+  padding-left: 6px !important;
+  padding-right: 6px !important;
+}
+
+#result_list th {
+  white-space: nowrap;
+  font-size: 12px;
+}
+
+/* Галочка и ▼ — узко, рядом */
+#result_list th.action-checkbox-column,
+#result_list td.action-checkbox,
+#result_list .action-checkbox {
+  width: 1% !important;
+  min-width: 0 !important;
+  max-width: 32px !important;
+  padding-left: 4px !important;
+  padding-right: 2px !important;
+  white-space: nowrap !important;
+}
+
+#result_list th.column-expand_toggle,
+#result_list td.field-expand_toggle {
+  width: 1% !important;
+  min-width: 0 !important;
+  max-width: 40px !important;
+  padding-left: 2px !important;
+  padding-right: 4px !important;
   text-align: center;
-  vertical-align: middle;
+  white-space: nowrap !important;
+  overflow: visible !important;
 }
 
 .inbox-row-expand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   border: 1px solid #c5d9e2;
   border-radius: 6px;
   background: #fff;
   color: #111;
   cursor: pointer;
+  padding: 0;
 }
 
 .inbox-row-expand:hover {
@@ -40,10 +79,40 @@
   color: #fff;
 }
 
+/* Длинный текст — одна строка + многоточие */
+#result_list tbody tr.inbox-row > td.field-short_problem,
+#result_list tbody tr.inbox-row > td.field-address_col,
+#result_list tbody tr.inbox-row > td.field-email,
+#result_list tbody tr.inbox-row > td.field-contact_col,
+#result_list tbody tr.inbox-row > td.field-address_name_col,
+#result_list tbody tr.inbox-row > td.field-full_name {
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#result_list .field-id,
+#result_list .field-email_sent_col,
+#result_list .field-total_display,
+#result_list .field-created_col,
+#result_list .field-phone,
+#result_list .field-city,
+#result_list .field-delivery_col {
+  white-space: nowrap;
+  width: 1%;
+}
+
+#result_list .field-created_col {
+  min-width: 110px;
+}
+
 .inbox-row-detail td {
   padding: 0 !important;
   border-top: none;
   background: #f4f8fb;
+  white-space: normal !important;
+  overflow: visible !important;
 }
 
 .inbox-row-detail__inner {
@@ -53,7 +122,7 @@
 
 .inbox-row-detail__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px 18px;
 }
 
@@ -95,78 +164,62 @@
   margin: 4px 0;
 }
 
-/* Статус заявки / запроса */
-#result_list .field-status_control {
-  min-width: 140px !important;
+/* Две кнопки статуса в один ряд */
+#result_list th.column-status_control,
+#result_list td.field-status_control {
   width: 1%;
-  white-space: nowrap;
-  vertical-align: middle;
+  white-space: nowrap !important;
+  overflow: visible !important;
 }
 
-#result_list .inbox-status-select {
-  min-width: 148px !important;
-  width: 148px !important;
-  max-width: none !important;
-  font-weight: 700;
-  border-width: 2px;
+.inbox-status-btns {
+  display: inline-flex;
+  flex-direction: row;
+  gap: 4px;
+  align-items: center;
+}
+
+.inbox-status-btn {
+  appearance: none;
+  border: 2px solid transparent;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
   cursor: pointer;
+  white-space: nowrap;
+  background: #f3f6f8;
+  color: #5a6b75;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-#result_list .inbox-status-select.status-select--new,
-#result_list tr[data-inbox-status="new"] .inbox-status-select {
-  color: #b71c1c !important;
-  border-color: #e53935 !important;
-  background: #ffebee !important;
+.inbox-status-btn--new.is-active,
+.inbox-status-btn--new:hover {
+  color: #b71c1c;
+  background: #ffebee;
+  border-color: #e53935;
 }
 
-#result_list .inbox-status-select.status-select--processed,
-#result_list tr[data-inbox-status="processed"] .inbox-status-select {
-  color: #1b5e20 !important;
-  border-color: #43a047 !important;
-  background: #e8f5e9 !important;
+.inbox-status-btn--done.is-active,
+.inbox-status-btn--done:hover {
+  color: #1b5e20;
+  background: #e8f5e9;
+  border-color: #43a047;
 }
 
-#result_list .inbox-status-select--saving {
-  opacity: 0.65;
+.inbox-status-btn:disabled {
+  opacity: 0.55;
   cursor: wait;
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 110px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.2;
-  white-space: nowrap;
+.inbox-status-btns.is-saving {
+  opacity: 0.7;
 }
 
-.status-badge--new {
-  color: #b71c1c;
-  background: #ffebee;
-  border: 1px solid #ef9a9a;
-}
-
-.status-badge--done {
-  color: #1b5e20;
-  background: #e8f5e9;
-  border: 1px solid #a5d6a7;
-}
-
-@media (max-width: 1200px) {
-  #result_list .field-status_control {
-    min-width: 160px !important;
-  }
-
-  #result_list .inbox-status-select {
-    min-width: 160px !important;
-    width: 160px !important;
-    font-size: 13px;
+@media (max-width: 900px) {
+  .inbox-row-detail__grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -188,4 +241,15 @@ html[data-bs-theme="dark"] .inbox-expandable-hint {
 html[data-bs-theme="dark"] .inbox-expandable-hint {
   background: #24333c !important;
   border-color: #3a4d59 !important;
+}
+
+html[data-bs-theme="dark"] .inbox-status-btn {
+  background: #2a3a44;
+  color: #c5d0d6;
+}
+
+html[data-bs-theme="dark"] .inbox-row-expand {
+  background: #24333c;
+  border-color: #3a4d59;
+  color: #fff;
 }

@@ -9,9 +9,30 @@ from django.contrib.admin.templatetags.admin_list import (
 )
 from django.http import JsonResponse
 from django.urls import path, reverse
-from django.utils.html import escape, format_html, format_html_join, mark_safe
+from django.utils.html import escape, format_html, mark_safe
 
 from .models import Favorite, Order, OrderItem, StainHelpRequest
+
+
+def inbox_status_buttons(url, current, kind, done_label):
+    """Две кнопки статуса с мгновенным сохранением."""
+    new_active = ' is-active' if current == 'new' else ''
+    done_active = ' is-active' if current == 'processed' else ''
+    return format_html(
+        '<div class="inbox-status-btns" data-inbox-quick-url="{}" '
+        'data-inbox-kind="{}" data-inbox-status="{}" role="group" aria-label="Статус">'
+        '<button type="button" class="inbox-status-btn inbox-status-btn--new{}" '
+        'data-status="new">Новая</button>'
+        '<button type="button" class="inbox-status-btn inbox-status-btn--done{}" '
+        'data-status="processed">{}</button>'
+        '</div>',
+        url,
+        kind,
+        current,
+        new_active,
+        done_active,
+        done_label,
+    )
 
 
 class OrderItemInline(admin.TabularInline):
@@ -101,13 +122,13 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         'full_name',
         'phone',
         'city',
-        'delivery_method',
+        'delivery_col',
         'email',
-        'email_sent',
-        'address',
-        'address_name',
+        'email_sent_col',
+        'address_col',
+        'address_name_col',
         'status_control',
-        'created_at',
+        'created_col',
         'total_display',
     )
     list_filter = ('status', 'delivery_method', 'email_sent', 'created_at')
@@ -191,25 +212,34 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     def get_row_status(self, obj):
         return obj.status if obj.status in ('new', 'processed') else 'new'
 
+    @admin.display(description='Получение', ordering='delivery_method')
+    def delivery_col(self, obj):
+        return obj.get_delivery_method_display()
+
+    @admin.display(description='Письмо', boolean=True, ordering='email_sent')
+    def email_sent_col(self, obj):
+        return obj.email_sent
+
+    @admin.display(description='Адрес', ordering='address')
+    def address_col(self, obj):
+        return obj.address
+
+    @admin.display(description='Название', ordering='address_name')
+    def address_name_col(self, obj):
+        return obj.address_name
+
     @admin.display(description='Статус', ordering='status')
     def status_control(self, obj):
-        url = reverse('admin:cart_order_quick_status', args=[obj.pk])
-        options = format_html_join(
-            '',
-            '<option value="{}"{}>{}</option>',
-            (
-                (value, ' selected' if value == obj.status else '', label)
-                for value, label in Order.Status.choices
-            ),
+        return inbox_status_buttons(
+            reverse('admin:cart_order_quick_status', args=[obj.pk]),
+            obj.status if obj.status in ('new', 'processed') else 'new',
+            'order',
+            'Готово',
         )
-        css = 'status-select--new' if obj.status == Order.Status.NEW else 'status-select--processed'
-        return format_html(
-            '<select class="inbox-status-select {}" data-inbox-quick-url="{}" '
-            'data-inbox-kind="order" aria-label="Статус заявки">{}</select>',
-            css,
-            url,
-            options,
-        )
+
+    @admin.display(description='Создана', ordering='created_at')
+    def created_col(self, obj):
+        return obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—'
 
     @admin.display(description='Сумма')
     def total_display(self, obj):
@@ -229,12 +259,18 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         comment = (obj.comment or '').strip() or '—'
         feedback = (obj.site_feedback or '').strip() or '—'
         address = (obj.address or '').strip() or '—'
+        address_name = (obj.address_name or '').strip() or '—'
         city = (obj.city or '').strip() or '—'
+        email = (obj.email or '').strip() or '—'
         delivery = obj.get_delivery_method_display() if obj.delivery_method else '—'
+        email_sent = 'Да' if obj.email_sent else 'Нет'
 
         return mark_safe(
             '<div class="inbox-row-detail__inner">'
             '<div class="inbox-row-detail__grid">'
+            f'<div class="inbox-row-detail__block">'
+            f'<span class="inbox-row-detail__label">Email</span>'
+            f'<div class="inbox-row-detail__value">{escape(email)}</div></div>'
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Город</span>'
             f'<div class="inbox-row-detail__value">{escape(city)}</div></div>'
@@ -242,6 +278,12 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             f'<span class="inbox-row-detail__label">Доставка</span>'
             f'<div class="inbox-row-detail__value">{escape(str(delivery))}</div></div>'
             f'<div class="inbox-row-detail__block">'
+            f'<span class="inbox-row-detail__label">Письмо отправлено</span>'
+            f'<div class="inbox-row-detail__value">{escape(email_sent)}</div></div>'
+            f'<div class="inbox-row-detail__block">'
+            f'<span class="inbox-row-detail__label">Название адреса</span>'
+            f'<div class="inbox-row-detail__value">{escape(address_name)}</div></div>'
+            f'<div class="inbox-row-detail__block inbox-row-detail__block--wide">'
             f'<span class="inbox-row-detail__label">Адрес</span>'
             f'<div class="inbox-row-detail__value">{escape(address)}</div></div>'
             f'<div class="inbox-row-detail__block inbox-row-detail__block--wide">'
@@ -268,14 +310,12 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     change_list_template = 'admin/cart/stainhelprequest/change_list.html'
     list_display = (
         'expand_toggle',
-        'created_at',
+        'created_col',
         'full_name',
         'phone',
-        'contact_method',
+        'contact_col',
         'short_problem',
-        'email_sent',
         'status_control',
-        'user',
     )
     list_filter = ('is_processed', 'email_sent', 'created_at')
     search_fields = ('full_name', 'phone', 'contact_method', 'problem')
@@ -350,30 +390,26 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     def get_row_status(self, obj):
         return 'processed' if obj.is_processed else 'new'
 
-    @admin.display(description='Что не отмывается')
+    @admin.display(description='Создано', ordering='created_at')
+    def created_col(self, obj):
+        return obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—'
+
+    @admin.display(description='Связь', ordering='contact_method')
+    def contact_col(self, obj):
+        return obj.contact_method
+
+    @admin.display(description='Проблема')
     def short_problem(self, obj):
         text = (obj.problem or '').strip().replace('\n', ' ')
-        return text if len(text) <= 80 else f'{text[:77]}…'
+        return text if len(text) <= 40 else f'{text[:37]}…'
 
     @admin.display(description='Статус', ordering='is_processed')
     def status_control(self, obj):
-        url = reverse('admin:cart_stainhelprequest_quick_status', args=[obj.pk])
-        current = 'processed' if obj.is_processed else 'new'
-        options = format_html_join(
-            '',
-            '<option value="{}"{}>{}</option>',
-            (
-                (value, ' selected' if value == current else '', label)
-                for value, label in (('new', 'Новая'), ('processed', 'Обработано'))
-            ),
-        )
-        css = 'status-select--new' if current == 'new' else 'status-select--processed'
-        return format_html(
-            '<select class="inbox-status-select {}" data-inbox-quick-url="{}" '
-            'data-inbox-kind="request" aria-label="Статус запроса">{}</select>',
-            css,
-            url,
-            options,
+        return inbox_status_buttons(
+            reverse('admin:cart_stainhelprequest_quick_status', args=[obj.pk]),
+            'processed' if obj.is_processed else 'new',
+            'request',
+            'Готово',
         )
 
     def row_details_html(self, obj):
@@ -381,6 +417,8 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         contact = (obj.contact_method or '').strip() or '—'
         phone = (obj.phone or '').strip() or '—'
         name = (obj.full_name or '').strip() or '—'
+        email_sent = 'Да' if obj.email_sent else 'Нет'
+        user = str(obj.user) if obj.user_id else '—'
         return mark_safe(
             '<div class="inbox-row-detail__inner">'
             '<div class="inbox-row-detail__grid">'
@@ -393,6 +431,12 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Способ связи</span>'
             f'<div class="inbox-row-detail__value">{escape(contact)}</div></div>'
+            f'<div class="inbox-row-detail__block">'
+            f'<span class="inbox-row-detail__label">Письмо отправлено</span>'
+            f'<div class="inbox-row-detail__value">{escape(email_sent)}</div></div>'
+            f'<div class="inbox-row-detail__block">'
+            f'<span class="inbox-row-detail__label">Пользователь</span>'
+            f'<div class="inbox-row-detail__value">{escape(user)}</div></div>'
             f'<div class="inbox-row-detail__block inbox-row-detail__block--wide">'
             f'<span class="inbox-row-detail__label">Сообщение</span>'
             f'<div class="inbox-row-detail__value">{escape(problem)}</div></div>'
