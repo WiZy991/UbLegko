@@ -316,7 +316,7 @@ class ProductAdmin(admin.ModelAdmin):
         sort = request.GET.get('sort')
         if sort in PRODUCT_ADMIN_SORT:
             return PRODUCT_ADMIN_SORT[sort]
-        return ('category__sort_order', 'category__name', 'name')
+        return ('name',)
 
     def get_search_results(self, request, queryset, search_term):
         """Тот же поиск, что на сайте: название, описание, артикул, раскладка, стемминг."""
