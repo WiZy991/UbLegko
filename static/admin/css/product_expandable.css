@@ -317,6 +317,31 @@
   color: #8b1f28;
 }
 
+.product-row-detail__upload-progress {
+  margin: 0 0 12px;
+}
+
+.product-row-detail__upload-progress-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #d9e6ee;
+  overflow: hidden;
+}
+
+.product-row-detail__upload-progress-bar {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: #00acd7;
+  transition: width 0.12s linear;
+}
+
+.product-row-detail__upload-progress-label {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #334;
+}
+
 .product-row-detail__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -531,6 +556,14 @@ html[data-bs-theme="dark"] .product-row-detail__notice.is-success {
 html[data-bs-theme="dark"] .product-row-detail__notice.is-error {
   background: #3b1d22;
   color: #ffb8c0;
+}
+
+html[data-bs-theme="dark"] .product-row-detail__upload-progress-track {
+  background: #2d4452;
+}
+
+html[data-bs-theme="dark"] .product-row-detail__upload-progress-label {
+  color: #c5d6e0;
 }
 
 html[data-bs-theme="dark"] .product-row-expand {

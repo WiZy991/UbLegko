@@ -53,17 +53,178 @@
     }
   }
 
-  function postPhotos(url, formData) {
-    return fetch(url, {
-      method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken'),
-      },
-      body: formData,
-    }).then(function (response) {
-      return response.json().then(function (data) {
-        return { ok: response.ok, data: data };
+  function ensureUploadProgress(detailRow) {
+    var wrap = detailRow.querySelector('[data-upload-progress]');
+    if (wrap) return wrap;
+    wrap = document.createElement('div');
+    wrap.className = 'product-row-detail__upload-progress';
+    wrap.setAttribute('data-upload-progress', '');
+    wrap.hidden = true;
+    wrap.innerHTML =
+      '<div class="product-row-detail__upload-progress-track">' +
+      '<div class="product-row-detail__upload-progress-bar" data-upload-progress-bar></div>' +
+      '</div>' +
+      '<div class="product-row-detail__upload-progress-label" data-upload-progress-label></div>';
+    var notice = detailRow.querySelector('[data-quick-message]');
+    if (notice && notice.parentNode) {
+      notice.parentNode.insertBefore(wrap, notice.nextSibling);
+    } else {
+      var cell = detailRow.querySelector('td');
+      if (cell) cell.insertBefore(wrap, cell.firstChild);
+    }
+    return wrap;
+  }
+
+  function setUploadProgress(detailRow, percent, label) {
+    var wrap = ensureUploadProgress(detailRow);
+    wrap.hidden = false;
+    var pct = Math.max(0, Math.min(100, Math.round(percent)));
+    var bar = wrap.querySelector('[data-upload-progress-bar]');
+    var lab = wrap.querySelector('[data-upload-progress-label]');
+    if (bar) bar.style.width = pct + '%';
+    if (lab) lab.textContent = label || pct + '%';
+  }
+
+  function hideUploadProgress(detailRow) {
+    var wrap = detailRow.querySelector('[data-upload-progress]');
+    if (wrap) wrap.hidden = true;
+  }
+
+  function postPhotos(url, formData, onProgress) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('X-CSRFToken', getCookie('csrftoken'));
+      xhr.upload.onprogress = function (event) {
+        if (event.lengthComputable && typeof onProgress === 'function') {
+          onProgress(event.loaded, event.total);
+        }
+      };
+      xhr.onload = function () {
+        var data;
+        try {
+          data = JSON.parse(xhr.responseText || '{}');
+        } catch (err) {
+          reject(new Error('Некорректный ответ сервера'));
+          return;
+        }
+        resolve({
+          ok: xhr.status >= 200 && xhr.status < 300,
+          data: data,
+        });
+      };
+      xhr.onerror = function () {
+        reject(new Error('Ошибка сети'));
+      };
+      xhr.send(formData);
+    });
+  }
+
+  function uploadPhotosQueue(url, kind, files, detailRow) {
+    var list = Array.prototype.slice.call(files || [], 0);
+    if (!list.length) {
+      return Promise.reject(new Error('Файлы не выбраны'));
+    }
+
+    var sizes = list.map(function (file) {
+      return file.size > 0 ? file.size : 1;
+    });
+    var totalSize = sizes.reduce(function (sum, size) {
+      return sum + size;
+    }, 0);
+    var doneBytes = 0;
+    var errors = [];
+    var lastOk = null;
+
+    function uploadOne(index) {
+      if (index >= list.length) {
+        return Promise.resolve(lastOk);
+      }
+
+      var file = list[index];
+      var formData = new FormData();
+      if (kind === 'main') {
+        formData.append('action', 'upload_main');
+        formData.append('image', file);
+      } else {
+        formData.append('action', 'upload_gallery');
+        formData.append('images', file);
+      }
+
+      var labelPrefix =
+        list.length > 1
+          ? 'Фото ' + (index + 1) + ' из ' + list.length
+          : 'Загрузка';
+      setNotice(detailRow, labelPrefix + '…', 'is-loading');
+
+      return postPhotos(url, formData, function (loaded, total) {
+        var current = total > 0 ? loaded : 0;
+        if (current > sizes[index]) current = sizes[index];
+        var overall = ((doneBytes + current) / totalSize) * 100;
+        setUploadProgress(
+          detailRow,
+          overall,
+          labelPrefix + ' — ' + Math.round(overall) + '%'
+        );
+      }).then(function (result) {
+        if (!result.ok || !result.data.ok) {
+          throw new Error(
+            (result.data && result.data.error) || 'Ошибка загрузки'
+          );
+        }
+        doneBytes += sizes[index];
+        lastOk = result;
+        replaceGallery(
+          detailRow,
+          result.data.photos_html,
+          result.data.has_main_photo_html
+        );
+        setUploadProgress(
+          detailRow,
+          (doneBytes / totalSize) * 100,
+          labelPrefix + ' — готово'
+        );
+        return uploadOne(index + 1);
+      }).catch(function (error) {
+        errors.push((file.name || 'фото') + ': ' + (error.message || 'ошибка'));
+        doneBytes += sizes[index];
+        setUploadProgress(
+          detailRow,
+          (doneBytes / totalSize) * 100,
+          labelPrefix + ' — ошибка, дальше…'
+        );
+        return uploadOne(index + 1);
       });
+    }
+
+    return uploadOne(0).then(function (result) {
+      if (errors.length && !lastOk) {
+        throw new Error(errors.join('; '));
+      }
+      if (errors.length) {
+        return {
+          ok: true,
+          data: Object.assign({}, lastOk && lastOk.data, {
+            message:
+              'Загружено с ошибками (' +
+              (list.length - errors.length) +
+              ' из ' +
+              list.length +
+              '): ' +
+              errors.join('; '),
+            partial_errors: true,
+          }),
+        };
+      }
+      if (lastOk && lastOk.data && list.length > 1) {
+        return {
+          ok: true,
+          data: Object.assign({}, lastOk.data, {
+            message: 'Добавлено фото: ' + list.length,
+          }),
+        };
+      }
+      return result || lastOk;
     });
   }
 
@@ -368,32 +529,44 @@
 
     var url = gallery.getAttribute('data-photos-url');
     var kind = input.getAttribute('data-photo-upload');
-    var formData = new FormData();
+    var files =
+      kind === 'main' ? [input.files[0]] : Array.prototype.slice.call(input.files, 0);
 
-    if (kind === 'main') {
-      formData.append('action', 'upload_main');
-      formData.append('image', input.files[0]);
-    } else {
-      formData.append('action', 'upload_gallery');
-      Array.from(input.files).forEach(function (file) {
-        formData.append('images', file);
-      });
-    }
+    // Сразу сбрасываем input, чтобы можно было выбрать те же файлы снова
+    input.value = '';
 
-    setNotice(detailRow, 'Загружаю фото...', 'is-loading');
-    postPhotos(url, formData)
+    setNotice(detailRow, 'Загружаю фото…', 'is-loading');
+    setUploadProgress(detailRow, 0, 'Подготовка…');
+
+    uploadPhotosQueue(url, kind, files, detailRow)
       .then(function (result) {
-        if (!result.ok || !result.data.ok) {
-          throw new Error(result.data.error || 'Ошибка загрузки');
+        if (!result || !result.ok || !result.data || !result.data.ok) {
+          throw new Error(
+            (result && result.data && result.data.error) || 'Ошибка загрузки'
+          );
         }
-        replaceGallery(detailRow, result.data.photos_html, result.data.has_main_photo_html);
-        setNotice(detailRow, result.data.message || 'Фото загружено', 'is-success');
+        if (result.data.photos_html) {
+          replaceGallery(
+            detailRow,
+            result.data.photos_html,
+            result.data.has_main_photo_html
+          );
+        }
+        setUploadProgress(detailRow, 100, '100%');
+        var state = result.data.partial_errors ? 'is-error' : 'is-success';
+        setNotice(
+          detailRow,
+          result.data.message || 'Фото загружено',
+          state
+        );
       })
       .catch(function (error) {
         setNotice(detailRow, error.message || 'Ошибка загрузки', 'is-error');
       })
       .finally(function () {
-        input.value = '';
+        window.setTimeout(function () {
+          hideUploadProgress(detailRow);
+        }, 700);
       });
   });
 
