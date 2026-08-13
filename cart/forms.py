@@ -98,7 +98,7 @@ class CheckoutForm(forms.Form):
         }),
     )
     site_feedback = forms.CharField(
-        label='Замечаний по сайту',
+        label='Замечания по сайту',
         required=False,
         widget=forms.Textarea(attrs={
             'class': 'form-input',
