@@ -160,9 +160,12 @@ class Product(models.Model):
                 slug = f'{base}-{n}'
                 n += 1
             self.slug = slug
-        # Старая цена → товар автоматически акционный (бэйдж на сайте)
+        # Старая цена → товар автоматически акционный (бэйдж на сайте).
+        # Без старой цены — не акция.
         if self.old_price is not None and self.old_price > 0:
             self.is_promo = True
+        else:
+            self.is_promo = False
         self.recommendation_codes = normalize_recommendation_codes(self.recommendation_codes)
         self.search_text = build_product_search_text(
             name=self.name,
