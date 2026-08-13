@@ -9,6 +9,26 @@
       .replace(/"/g, '&quot;');
   }
 
+  function ensureSearchGroup(input) {
+    var form = input.closest('#changelist-search') || input.form;
+    if (!form) return;
+
+    var group = input.closest('.admin-search-group');
+    var button =
+      (group && group.querySelector('button[type="submit"], .btn[type="submit"]')) ||
+      form.querySelector('button[type="submit"], .btn[type="submit"]');
+
+    if (!group) {
+      group = document.createElement('div');
+      group.className = 'admin-search-group';
+      input.parentNode.insertBefore(group, input);
+      group.appendChild(input);
+    }
+    if (button && button.parentNode !== group) {
+      group.appendChild(button);
+    }
+  }
+
   function initAdminProductSuggest() {
     var suggestUrl =
       (window.UBLEGKO_PRODUCT_SEARCH_SUGGEST || '').trim() ||
@@ -22,6 +42,8 @@
       document.querySelector('input[name="q"][type="text"]');
     if (!input || input.dataset.suggestBound === '1') return;
     input.dataset.suggestBound = '1';
+
+    ensureSearchGroup(input);
 
     var wrap = document.createElement('div');
     wrap.className = 'admin-search-suggest-wrap';

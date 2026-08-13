@@ -162,12 +162,37 @@
     });
   }
 
+  function ensureAdminSearchGroup() {
+    var form = document.getElementById('changelist-search');
+    if (!form) return;
+    var input =
+      form.querySelector('#searchbar') || form.querySelector('input[name="q"]');
+    if (!input) return;
+
+    var group = input.closest('.admin-search-group');
+    var button =
+      (group && group.querySelector('button[type="submit"], .btn[type="submit"]')) ||
+      form.querySelector(':scope > button[type="submit"], :scope > .btn[type="submit"]') ||
+      form.querySelector('button[type="submit"], .btn[type="submit"]');
+
+    if (!group) {
+      group = document.createElement('div');
+      group.className = 'admin-search-group';
+      input.parentNode.insertBefore(group, input);
+      group.appendChild(input);
+    }
+    if (button && button.parentNode !== group) {
+      group.appendChild(button);
+    }
+  }
+
   function init() {
     localizeModeSelect();
     addQuickThemeToggle();
     bindModeSelect();
     applyMode(getStoredMode());
     watchHtmlThemeAttr();
+    ensureAdminSearchGroup();
   }
 
   if (document.readyState === 'loading') {
