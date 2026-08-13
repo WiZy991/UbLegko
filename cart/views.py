@@ -258,7 +258,11 @@ def _send_order_email(order):
 
     subject = f'Заявка №{order.pk} с сайта {site.brand_name}'
     body = render_to_string('cart/email/order.txt', {'order': order, 'site': site})
-    from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
+    # Mail.ru: From лучше брать из SMTP-логина, иначе письмо часто не принимается.
+    from_email = (
+        (getattr(settings, 'EMAIL_HOST_USER', '') or '').strip()
+        or (getattr(settings, 'DEFAULT_FROM_EMAIL', '') or '').strip()
+    )
     client_email = (order.email or '').strip()
 
     # Reply-To вместо CC: у Mail.ru/Beget CC на чужой ящик часто роняет всю отправку

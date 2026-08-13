@@ -78,12 +78,23 @@ def stain_help_submit(request):
             'problem': data['problem'],
         },
     )
+    # Mail.ru/Beget: From должен совпадать с SMTP-логином, иначе письмо отбрасывается.
+    from_email = (
+        (getattr(settings, 'EMAIL_HOST_USER', '') or '').strip()
+        or (getattr(settings, 'DEFAULT_FROM_EMAIL', '') or '').strip()
+    )
+    if not from_email:
+        logger.error('Нет DEFAULT_FROM_EMAIL / EMAIL_HOST_USER для обращения «не отмывается»')
+        return JsonResponse(
+            {'ok': False, 'error': 'Почта не настроена. Позвоните нам.'},
+            status=503,
+        )
+
     email = EmailMessage(
         subject=subject,
         body=body,
-        from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
+        from_email=from_email,
         to=[to_email],
-        reply_to=None,
     )
     try:
         if not _is_real_smtp_backend():
@@ -101,10 +112,20 @@ def stain_help_submit(request):
             )
         sent = email.send(fail_silently=False)
         if not sent:
+            logger.error(
+                'Обращение «не отмывается»: SMTP вернул 0 (письмо на %s не принято)',
+                to_email,
+            )
             return JsonResponse(
                 {'ok': False, 'error': 'Не удалось отправить. Попробуйте позже или позвоните.'},
                 status=502,
             )
+        logger.info(
+            'Обращение «не отмывается» отправлено на %s (от %s, тел. %s)',
+            to_email,
+            data['full_name'],
+            data['phone'],
+        )
     except Exception:
         logger.exception('Не удалось отправить обращение «не отмывается» на %s', to_email)
         return JsonResponse(

@@ -2076,7 +2076,23 @@
 
     const statusEl = form.querySelector("[data-stain-help-status]");
     const submitBtn = form.querySelector(".stain-help-form__submit");
+    const nameInput = form.querySelector("[name='full_name']");
+    const phoneInput = form.querySelector("[name='phone']");
     let lastFocus = null;
+
+    function applyPrefill() {
+      const name = (form.getAttribute("data-prefill-name") || "").trim();
+      const phone = (form.getAttribute("data-prefill-phone") || "").trim();
+      if (nameInput && name && !nameInput.value.trim()) {
+        nameInput.value = name;
+      }
+      if (phoneInput && phone) {
+        const formatted =
+          typeof formatPhoneMask === "function" ? formatPhoneMask(phone) : phone;
+        if (!phoneInput.value.trim()) phoneInput.value = formatted;
+        else phoneInput.value = formatPhoneMask(phoneInput.value);
+      }
+    }
 
     function clearErrors() {
       form.querySelectorAll("[data-error-for]").forEach((el) => {
@@ -2106,6 +2122,7 @@
     function openModal() {
       lastFocus = document.activeElement;
       clearErrors();
+      applyPrefill();
       modal.hidden = false;
       document.body.style.overflow = "hidden";
       const first = form.querySelector("[name='problem']");
@@ -2117,6 +2134,8 @@
       document.body.style.overflow = "";
       if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
     }
+
+    applyPrefill();
 
     document.querySelectorAll("[data-stain-help-open]").forEach((btn) => {
       btn.addEventListener("click", (event) => {
@@ -2140,18 +2159,55 @@
       event.preventDefault();
       clearErrors();
 
+      const problem = (form.querySelector("[name='problem']")?.value || "").trim();
+      const fullName = (nameInput?.value || "").trim();
+      const phone = phoneInput?.value || "";
+      const contactMethod = (form.querySelector("[name='contact_method']")?.value || "").trim();
+      let hasError = false;
+      if (problem.length < 3) {
+        showFieldError("problem", "Опишите, что не отмывается");
+        hasError = true;
+      }
+      if (fullName.length < 2) {
+        showFieldError("full_name", "Укажите имя");
+        hasError = true;
+      }
+      if (!isValidRuPhone(phone)) {
+        showFieldError("phone", "Укажите телефон в формате +7 (999) 000-00-00");
+        hasError = true;
+      }
+      if (contactMethod.length < 2) {
+        showFieldError("contact_method", "Укажите удобный способ связи");
+        hasError = true;
+      }
+      if (hasError) {
+        if (statusEl) {
+          statusEl.textContent = "Проверьте поля и попробуйте ещё раз.";
+          statusEl.classList.add("is-error");
+          statusEl.hidden = false;
+        }
+        return;
+      }
+
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = "Отправляем…";
       }
+
+      const csrf =
+        form.querySelector("[name=csrfmiddlewaretoken]")?.value ||
+        (document.cookie.match(/(?:^|; )csrftoken=([^;]+)/) || [])[1] ||
+        "";
 
       try {
         const response = await fetch(form.action, {
           method: "POST",
           headers: {
             "X-Requested-With": "XMLHttpRequest",
+            ...(csrf ? { "X-CSRFToken": decodeURIComponent(csrf) } : {}),
           },
           body: new FormData(form),
+          credentials: "same-origin",
         });
         const data = await response.json().catch(() => ({}));
 
@@ -2163,14 +2219,24 @@
           }
           if (statusEl) {
             statusEl.textContent =
-              data.error || "Проверьте поля и попробуйте ещё раз.";
+              data.error ||
+              (response.status === 403
+                ? "Сессия устарела — обновите страницу и отправьте снова."
+                : "Проверьте поля и попробуйте ещё раз.");
             statusEl.classList.add("is-error");
             statusEl.hidden = false;
           }
           return;
         }
 
+        const savedName = nameInput ? nameInput.value : "";
+        const savedPhone = phoneInput ? phoneInput.value : "";
         form.reset();
+        applyPrefill();
+        if (nameInput && !nameInput.value && savedName) nameInput.value = savedName;
+        if (phoneInput && !phoneInput.value && savedPhone) {
+          phoneInput.value = formatPhoneMask(savedPhone);
+        }
         if (statusEl) {
           statusEl.textContent = data.message || "Спасибо! Мы получили обращение.";
           statusEl.classList.add("is-success");

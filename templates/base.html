@@ -328,7 +328,17 @@
       <button type="button" class="stain-help-modal__close" data-stain-help-close aria-label="Закрыть">×</button>
       <h2 class="stain-help-modal__title" id="stain-help-title">{{ site_settings.slogan }}</h2>
       <p class="stain-help-modal__lead">Напишите, что не отмывается — подскажем, чем лучше справиться.</p>
-      <form class="stain-help-form" data-stain-help-form action="{% url 'core:stain_help' %}" method="post" novalidate>
+      <form
+        class="stain-help-form"
+        data-stain-help-form
+        action="{% url 'core:stain_help' %}"
+        method="post"
+        novalidate
+        {% if user.is_authenticated %}
+          data-prefill-name="{{ user.first_name|default:'' }}"
+          {% if user.profile.phone %}data-prefill-phone="{{ user.profile.phone }}"{% endif %}
+        {% endif %}
+      >
         {% csrf_token %}
         <label class="stain-help-form__field">
           <span class="stain-help-form__label">Что не отмывается</span>
@@ -344,7 +354,15 @@
         <div class="stain-help-form__row">
           <label class="stain-help-form__field">
             <span class="stain-help-form__label">Имя</span>
-            <input class="form-input" type="text" name="full_name" required placeholder="Иван" autocomplete="given-name">
+            <input
+              class="form-input"
+              type="text"
+              name="full_name"
+              required
+              placeholder="Иван"
+              autocomplete="given-name"
+              {% if user.is_authenticated and user.first_name %}value="{{ user.first_name }}"{% endif %}
+            >
             <span class="field-error" data-error-for="full_name" hidden></span>
           </label>
           <label class="stain-help-form__field">
@@ -358,6 +376,7 @@
               inputmode="tel"
               autocomplete="tel"
               data-phone-mask="1"
+              {% if user.is_authenticated and user.profile.phone %}value="{{ user.profile.phone }}"{% endif %}
             >
             <span class="field-error" data-error-for="phone" hidden></span>
           </label>
@@ -379,7 +398,7 @@
     </div>
   </div>
 
-  <script src="{% static 'js/main.js' %}?v=20260812stain1"></script>
+  <script src="{% static 'js/main.js' %}?v=20260813stain2"></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>
