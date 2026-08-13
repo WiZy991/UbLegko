@@ -95,46 +95,42 @@
   margin: 4px 0;
 }
 
-/* Статус заявки */
-#result_list .field-status,
-#result_list .field-status_badge,
-#result_list .field-processed_badge {
+/* Статус заявки / запроса */
+#result_list .field-status_control {
   min-width: 140px !important;
   width: 1%;
   white-space: nowrap;
   vertical-align: middle;
 }
 
-#result_list .field-status select {
+#result_list .inbox-status-select {
   min-width: 148px !important;
   width: 148px !important;
   max-width: none !important;
   font-weight: 700;
   border-width: 2px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
 }
 
-#result_list .field-status select.status-select--new,
-#result_list tr[data-inbox-status="new"] .field-status select {
+#result_list .inbox-status-select.status-select--new,
+#result_list tr[data-inbox-status="new"] .inbox-status-select {
   color: #b71c1c !important;
   border-color: #e53935 !important;
   background: #ffebee !important;
 }
 
-#result_list .field-status select.status-select--processed,
-#result_list tr[data-inbox-status="processed"] .field-status select {
+#result_list .inbox-status-select.status-select--processed,
+#result_list tr[data-inbox-status="processed"] .inbox-status-select {
   color: #1b5e20 !important;
   border-color: #43a047 !important;
   background: #e8f5e9 !important;
 }
 
-#result_list tr[data-inbox-status="new"] .field-is_processed,
-#result_list tr[data-inbox-status="new"] .field-processed_badge {
-  background: #ffebee;
-}
-
-#result_list tr[data-inbox-status="processed"] .field-is_processed,
-#result_list tr[data-inbox-status="processed"] .field-processed_badge {
-  background: #e8f5e9;
+#result_list .inbox-status-select--saving {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 .status-badge {
@@ -163,13 +159,11 @@
 }
 
 @media (max-width: 1200px) {
-  #result_list .field-status,
-  #result_list .field-status_badge,
-  #result_list .field-processed_badge {
+  #result_list .field-status_control {
     min-width: 160px !important;
   }
 
-  #result_list .field-status select {
+  #result_list .inbox-status-select {
     min-width: 160px !important;
     width: 160px !important;
     font-size: 13px;

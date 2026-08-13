@@ -1,3 +1,5 @@
+import json
+
 from django.contrib import admin
 from django.contrib.admin.templatetags.admin_list import (
     ResultList,
@@ -6,8 +8,8 @@ from django.contrib.admin.templatetags.admin_list import (
     result_hidden_fields,
 )
 from django.http import JsonResponse
-from django.urls import path
-from django.utils.html import escape, format_html, mark_safe
+from django.urls import path, reverse
+from django.utils.html import escape, format_html, format_html_join, mark_safe
 
 from .models import Favorite, Order, OrderItem, StainHelpRequest
 
@@ -104,13 +106,12 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         'email_sent',
         'address',
         'address_name',
-        'status',
+        'status_control',
         'created_at',
         'total_display',
     )
     list_filter = ('status', 'delivery_method', 'email_sent', 'created_at')
     search_fields = ('full_name', 'phone', 'email', 'address', 'address_name', 'city')
-    list_editable = ('status',)
     readonly_fields = (
         'user',
         'full_name',
@@ -139,6 +140,11 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
                 self.admin_site.admin_view(self.inbox_counts_view),
                 name='cart_inbox_counts',
             ),
+            path(
+                '<path:object_id>/quick-status/',
+                self.admin_site.admin_view(self.quick_status_view),
+                name='cart_order_quick_status',
+            ),
         ]
         return custom + urls
 
@@ -148,11 +154,62 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             'requests_new': StainHelpRequest.objects.filter(is_processed=False).count(),
         })
 
+    def quick_status_view(self, request, object_id):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        obj = Order.objects.filter(pk=object_id).first()
+        if not obj:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        status = str(payload.get('status') or '').strip()
+        valid = {choice[0] for choice in Order.Status.choices}
+        if status not in valid:
+            return JsonResponse({'ok': False, 'error': 'Некорректный статус'}, status=400)
+
+        if obj.status != status:
+            obj.status = status
+            obj.save(update_fields=['status'])
+
+        return JsonResponse({
+            'ok': True,
+            'status': obj.status,
+            'orders_new': Order.objects.filter(status=Order.Status.NEW).count(),
+            'requests_new': StainHelpRequest.objects.filter(is_processed=False).count(),
+        })
+
     def get_inbox_new_count(self):
         return Order.objects.filter(status=Order.Status.NEW).count()
 
     def get_row_status(self, obj):
         return obj.status if obj.status in ('new', 'processed') else 'new'
+
+    @admin.display(description='Статус', ordering='status')
+    def status_control(self, obj):
+        url = reverse('admin:cart_order_quick_status', args=[obj.pk])
+        options = format_html_join(
+            '',
+            '<option value="{}"{}>{}</option>',
+            (
+                (value, ' selected' if value == obj.status else '', label)
+                for value, label in Order.Status.choices
+            ),
+        )
+        css = 'status-select--new' if obj.status == Order.Status.NEW else 'status-select--processed'
+        return format_html(
+            '<select class="inbox-status-select {}" data-inbox-quick-url="{}" '
+            'data-inbox-kind="order" aria-label="Статус заявки">{}</select>',
+            css,
+            url,
+            options,
+        )
 
     @admin.display(description='Сумма')
     def total_display(self, obj):
@@ -217,12 +274,10 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         'contact_method',
         'short_problem',
         'email_sent',
-        'processed_badge',
-        'is_processed',
+        'status_control',
         'user',
     )
     list_filter = ('is_processed', 'email_sent', 'created_at')
-    list_editable = ('is_processed',)
     search_fields = ('full_name', 'phone', 'contact_method', 'problem')
     readonly_fields = (
         'full_name',
@@ -247,6 +302,48 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     date_hierarchy = 'created_at'
     list_per_page = 50
 
+    def get_urls(self):
+        urls = super().get_urls()
+        custom = [
+            path(
+                '<path:object_id>/quick-status/',
+                self.admin_site.admin_view(self.quick_status_view),
+                name='cart_stainhelprequest_quick_status',
+            ),
+        ]
+        return custom + urls
+
+    def quick_status_view(self, request, object_id):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        obj = StainHelpRequest.objects.filter(pk=object_id).first()
+        if not obj:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        status = str(payload.get('status') or '').strip()
+        if status not in {'new', 'processed'}:
+            return JsonResponse({'ok': False, 'error': 'Некорректный статус'}, status=400)
+
+        is_processed = status == 'processed'
+        if obj.is_processed != is_processed:
+            obj.is_processed = is_processed
+            obj.save(update_fields=['is_processed'])
+
+        return JsonResponse({
+            'ok': True,
+            'status': 'processed' if obj.is_processed else 'new',
+            'orders_new': Order.objects.filter(status=Order.Status.NEW).count(),
+            'requests_new': StainHelpRequest.objects.filter(is_processed=False).count(),
+        })
+
     def get_inbox_new_count(self):
         return StainHelpRequest.objects.filter(is_processed=False).count()
 
@@ -259,13 +356,24 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         return text if len(text) <= 80 else f'{text[:77]}…'
 
     @admin.display(description='Статус', ordering='is_processed')
-    def processed_badge(self, obj):
-        if obj.is_processed:
-            return format_html(
-                '<span class="status-badge status-badge--done">Обработано</span>'
-            )
+    def status_control(self, obj):
+        url = reverse('admin:cart_stainhelprequest_quick_status', args=[obj.pk])
+        current = 'processed' if obj.is_processed else 'new'
+        options = format_html_join(
+            '',
+            '<option value="{}"{}>{}</option>',
+            (
+                (value, ' selected' if value == current else '', label)
+                for value, label in (('new', 'Новая'), ('processed', 'Обработано'))
+            ),
+        )
+        css = 'status-select--new' if current == 'new' else 'status-select--processed'
         return format_html(
-            '<span class="status-badge status-badge--new">Новая</span>'
+            '<select class="inbox-status-select {}" data-inbox-quick-url="{}" '
+            'data-inbox-kind="request" aria-label="Статус запроса">{}</select>',
+            css,
+            url,
+            options,
         )
 
     def row_details_html(self, obj):

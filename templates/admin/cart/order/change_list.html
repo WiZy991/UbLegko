@@ -3,12 +3,12 @@
 
 {% block extrahead %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=1">
-  <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=1"></script>
+  <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=2">
+  <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=2"></script>
 {% endblock %}
 
 {% block content_title %}
-  <h1>Заявки{% if new_count %} ({{ new_count }}){% endif %}</h1>
+  Заявки{% if new_count %} ({{ new_count }}){% endif %}
 {% endblock %}
 
 {% block result_list %}
