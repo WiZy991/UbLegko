@@ -5,13 +5,7 @@
     <div class="catalog-sheet__clip">
       <aside class="sidebar" id="sidebar">
         <div class="sidebar__body">
-          <p class="sidebar__title">Каталог</p>
-          <a
-            href="{% url 'catalog:home' %}{% catalog_query %}"
-            class="{% if not current_category %}is-active{% endif %}"
-            data-catalog-nav
-            data-scroll-spy-home
-          >Все товары</a>
+          <p class="sidebar__title">Категории</p>
           {% if scroll_spy_categories %}
             {% for category in categories %}
               <a

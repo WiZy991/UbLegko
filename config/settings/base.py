@@ -41,6 +41,7 @@ JAZZMIN_SETTINGS = {
         {'name': 'Открыть сайт', 'url': '/', 'new_window': True},
         {'name': 'Каталог', 'url': 'admin:catalog_product_changelist', 'permissions': ['catalog.view_product']},
         {'name': 'Заявки', 'url': 'admin:cart_order_changelist', 'permissions': ['cart.view_order']},
+        {'name': 'Запросы', 'url': 'admin:core_stainhelprequest_changelist', 'permissions': ['core.view_stainhelprequest']},
     ],
     'usermenu_links': [
         {'name': 'Открыть сайт', 'url': '/', 'new_window': True},
@@ -59,6 +60,7 @@ JAZZMIN_SETTINGS = {
         'cart.Order',
         'cart.Favorite',
         'core',
+        'core.StainHelpRequest',
         'core.SiteSettings',
         'core.City',
         'auth',
@@ -75,6 +77,7 @@ JAZZMIN_SETTINGS = {
         'cart.Favorite': 'fas fa-heart',
         'core.City': 'fas fa-map-marker-alt',
         'core.SiteSettings': 'fas fa-cog',
+        'core.StainHelpRequest': 'fas fa-comment-dots',
     },
     'default_icon_parents': 'fas fa-chevron-circle-right',
     'default_icon_children': 'fas fa-circle',
