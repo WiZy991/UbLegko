@@ -43,7 +43,17 @@ def build_product_search_text(
 ) -> str:
     """Нормализованный текст для поиска без учёта регистра (SQLite + кириллица)."""
     parts = (name, description, sku, country, short_description)
-    return ' '.join(p.strip() for p in parts if p and p.strip()).casefold()
+    base = ' '.join(p.strip() for p in parts if p and p.strip()).casefold()
+    if not base:
+        return ''
+    # Дубли без пробелов вокруг «-» и без дефисов: sr-100 / sr100
+    extras = []
+    compact = re.sub(r'\s*-\s*', '-', base)
+    mashed = re.sub(r'[\s\-]+', '', base)
+    for extra in (compact, mashed):
+        if extra and extra not in base and extra not in extras:
+            extras.append(extra)
+    return ' '.join([base, *extras]) if extras else base
 
 
 def _transliterate_ru_to_en(text: str) -> str:
@@ -82,6 +92,26 @@ def _transliterate_en_to_ru(text: str) -> str:
     return ''.join(out)
 
 
+def _hyphen_space_variants(text: str) -> list[str]:
+    """
+    Варианты вокруг дефиса: «sr-100» ↔ «sr -100» (как в Bahler SR -100).
+    """
+    text = (text or '').strip()
+    if not text or ('-' not in text and ' -' not in text):
+        return []
+    compact = re.sub(r'\s*-\s*', '-', text)
+    compact = re.sub(r'\s+', ' ', compact).strip()
+    # В каталоге часто «SR -100» (пробел перед дефисом)
+    spaced = compact.replace('-', ' -')
+    mashed = re.sub(r'[\s\-]+', '', compact)
+    out = []
+    for v in (compact, spaced, mashed):
+        v = v.strip()
+        if v and v.casefold() != text.casefold():
+            out.append(v)
+    return out
+
+
 def query_variants(q: str) -> list[str]:
     """Уникальные варианты запроса для RU/EN поиска."""
     q = (q or '').strip()
@@ -94,9 +124,13 @@ def query_variants(q: str) -> list[str]:
         _transliterate_ru_to_en(q),
         _transliterate_en_to_ru(q),
     ]
+    expanded = []
+    for v in variants:
+        expanded.append(v)
+        expanded.extend(_hyphen_space_variants(v))
     seen = set()
     result = []
-    for v in variants:
+    for v in expanded:
         v = v.strip()
         if not v:
             continue
@@ -179,14 +213,22 @@ def text_search_q(q: str) -> Q:
 
 def description_search_q(q: str) -> Q:
     """Вхождение запроса в описании или других полях (для подсказок)."""
-    filt = Q()
-    for token in query_tokens(q) or [q.strip()]:
+    tokens = query_tokens(q) or ([q.strip()] if q.strip() else [])
+    if not tokens:
+        return Q()
+    combined = Q()
+    for index, token in enumerate(tokens):
+        token_q = Q()
         for variant in query_variants(token):
             for stem in stem_variants(variant):
                 fold = stem.casefold()
                 if fold:
-                    filt |= Q(**{f'{_SEARCH_FIELD}__contains': fold})
-    return filt
+                    token_q |= Q(**{f'{_SEARCH_FIELD}__contains': fold})
+        if index == 0:
+            combined = token_q
+        else:
+            combined &= token_q
+    return combined
 
 
 def filter_products_by_query(qs, q: str, *, prefix_only: bool = False):

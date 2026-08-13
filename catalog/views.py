@@ -273,7 +273,7 @@ def search_suggest(request):
 
     qs = Product.objects.filter(is_visible=True).select_related('category').prefetch_related('images')
     qs = filter_products_by_query(qs, q, prefix_only=True)
-    ranked = rank_prefix_first(list(qs[:40]), q)[:10]
+    ranked = rank_prefix_first(list(qs[:200]), q)[:10]
     results = [
         {
             'id': p.id,

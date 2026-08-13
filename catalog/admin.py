@@ -584,7 +584,7 @@ class ProductAdmin(admin.ModelAdmin):
 
         qs = self.get_queryset(request)
         qs = filter_products_by_query(qs, q, prefix_only=True)
-        ranked = rank_prefix_first(list(qs[:40]), q)[:12]
+        ranked = rank_prefix_first(list(qs[:200]), q)[:12]
         results = [
             {
                 'id': p.id,
