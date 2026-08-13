@@ -2,14 +2,19 @@
   <div class="city-selector" data-city-selector>
     <button
       type="button"
-      class="city-selector__toggle"
+      class="city-selector__toggle ub-pill"
       data-city-toggle
       aria-haspopup="listbox"
       aria-expanded="false"
       aria-controls="city-selector-dropdown"
     >
-      <span data-city-label>{{ selected_city_name }}</span>
-      <span class="city-selector__arrow" aria-hidden="true">▾</span>
+      <span class="ub-pill__circle" aria-hidden="true"></span>
+      <span class="ub-pill__stack">
+        <span class="ub-pill__label">
+          <span data-city-label>{{ selected_city_name }}</span>
+          <span class="city-selector__arrow" aria-hidden="true">▾</span>
+        </span>
+      </span>
     </button>
     <div
       class="city-selector__dropdown"
@@ -50,5 +55,10 @@
     <input type="hidden" name="next" value="{{ request.get_full_path }}">
   </form>
 {% else %}
-  <span class="city-static" title="Город доставки">{{ selected_city_name|default:"г. Уссурийск" }}</span>
+  <span class="city-static ub-pill" title="Город доставки">
+    <span class="ub-pill__circle" aria-hidden="true"></span>
+    <span class="ub-pill__stack">
+      <span class="ub-pill__label">{{ selected_city_name|default:"г. Уссурийск" }}</span>
+    </span>
+  </span>
 {% endif %}

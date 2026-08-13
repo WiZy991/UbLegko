@@ -24,6 +24,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260813ppl2">
+  <link rel="stylesheet" href="{% static 'css/pill_nav_topbar.css' %}?v=4">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -80,63 +81,114 @@
         <div class="topbar__left">
           {% include "includes/city_selector.html" %}
           {% if site_settings.max_channel_url %}
-            <a class="pill-link pill-link--max" href="{{ site_settings.max_channel_url }}" target="_blank" rel="noopener"><span class="pill-link--max__full">Канал в MAX</span><span class="pill-link--max__short">MAX</span></a>
+            <a class="pill-link pill-link--max ub-pill" href="{{ site_settings.max_channel_url }}" target="_blank" rel="noopener">
+              <span class="ub-pill__circle" aria-hidden="true"></span>
+              <span class="ub-pill__stack">
+                <span class="ub-pill__label">
+                  <span class="pill-link--max__full">Канал в MAX</span>
+                  <span class="pill-link--max__short">MAX</span>
+                </span>
+              </span>
+            </a>
           {% else %}
-            <span class="pill-link pill-link--max"><span class="pill-link--max__full">Канал в MAX</span><span class="pill-link--max__short">MAX</span></span>
+            <span class="pill-link pill-link--max ub-pill">
+              <span class="ub-pill__circle" aria-hidden="true"></span>
+              <span class="ub-pill__stack">
+                <span class="ub-pill__label">
+                  <span class="pill-link--max__full">Канал в MAX</span>
+                  <span class="pill-link--max__short">MAX</span>
+                </span>
+              </span>
+            </span>
           {% endif %}
           <a
-            class="pill-link pill-link--gis"
+            class="pill-link pill-link--gis ub-pill"
             href="https://2gis.ru/ussuriysk/geo/70000001103185644"
             target="_blank"
             rel="noopener"
-          >2ГИС</a>
+          >
+            <span class="ub-pill__circle" aria-hidden="true"></span>
+            <span class="ub-pill__stack">
+              <span class="ub-pill__label">2ГИС</span>
+            </span>
+          </a>
         </div>
         <div class="topbar__center">
           <button
             type="button"
-            class="stain-help-trigger"
+            class="stain-help-trigger ub-pill ub-pill--slogan"
             data-stain-help-open
             aria-haspopup="dialog"
           >
-            <span class="stain-help-trigger__text">{{ site_settings.slogan }}</span>
-            <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span>
+            <span class="ub-pill__circle" aria-hidden="true"></span>
+            <span class="ub-pill__stack">
+              <span class="ub-pill__label">
+                <span class="stain-help-trigger__text">{{ site_settings.slogan }}</span>
+                <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span>
+              </span>
+            </span>
           </button>
         </div>
         <div class="topbar__right">
           <a
-            class="pill-link catalog-download"
+            class="pill-link catalog-download ub-pill"
             href="{% url 'catalog:download_xlsx' %}"
             title="Скачать каталог в Excel"
             aria-label="Скачать каталог в Excel"
             download
           >
-            <span class="catalog-download__icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
+            <span class="ub-pill__circle" aria-hidden="true"></span>
+            <span class="ub-pill__stack">
+              <span class="ub-pill__label">
+                <span class="catalog-download__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span class="catalog-download__text">Excel</span>
+              </span>
             </span>
-            <span class="catalog-download__text">Excel</span>
           </a>
-          <a class="cart-link topbar__cart" href="{% url 'cart:detail' %}">
-            <span class="cart-link__icon" aria-hidden="true">
-              <svg class="cart-link__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3.5 5h1.6l1.3 9.2a1.5 1.5 0 0 0 1.5 1.3h8.7a1.5 1.5 0 0 0 1.5-1.2l1.1-6.3H7.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                <circle cx="9.2" cy="19" r="1.4" fill="currentColor"/>
-                <circle cx="16.3" cy="19" r="1.4" fill="currentColor"/>
-              </svg>
+          <a class="cart-link topbar__cart" href="{% url 'cart:detail' %}" data-ub-pill-host>
+            <span class="cart-link__icon ub-pill ub-pill--cart-icon">
+              <span class="ub-pill__circle" aria-hidden="true"></span>
+              <span class="ub-pill__stack">
+                <span class="ub-pill__label">
+                  <svg class="cart-link__svg" viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3.5 5h1.6l1.3 9.2a1.5 1.5 0 0 0 1.5 1.3h8.7a1.5 1.5 0 0 0 1.5-1.2l1.1-6.3H7.1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="9.2" cy="19" r="1.4" fill="currentColor"/>
+                    <circle cx="16.3" cy="19" r="1.4" fill="currentColor"/>
+                  </svg>
+                </span>
+              </span>
             </span>
             <span data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
           </a>
           {% if user.is_authenticated %}
             <div class="topbar__auth">
-              <a class="pill-link" href="{% url 'accounts:profile' %}">Кабинет</a>
+              <a class="pill-link ub-pill" href="{% url 'accounts:profile' %}">
+                <span class="ub-pill__circle" aria-hidden="true"></span>
+                <span class="ub-pill__stack">
+                  <span class="ub-pill__label">Кабинет</span>
+                </span>
+              </a>
               <form class="topbar__logout" action="{% url 'accounts:logout' %}" method="post">
                 {% csrf_token %}
-                <button type="submit" class="pill-link pill-link--button">Выход</button>
+                <button type="submit" class="pill-link pill-link--button ub-pill">
+                  <span class="ub-pill__circle" aria-hidden="true"></span>
+                  <span class="ub-pill__stack">
+                    <span class="ub-pill__label">Выход</span>
+                  </span>
+                </button>
               </form>
             </div>
           {% else %}
-            <a class="auth-link" href="{% url 'accounts:login' %}">Вход</a>
+            <a class="auth-link ub-pill" href="{% url 'accounts:login' %}">
+              <span class="ub-pill__circle" aria-hidden="true"></span>
+              <span class="ub-pill__stack">
+                <span class="ub-pill__label">Вход</span>
+              </span>
+            </a>
           {% endif %}
         </div>
       </div>
@@ -206,12 +258,17 @@
       <div class="account-bar__contact">
         <button
           type="button"
-          class="stain-help-trigger stain-help-trigger--mobile"
+          class="stain-help-trigger stain-help-trigger--mobile ub-pill ub-pill--slogan"
           data-stain-help-open
           aria-haspopup="dialog"
         >
-          <span class="stain-help-trigger__text">{{ site_settings.slogan }}</span>
-          <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span>
+          <span class="ub-pill__circle" aria-hidden="true"></span>
+          <span class="ub-pill__stack">
+            <span class="ub-pill__label">
+              <span class="stain-help-trigger__text">{{ site_settings.slogan }}</span>
+              <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span>
+            </span>
+          </span>
         </button>
       </div>
     </div>
@@ -407,6 +464,8 @@
   </div>
 
   <script src="{% static 'js/main.js' %}?v=20260813stain2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+  <script src="{% static 'js/pill_nav_topbar.js' %}?v=4" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

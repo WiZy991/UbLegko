@@ -1,0 +1,196 @@
+/* PillNav-hover только для кнопок topbar / слогана */
+
+.ub-pill {
+  --ub-pill-fill: var(--cyan, #00acd7);
+  --ub-pill-hover-text: #fff;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 999px;
+  z-index: 0;
+}
+
+.ub-pill__circle {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  border-radius: 50%;
+  background: var(--ub-pill-fill);
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.ub-pill__stack {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  z-index: 2;
+}
+
+.ub-pill__label {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  line-height: inherit;
+  will-change: transform;
+}
+
+.ub-pill__label-hover {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+  line-height: inherit;
+  color: var(--ub-pill-hover-text);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Сброс старых hover для pill-кнопок с анимацией */
+.topbar .ub-pill.pill-link:hover,
+.topbar .ub-pill.pill-link--button:hover,
+.topbar .ub-pill.auth-link:hover,
+.topbar .ub-pill.city-selector__toggle:hover,
+.topbar .city-selector.is-open .ub-pill.city-selector__toggle {
+  background: #fff;
+  color: #111;
+  border-color: #111;
+}
+
+.topbar .ub-pill .ub-pill__label-hover .catalog-download__icon {
+  color: var(--ub-pill-hover-text);
+  border-color: var(--ub-pill-hover-text);
+}
+
+/* Корзина: анимация только на круглом значке, сумма снаружи */
+.topbar .cart-link.topbar__cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #111;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.topbar .ub-pill--cart-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0;
+  border: 2px solid #111;
+  background: #fff;
+  color: #111;
+  box-sizing: border-box;
+}
+
+.topbar .ub-pill--cart-icon .ub-pill__stack {
+  width: 18px;
+  height: 18px;
+}
+
+.topbar .ub-pill--cart-icon .ub-pill__label,
+.topbar .ub-pill--cart-icon .ub-pill__label-hover {
+  width: 18px;
+  height: 18px;
+  justify-content: center;
+}
+
+.topbar .ub-pill--cart-icon .cart-link__svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+.topbar .ub-pill--cart-icon .ub-pill__label-hover {
+  color: var(--ub-pill-hover-text);
+}
+
+.topbar .ub-pill--cart-icon:hover,
+.topbar .topbar__cart:hover .ub-pill--cart-icon {
+  border-color: var(--ub-pill-fill);
+}
+
+.topbar .ub-pill.catalog-download .ub-pill__label,
+.topbar .ub-pill.catalog-download .ub-pill__label-hover {
+  gap: 6px;
+}
+
+.topbar .ub-pill.city-selector__toggle .ub-pill__label,
+.topbar .ub-pill.city-selector__toggle .ub-pill__label-hover {
+  gap: 6px;
+}
+
+/* Слоган в овале */
+.ub-pill--slogan.stain-help-trigger {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 8px 18px;
+  border: 2px solid #111;
+  background: #fff;
+  color: #111;
+  text-decoration: none;
+  text-align: center;
+  box-shadow: none;
+}
+
+.ub-pill--slogan .ub-pill__stack {
+  display: inline-flex;
+}
+
+.ub-pill--slogan .ub-pill__label,
+.ub-pill--slogan .ub-pill__label-hover {
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.ub-pill--slogan .stain-help-trigger__text,
+.ub-pill--slogan .stain-help-trigger__phone {
+  text-decoration: none;
+}
+
+.ub-pill--slogan:hover,
+.ub-pill--slogan:focus-visible {
+  color: #111;
+}
+
+.account-bar .ub-pill--slogan {
+  max-width: 100%;
+  padding: 8px 14px;
+}
+
+.account-bar .ub-pill--slogan .ub-pill__label,
+.account-bar .ub-pill--slogan .ub-pill__label-hover {
+  align-items: flex-start;
+  text-align: left;
+}
+
+@media (hover: none) {
+  .ub-pill:active {
+    background: var(--ub-pill-fill) !important;
+    color: var(--ub-pill-hover-text) !important;
+    border-color: var(--ub-pill-fill) !important;
+  }
+
+  .ub-pill:active .cart-link__icon,
+  .ub-pill:active .catalog-download__icon {
+    color: var(--ub-pill-hover-text);
+    border-color: var(--ub-pill-hover-text);
+  }
+}
