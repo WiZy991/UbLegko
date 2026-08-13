@@ -1,15 +1,44 @@
+/* Поиск: поле и «Найти» всегда вместе, поле слева — кнопка справа */
+.admin-search-group {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1 1 320px;
+  min-width: min(100%, 280px);
+  max-width: 100%;
+  order: 100;
+}
+
+.admin-search-group #searchbar,
+.admin-search-group input[name="q"],
+.admin-search-group .admin-search-suggest-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+}
+
+.admin-search-group .btn,
+.admin-search-group button[type="submit"] {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 /* Подсказки поиска в админке */
 .admin-search-suggest-wrap {
   position: relative;
-  display: inline-block;
+  display: block;
   vertical-align: middle;
   max-width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .admin-search-suggest-wrap #searchbar,
 .admin-search-suggest-wrap input[name="q"] {
   width: 100%;
-  min-width: 250px;
+  min-width: 0;
 }
 
 .admin-search-suggest {
