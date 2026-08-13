@@ -7,8 +7,13 @@ Email: {{ order.email|default:"—" }}
 Способ получения: {{ order.get_delivery_method_display }}
 {% if order.address_name %}Название адреса: {{ order.address_name }}
 {% endif %}Адрес доставки: {{ order.address|default:"—" }}
-Комментарий: {{ order.comment|default:"—" }}
-Замечаний по сайту: {{ order.site_feedback|default:"—" }}
+
+Комментарий:
+{{ order.comment|default:"—" }}
+
+Замечания по сайту:
+{{ order.site_feedback|default:"—" }}
+
 Дата: {{ order.created_at|date:"d.m.Y H:i" }}
 
 Состав заявки:

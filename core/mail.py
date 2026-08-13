@@ -71,11 +71,16 @@ def prepare_email_body(body: str, width: int = _EMAIL_LINE_WIDTH) -> str:
 
 def body_to_html(body: str) -> str:
     """Простой HTML-вариант письма — так Mail.ru реже теряет текст."""
-    safe = escape(prepare_email_body(body)).replace('\n', '<br>\n')
+    # Двойной перенос → абзац с отступом, одинарный → <br>
+    parts: list[str] = []
+    for block in prepare_email_body(body).split('\n\n'):
+        lines = [escape(line) for line in block.split('\n')]
+        parts.append('<br>\n'.join(lines))
+    inner = '</p>\n<p style="margin:0 0 12px">'.join(parts)
     return (
         '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;'
         'font-size:14px;line-height:1.45;color:#111">'
-        f'{safe}'
+        f'<p style="margin:0 0 12px">{inner}</p>'
         '</body></html>'
     )
 
