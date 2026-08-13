@@ -305,12 +305,8 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
     def get_queryset(self, request):
-        return (
-            super()
-            .get_queryset(request)
-            .select_related('category')
-            .prefetch_related('images')
-        )
+        # Галерею не prefetch'им на весь список — фото подгружаются при раскрытии строки
+        return super().get_queryset(request).select_related('category')
 
     def get_ordering(self, request):
         sort = request.GET.get('sort')
@@ -344,14 +340,18 @@ class ProductAdmin(admin.ModelAdmin):
                 rows.append({
                     'result': ResultList(form, items_for_result(cl, res, form)),
                     'obj': res,
-                    'details_html': self.row_details_html(res),
+                    'details_url': reverse(
+                        'admin:catalog_product_quick_details', args=[res.pk]
+                    ),
                 })
         else:
             for res in cl.result_list:
                 rows.append({
                     'result': ResultList(None, items_for_result(cl, res, None)),
                     'obj': res,
-                    'details_html': self.row_details_html(res),
+                    'details_url': reverse(
+                        'admin:catalog_product_quick_details', args=[res.pk]
+                    ),
                 })
 
         headers = list(result_headers(cl))
@@ -549,6 +549,11 @@ class ProductAdmin(admin.ModelAdmin):
                 name='catalog_product_quick_photos',
             ),
             path(
+                '<int:product_id>/quick-details/',
+                self.admin_site.admin_view(self.quick_details_view),
+                name='catalog_product_quick_details',
+            ),
+            path(
                 'search-suggest/',
                 self.admin_site.admin_view(self.search_suggest_view),
                 name='catalog_product_search_suggest',
@@ -594,6 +599,27 @@ class ProductAdmin(admin.ModelAdmin):
             'message': message,
             'photos_html': str(self.photos_html(product)),
             'has_main_photo_html': str(_boolean_icon(bool(product.image))),
+        })
+
+    def quick_details_view(self, request, product_id):
+        """HTML раскрытой строки — только по запросу (не на всю страницу списка)."""
+        if request.method != 'GET':
+            return JsonResponse({'ok': False, 'error': 'GET only'}, status=405)
+        if not (self.has_view_permission(request) or self.has_change_permission(request)):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        product = (
+            Product.objects.filter(pk=product_id)
+            .select_related('category')
+            .prefetch_related('images')
+            .first()
+        )
+        if not product:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        return JsonResponse({
+            'ok': True,
+            'html': str(self.row_details_html(product)),
         })
 
     def quick_update_view(self, request, product_id):

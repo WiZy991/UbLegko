@@ -230,11 +230,51 @@
     }
 
     var willOpen = detail.hidden;
-    detail.hidden = !willOpen;
-    setExpanded(btn, willOpen);
-    if (willOpen) {
-      refreshDirty(id);
+    if (!willOpen) {
+      detail.hidden = true;
+      setExpanded(btn, false);
+      return;
     }
+
+    detail.hidden = false;
+    setExpanded(btn, true);
+
+    if (detail.getAttribute('data-details-loaded') === '1') {
+      refreshDirty(id);
+      return;
+    }
+
+    var url = detail.getAttribute('data-details-url');
+    var cell = detail.querySelector('td');
+    if (!url || !cell) {
+      return;
+    }
+
+    cell.innerHTML = '<div class="product-row-detail__placeholder">Загрузка…</div>';
+    fetch(url, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin',
+    })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          return { ok: response.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok || !result.data.ok || !result.data.html) {
+          throw new Error((result.data && result.data.error) || 'Не удалось загрузить');
+        }
+        cell.innerHTML = result.data.html;
+        detail.setAttribute('data-details-loaded', '1');
+        snapshot(id);
+        setDirty(id, false);
+      })
+      .catch(function (error) {
+        cell.innerHTML =
+          '<div class="product-row-detail__notice is-error">' +
+          (error.message || 'Ошибка загрузки') +
+          '</div>';
+      });
   });
 
   document.addEventListener('click', function (event) {

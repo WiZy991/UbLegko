@@ -29,8 +29,11 @@
     <tr><td colspan="{{ row.result|length }}">{{ row.result.form.non_field_errors }}</td></tr>
 {% endif %}
 <tr class="product-row" data-product-id="{{ row.obj.pk }}">{% for item in row.result %}{{ item }}{% endfor %}</tr>
-<tr class="product-row-detail" id="product-detail-{{ row.obj.pk }}" hidden>
-  <td colspan="{{ row.result|length }}">{{ row.details_html }}</td>
+<tr class="product-row-detail" id="product-detail-{{ row.obj.pk }}" hidden
+    data-details-url="{{ row.details_url }}" data-details-loaded="0">
+  <td colspan="{{ row.result|length }}">
+    <div class="product-row-detail__placeholder">Загрузка…</div>
+  </td>
 </tr>
 {% endfor %}
 </tbody>
