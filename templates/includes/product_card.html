@@ -91,7 +91,10 @@
 
   <div class="product-card__meta product-card__meta--status">
     {% if product.price_per_liter and product.pack_unit_liters %}
-      <span class="product-card__ppl">{{ product.pack_unit_liters }}л = {{ product.price_per_liter }}р.</span>
+      <span class="product-card__ppl">
+        <span class="product-card__ppl-label">Выгодно:</span>
+        <span class="product-card__ppl-value">{{ product.pack_unit_liters }}л = {{ product.price_per_liter }}р.</span>
+      </span>
     {% endif %}
     <span class="status-pill{% if product.status_modifier %} status-pill--{{ product.status_modifier }}{% endif %}">{{ product.get_status_display }}</span>
   </div>

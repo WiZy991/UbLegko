@@ -110,7 +110,10 @@
           <span class="status-pill{% if product.status_modifier %} status-pill--{{ product.status_modifier }}{% endif %}">{{ product.get_status_display }}</span>
         </div>
         {% if product.price_per_liter and product.pack_unit_liters %}
-          <p class="product-detail__ppl">{{ product.pack_unit_liters }}л = {{ product.price_per_liter }}р.</p>
+          <p class="product-detail__ppl">
+            <span class="product-detail__ppl-label">Выгодно:</span>
+            <span class="product-detail__ppl-value">{{ product.pack_unit_liters }}л = {{ product.price_per_liter }}р.</span>
+          </p>
         {% endif %}
         <div class="product-card__meta" style="justify-content:flex-start;gap:10px;margin-bottom:12px;">
           {% if product.country %}<span class="status-pill">{{ product.country }}</span>{% endif %}
