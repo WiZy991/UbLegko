@@ -211,7 +211,6 @@ class CategoryAdmin(admin.ModelAdmin):
         return JsonResponse({'ok': True, 'count': len(updates)})
 
 
-@admin.register(Product)
 PRODUCT_ADMIN_SORT = {
     'category': ('category__sort_order', 'category__name', 'name'),
     'alpha': ('name',),
@@ -240,6 +239,7 @@ class ProductSortFilter(admin.SimpleListFilter):
         return queryset
 
 
+@admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
         'expand_toggle',
