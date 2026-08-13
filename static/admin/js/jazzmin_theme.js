@@ -186,6 +186,61 @@
     }
   }
 
+  function setInboxNavLabel(anchor, baseLabel, count) {
+    if (!anchor) return;
+    var text = baseLabel + (count > 0 ? ' (' + count + ')' : '');
+    var p = anchor.querySelector('p');
+    if (p) {
+      // Jazzmin: иконка справа в <p> как <i class="right ...">
+      var rightIcon = p.querySelector('i.right, .right');
+      p.textContent = text;
+      if (rightIcon) p.appendChild(rightIcon);
+      return;
+    }
+    var icon = anchor.querySelector(':scope > i');
+    anchor.textContent = '';
+    if (icon) {
+      anchor.appendChild(icon);
+      anchor.appendChild(document.createTextNode(' ' + text));
+    } else {
+      anchor.textContent = text;
+    }
+  }
+
+  function isInboxListLink(href, modelPath) {
+    if (!href || href.indexOf(modelPath) === -1) return false;
+    if (href.indexOf('inbox-counts') !== -1) return false;
+    // changelist: .../order/ или .../order/?... — не .../order/12/change/
+    var re = new RegExp(modelPath.replace(/\//g, '\\/') + '(?:\\?.*)?$');
+    return re.test(href.split('#')[0]);
+  }
+
+  function updateInboxNavCounts() {
+    fetch('/admin/cart/order/inbox-counts/', {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    })
+      .then(function (response) {
+        if (!response.ok) throw new Error('inbox counts');
+        return response.json();
+      })
+      .then(function (data) {
+        var orders = Number(data.orders_new || 0);
+        var requests = Number(data.requests_new || 0);
+        document.querySelectorAll('a[href]').forEach(function (a) {
+          var href = a.getAttribute('href') || '';
+          if (isInboxListLink(href, '/admin/cart/order/')) {
+            setInboxNavLabel(a, 'Заявки', orders);
+          } else if (isInboxListLink(href, '/admin/cart/stainhelprequest/')) {
+            setInboxNavLabel(a, 'Запросы', requests);
+          }
+        });
+      })
+      .catch(function () {
+        /* ignore: нет прав или офлайн */
+      });
+  }
+
   function init() {
     localizeModeSelect();
     addQuickThemeToggle();
@@ -193,6 +248,7 @@
     applyMode(getStoredMode());
     watchHtmlThemeAttr();
     ensureAdminSearchGroup();
+    updateInboxNavCounts();
   }
 
   if (document.readyState === 'loading') {

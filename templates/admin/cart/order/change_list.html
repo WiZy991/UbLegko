@@ -1,0 +1,25 @@
+{% extends "admin/change_list.html" %}
+{% load static admin_list %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=1">
+  <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=1"></script>
+{% endblock %}
+
+{% block content_title %}
+  <h1>Заявки{% if new_count %} ({{ new_count }}){% endif %}</h1>
+{% endblock %}
+
+{% block result_list %}
+  <p class="inbox-expandable-hint">
+    Нажмите <strong>▼</strong>, чтобы раскрыть заявку и прочитать комментарий, замечания и состав заказа.
+  </p>
+  {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+  {% if expandable_rows %}
+    {% include "admin/cart/inbox_change_list_results.html" %}
+  {% else %}
+    {% result_list cl %}
+  {% endif %}
+  {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+{% endblock %}

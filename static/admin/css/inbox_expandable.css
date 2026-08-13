@@ -1,0 +1,197 @@
+/* Заявки / Запросы: статус, раскрытие, адаптив */
+
+.inbox-expandable-hint {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: #e8f6fb !important;
+  border: 1px solid #b6e2ef !important;
+  border-radius: 6px;
+  color: #111 !important;
+  font-size: 13px;
+}
+
+#result_list .field-expand_toggle {
+  width: 44px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.inbox-row-expand {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid #c5d9e2;
+  border-radius: 6px;
+  background: #fff;
+  color: #111;
+  cursor: pointer;
+}
+
+.inbox-row-expand:hover {
+  background: #e8f6fb;
+  border-color: #00acd7;
+}
+
+.inbox-row--expanded .inbox-row-expand {
+  background: #00acd7;
+  border-color: #00acd7;
+  color: #fff;
+}
+
+.inbox-row-detail td {
+  padding: 0 !important;
+  border-top: none;
+  background: #f4f8fb;
+}
+
+.inbox-row-detail__inner {
+  padding: 14px 16px 16px;
+  border-top: 2px solid #00acd7;
+}
+
+.inbox-row-detail__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 18px;
+}
+
+.inbox-row-detail__block {
+  background: #fff;
+  border: 1px solid #dbe5eb;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.inbox-row-detail__block--wide {
+  grid-column: 1 / -1;
+}
+
+.inbox-row-detail__label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #5a6b75;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 4px;
+}
+
+.inbox-row-detail__value {
+  font-size: 14px;
+  color: #111;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.inbox-row-detail__items {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.inbox-row-detail__items li {
+  margin: 4px 0;
+}
+
+/* Статус заявки */
+#result_list .field-status,
+#result_list .field-status_badge,
+#result_list .field-processed_badge {
+  min-width: 140px !important;
+  width: 1%;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+#result_list .field-status select {
+  min-width: 148px !important;
+  width: 148px !important;
+  max-width: none !important;
+  font-weight: 700;
+  border-width: 2px;
+}
+
+#result_list .field-status select.status-select--new,
+#result_list tr[data-inbox-status="new"] .field-status select {
+  color: #b71c1c !important;
+  border-color: #e53935 !important;
+  background: #ffebee !important;
+}
+
+#result_list .field-status select.status-select--processed,
+#result_list tr[data-inbox-status="processed"] .field-status select {
+  color: #1b5e20 !important;
+  border-color: #43a047 !important;
+  background: #e8f5e9 !important;
+}
+
+#result_list tr[data-inbox-status="new"] .field-is_processed,
+#result_list tr[data-inbox-status="new"] .field-processed_badge {
+  background: #ffebee;
+}
+
+#result_list tr[data-inbox-status="processed"] .field-is_processed,
+#result_list tr[data-inbox-status="processed"] .field-processed_badge {
+  background: #e8f5e9;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.status-badge--new {
+  color: #b71c1c;
+  background: #ffebee;
+  border: 1px solid #ef9a9a;
+}
+
+.status-badge--done {
+  color: #1b5e20;
+  background: #e8f5e9;
+  border: 1px solid #a5d6a7;
+}
+
+@media (max-width: 1200px) {
+  #result_list .field-status,
+  #result_list .field-status_badge,
+  #result_list .field-processed_badge {
+    min-width: 160px !important;
+  }
+
+  #result_list .field-status select {
+    min-width: 160px !important;
+    width: 160px !important;
+    font-size: 13px;
+  }
+}
+
+html[data-bs-theme="dark"] .inbox-row-detail td,
+html[data-bs-theme="dark"] .inbox-row-detail__inner {
+  background: #1e2a32;
+}
+
+html[data-bs-theme="dark"] .inbox-row-detail__block {
+  background: #24333c;
+  border-color: #3a4d59;
+}
+
+html[data-bs-theme="dark"] .inbox-row-detail__value,
+html[data-bs-theme="dark"] .inbox-expandable-hint {
+  color: #fff !important;
+}
+
+html[data-bs-theme="dark"] .inbox-expandable-hint {
+  background: #24333c !important;
+  border-color: #3a4d59 !important;
+}
