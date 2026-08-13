@@ -212,6 +212,34 @@ class CategoryAdmin(admin.ModelAdmin):
 
 
 @admin.register(Product)
+PRODUCT_ADMIN_SORT = {
+    'category': ('category__sort_order', 'category__name', 'name'),
+    'alpha': ('name',),
+    'price_asc': ('price', 'name'),
+    'price_desc': ('-price', 'name'),
+    'promo': ('category__sort_order', 'category__name', 'name'),
+}
+
+
+class ProductSortFilter(admin.SimpleListFilter):
+    title = 'Сортировка'
+    parameter_name = 'sort'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('category', 'По категориям'),
+            ('alpha', 'По алфавиту'),
+            ('price_asc', 'Сначала дешевые'),
+            ('price_desc', 'Сначала дорогие'),
+            ('promo', 'Акции'),
+        )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'promo':
+            return queryset.filter(is_promo=True)
+        return queryset
+
+
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
         'expand_toggle',
@@ -227,7 +255,7 @@ class ProductAdmin(admin.ModelAdmin):
     )
     # name в list_editable — нельзя держать в list_display_links
     list_display_links = None
-    list_filter = ('category', 'status', 'is_promo', 'is_visible', 'is_featured', 'country')
+    list_filter = (ProductSortFilter, 'category', 'status', 'is_promo', 'is_visible', 'is_featured', 'country')
     list_editable = (
         'name',
         'category',
@@ -282,6 +310,12 @@ class ProductAdmin(admin.ModelAdmin):
             .select_related('category')
             .prefetch_related('images')
         )
+
+    def get_ordering(self, request):
+        sort = request.GET.get('sort')
+        if sort in PRODUCT_ADMIN_SORT:
+            return PRODUCT_ADMIN_SORT[sort]
+        return ('category__sort_order', 'category__name', 'name')
 
     def get_search_results(self, request, queryset, search_term):
         """Тот же поиск, что на сайте: название, описание, артикул, раскладка, стемминг."""
