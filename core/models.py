@@ -1,4 +1,3 @@
-from django.conf import settings
 from django.db import models
 
 
@@ -93,31 +92,3 @@ class SiteSettings(models.Model):
     def load(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
-
-
-class StainHelpRequest(models.Model):
-    """Обращение из формы «Что-то не отмывается, просто скажите»."""
-
-    full_name = models.CharField('Имя', max_length=200)
-    phone = models.CharField('Телефон', max_length=40)
-    contact_method = models.CharField('Способ связи', max_length=300)
-    problem = models.TextField('Что не отмывается')
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='stain_help_requests',
-        verbose_name='Пользователь',
-    )
-    email_sent = models.BooleanField('Письмо отправлено', default=False)
-    is_processed = models.BooleanField('Обработано', default=False)
-    created_at = models.DateTimeField('Создано', auto_now_add=True)
-
-    class Meta:
-        verbose_name = 'Запрос'
-        verbose_name_plural = 'Запросы'
-        ordering = ['-created_at']
-
-    def __str__(self):
-        return f'{self.full_name} — {self.phone} ({self.created_at:%d.%m.%Y %H:%M})'

@@ -1,7 +1,5 @@
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.mail import EmailMessage
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -233,20 +231,12 @@ def order_success(request, order_id):
     return render(request, 'cart/order_success.html', {'order': order})
 
 
-def _is_real_smtp_backend():
-    backend = (settings.EMAIL_BACKEND or '').lower()
-    return 'smtp' in backend and 'console' not in backend and 'dummy' not in backend and 'locmem' not in backend
-
-
 def _send_order_email(order):
     """Отправляет письмо о заявке магазину. Возвращает True при реальной отправке."""
+    from core.mail import send_shop_email
     from core.models import SiteSettings
 
     site = SiteSettings.load()
-    to_email = (site.order_email or settings.ORDER_EMAIL_TO or '').strip()
-    if not to_email:
-        logger.error('Нет адреса ORDER_EMAIL / SiteSettings.order_email для заявки №%s', order.pk)
-        return False
 
     # Подтягиваем позиции — иначе письмо может уйти пустым при ленивом queryset
     order = (
@@ -258,46 +248,13 @@ def _send_order_email(order):
 
     subject = f'Заявка №{order.pk} с сайта {site.brand_name}'
     body = render_to_string('cart/email/order.txt', {'order': order, 'site': site})
-    # Mail.ru: From лучше брать из SMTP-логина, иначе письмо часто не принимается.
-    from_email = (
-        (getattr(settings, 'EMAIL_HOST_USER', '') or '').strip()
-        or (getattr(settings, 'DEFAULT_FROM_EMAIL', '') or '').strip()
-    )
     client_email = (order.email or '').strip()
-
-    # Reply-To вместо CC: у Mail.ru/Beget CC на чужой ящик часто роняет всю отправку
-    email = EmailMessage(
+    return send_shop_email(
         subject=subject,
         body=body,
-        from_email=from_email,
-        to=[to_email],
         reply_to=[client_email] if client_email else None,
+        log_label=f'Заявка №{order.pk}',
     )
-    try:
-        if not _is_real_smtp_backend():
-            # Console/dummy «успешно» печатают в лог, но на почту ничего не приходит
-            email.send(fail_silently=False)
-            logger.error(
-                'Заявка №%s: EMAIL_BACKEND=%s — письмо не ушло на почту. '
-                'Настройте SMTP в .env (см. .env.example).',
-                order.pk,
-                settings.EMAIL_BACKEND,
-            )
-            return False
-
-        sent = email.send(fail_silently=False)
-        if not sent:
-            logger.error(
-                'Заявка №%s: SMTP вернул 0 (письмо на %s не принято)',
-                order.pk,
-                to_email,
-            )
-            return False
-        logger.info('Заявка №%s: письмо отправлено на %s', order.pk, to_email)
-        return True
-    except Exception:
-        logger.exception('Не удалось отправить письмо по заявке №%s на %s', order.pk, to_email)
-        return False
 
 
 @login_required

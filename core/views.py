@@ -1,5 +1,3 @@
-from django.conf import settings
-from django.core.mail import EmailMessage
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
@@ -7,10 +5,12 @@ from django.views.decorators.http import require_POST
 import logging
 
 from catalog.models import Category
+from cart.models import StainHelpRequest
 
 from .context_processors import SESSION_CITY_KEY
 from .forms import StainHelpForm
-from .models import City, SiteSettings, StainHelpRequest
+from .mail import send_shop_email
+from .models import City, SiteSettings
 
 logger = logging.getLogger(__name__)
 
@@ -36,70 +36,6 @@ def set_city(request):
     return redirect(next_url)
 
 
-def _is_real_smtp_backend():
-    backend = (settings.EMAIL_BACKEND or '').lower()
-    return (
-        'smtp' in backend
-        and 'console' not in backend
-        and 'dummy' not in backend
-        and 'locmem' not in backend
-    )
-
-
-def _send_stain_help_email(*, site, data, to_email: str) -> bool:
-    subject = f'Обращение: не отмывается — {site.brand_name}'
-    body = render_to_string(
-        'core/email/stain_help.txt',
-        {
-            'site': site,
-            'full_name': data['full_name'],
-            'phone': data['phone'],
-            'contact_method': data['contact_method'],
-            'problem': data['problem'],
-        },
-    )
-    # Mail.ru/Beget: From должен совпадать с SMTP-логином, иначе письмо отбрасывается.
-    from_email = (
-        (getattr(settings, 'EMAIL_HOST_USER', '') or '').strip()
-        or (getattr(settings, 'DEFAULT_FROM_EMAIL', '') or '').strip()
-    )
-    if not from_email:
-        logger.error('Нет DEFAULT_FROM_EMAIL / EMAIL_HOST_USER для обращения «не отмывается»')
-        return False
-
-    email = EmailMessage(
-        subject=subject,
-        body=body,
-        from_email=from_email,
-        to=[to_email],
-    )
-    try:
-        if not _is_real_smtp_backend():
-            email.send(fail_silently=False)
-            logger.error(
-                'Обращение «не отмывается»: EMAIL_BACKEND=%s — письмо не ушло на почту',
-                settings.EMAIL_BACKEND,
-            )
-            return False
-        sent = email.send(fail_silently=False)
-        if not sent:
-            logger.error(
-                'Обращение «не отмывается»: SMTP вернул 0 (письмо на %s не принято)',
-                to_email,
-            )
-            return False
-        logger.info(
-            'Обращение «не отмывается» отправлено на %s (от %s, тел. %s)',
-            to_email,
-            data['full_name'],
-            data['phone'],
-        )
-        return True
-    except Exception:
-        logger.exception('Не удалось отправить обращение «не отмывается» на %s', to_email)
-        return False
-
-
 @require_POST
 def stain_help_submit(request):
     """Принимает обращение «не отмывается»: сохраняет в админку и шлёт на почту."""
@@ -113,7 +49,6 @@ def stain_help_submit(request):
 
     data = form.cleaned_data
     site = SiteSettings.load()
-    to_email = (site.order_email or getattr(settings, 'ORDER_EMAIL_TO', '') or '').strip()
 
     request_obj = StainHelpRequest.objects.create(
         full_name=data['full_name'],
@@ -124,14 +59,32 @@ def stain_help_submit(request):
         email_sent=False,
     )
 
-    email_sent = False
-    if to_email:
-        email_sent = _send_stain_help_email(site=site, data=data, to_email=to_email)
-        if email_sent:
-            request_obj.email_sent = True
-            request_obj.save(update_fields=['email_sent'])
+    # Тот же канал и получатель, что у заявок с сайта.
+    subject = f'Запрос №{request_obj.pk} с сайта {site.brand_name}'
+    body = render_to_string(
+        'core/email/stain_help.txt',
+        {
+            'site': site,
+            'request_obj': request_obj,
+            'full_name': data['full_name'],
+            'phone': data['phone'],
+            'contact_method': data['contact_method'],
+            'problem': data['problem'],
+        },
+    )
+    email_sent = send_shop_email(
+        subject=subject,
+        body=body,
+        log_label=f'Запрос №{request_obj.pk}',
+    )
+    if email_sent:
+        request_obj.email_sent = True
+        request_obj.save(update_fields=['email_sent'])
     else:
-        logger.error('Нет адреса для обращения «не отмывается» (запрос #%s сохранён)', request_obj.pk)
+        logger.error(
+            'Запрос №%s сохранён в админке, но письмо на почту не ушло',
+            request_obj.pk,
+        )
 
     return JsonResponse({
         'ok': True,

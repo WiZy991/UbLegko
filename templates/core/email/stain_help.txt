@@ -1,8 +1,10 @@
-Обращение с сайта {{ site.brand_name }}: что-то не отмывается
+Запрос №{{ request_obj.pk }} с сайта {{ site.brand_name }}
+(форма «Что-то не отмывается, просто скажите»)
 
-Имя: {{ full_name }}
+Клиент: {{ full_name }}
 Телефон: {{ phone }}
 Способ связи: {{ contact_method }}
+Дата: {{ request_obj.created_at|date:"d.m.Y H:i" }}
 
 Что не отмывается:
 {{ problem }}
