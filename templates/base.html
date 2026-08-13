@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260812ppl7">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260813topbar1">
   {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -97,7 +97,10 @@
             class="stain-help-trigger"
             data-stain-help-open
             aria-haspopup="dialog"
-          >{{ site_settings.slogan }} <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span></button>
+          >
+            <span class="stain-help-trigger__text">{{ site_settings.slogan }}</span>
+            <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span>
+          </button>
         </div>
         <div class="topbar__right">
           <a
@@ -125,11 +128,13 @@
             <span data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
           </a>
           {% if user.is_authenticated %}
-            <a class="pill-link" href="{% url 'accounts:profile' %}">Кабинет</a>
-            <form action="{% url 'accounts:logout' %}" method="post" style="display:inline;">
-              {% csrf_token %}
-              <button type="submit" class="pill-link pill-link--button">Выход</button>
-            </form>
+            <div class="topbar__auth">
+              <a class="pill-link" href="{% url 'accounts:profile' %}">Кабинет</a>
+              <form class="topbar__logout" action="{% url 'accounts:logout' %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="pill-link pill-link--button">Выход</button>
+              </form>
+            </div>
           {% else %}
             <a class="auth-link" href="{% url 'accounts:login' %}">Вход</a>
           {% endif %}
@@ -204,7 +209,10 @@
           class="stain-help-trigger stain-help-trigger--mobile"
           data-stain-help-open
           aria-haspopup="dialog"
-        >{{ site_settings.slogan }} <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span></button>
+        >
+          <span class="stain-help-trigger__text">{{ site_settings.slogan }}</span>
+          <span class="stain-help-trigger__phone">тел. {{ site_settings.phone }}</span>
+        </button>
       </div>
     </div>
   </div>

@@ -60,7 +60,11 @@ def stain_help_submit(request):
     )
 
     # Тот же канал и получатель, что у заявок с сайта.
-    subject = f'Запрос №{request_obj.pk} с сайта {site.brand_name}'
+    # В теме — имя и телефон: так письма реже теряются в спаме Mail.ru.
+    subject = (
+        f'Запрос №{request_obj.pk} с сайта {site.brand_name}: '
+        f'{data["full_name"]}, {data["phone"]}'
+    )
     body = render_to_string(
         'core/email/stain_help.txt',
         {

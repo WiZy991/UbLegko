@@ -396,9 +396,10 @@ select {
 
 .topbar__inner {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  /* Слева/справа по содержимому — иначе при 1fr+1fr правые кнопки ломаются на 2 ряда */
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 16px 24px;
+  gap: 12px 16px;
   min-height: 64px;
   padding-block: 12px;
   font-size: 0.95rem;
@@ -409,12 +410,13 @@ select {
 .topbar__center {
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .topbar__left {
   justify-content: flex-start;
+  flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .topbar__center {
@@ -422,10 +424,27 @@ select {
   justify-content: center;
   text-align: center;
   gap: 2px;
+  min-width: 0;
+  justify-self: center;
 }
 
 .topbar__right {
   justify-content: flex-end;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.topbar__auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.topbar__logout {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
 }
 
 .account-bar {
@@ -450,7 +469,10 @@ select {
 }
 
 .stain-help-trigger {
-  display: inline;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
   margin: 0;
   padding: 0;
   border: 0;
@@ -460,9 +482,14 @@ select {
   color: #1b2228;
   line-height: 1.3;
   text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.stain-help-trigger__text,
+.stain-help-trigger__phone {
   text-decoration: underline;
   text-underline-offset: 3px;
-  cursor: pointer;
 }
 
 .stain-help-trigger:hover,
@@ -476,12 +503,83 @@ select {
 }
 
 .stain-help-trigger__phone {
+  display: block;
   white-space: nowrap;
 }
 
 .topbar__center .stain-help-trigger {
+  align-items: center;
   font-size: inherit;
   text-align: center;
+}
+
+/* Средние ПК-мониторы: чуть компактнее, чтобы кнопки не переносились */
+@media (max-width: 1280px) and (min-width: 901px) {
+  .topbar__inner {
+    gap: 8px 10px;
+    font-size: 0.88rem;
+  }
+
+  .topbar__left,
+  .topbar__right,
+  .topbar__auth {
+    gap: 6px;
+  }
+
+  .topbar__left .pill-link,
+  .topbar__left .pill-link--button,
+  .topbar__right .pill-link,
+  .topbar__right .pill-link--button,
+  .topbar__right .auth-link,
+  .topbar__right .catalog-download,
+  .city-selector__toggle {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+
+  .topbar__cart {
+    gap: 5px;
+    font-size: 0.8rem;
+  }
+
+  .topbar__cart .cart-link__icon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .topbar__center .stain-help-trigger {
+    font-size: 0.86rem;
+    line-height: 1.25;
+  }
+
+  .pill-link--max__full {
+    display: none;
+  }
+
+  .pill-link--max__short {
+    display: inline;
+  }
+}
+
+@media (max-width: 1100px) and (min-width: 901px) {
+  .topbar__inner {
+    gap: 6px 8px;
+  }
+
+  .topbar__left .pill-link,
+  .topbar__left .pill-link--button,
+  .topbar__right .pill-link,
+  .topbar__right .pill-link--button,
+  .topbar__right .auth-link,
+  .topbar__right .catalog-download,
+  .city-selector__toggle {
+    padding: 5px 8px;
+    font-size: 0.75rem;
+  }
+
+  .topbar__center .stain-help-trigger {
+    font-size: 0.8rem;
+  }
 }
 
 .account-bar__actions {
@@ -3849,9 +3947,22 @@ select.form-input {
   }
 
   .stain-help-trigger--mobile {
+    align-items: flex-start;
     font-size: 0.95rem;
     line-height: 1.35;
     white-space: normal;
+  }
+
+  .stain-help-trigger--mobile .stain-help-trigger__text {
+    white-space: normal;
+  }
+
+  .topbar__auth {
+    gap: 3px;
+  }
+
+  .topbar__logout {
+    display: inline-flex;
   }
 
   .account-bar__actions {

@@ -459,7 +459,10 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         ok = 0
         fail = 0
         for obj in queryset:
-            subject = f'Запрос №{obj.pk} с сайта {site.brand_name}'
+            subject = (
+                f'Запрос №{obj.pk} с сайта {site.brand_name}: '
+                f'{obj.full_name}, {obj.phone}'
+            )
             body = render_to_string(
                 'core/email/stain_help.txt',
                 {
