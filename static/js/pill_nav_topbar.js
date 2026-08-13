@@ -50,6 +50,60 @@
     var circle = state.circle;
     if (!circle || !pill) return;
 
+    var label = state.label;
+    var hover = state.hover || pill.querySelector('.ub-pill__label-hover');
+    state.hover = hover;
+
+    // Жирный hover шире/выше обычного текста — овал должен вмещать оба
+    // Корзина — строго круг 36×36, размеры не трогаем
+    var isCart = pill.classList.contains('ub-pill--cart-icon');
+    if (label && hover && !isCart) {
+      gsap.set(label, { clearProps: 'transform' });
+      gsap.set(hover, { clearProps: 'transform', opacity: 0, y: 0 });
+
+      var isSlogan = pill.classList.contains('ub-pill--slogan');
+      hover.style.maxWidth = 'none';
+      hover.style.minHeight = '';
+
+      if (isSlogan) {
+        // Ширина как у основного текста; высота — по самому высокому варианту
+        var availW = Math.ceil(label.getBoundingClientRect().width);
+        hover.style.width = availW + 'px';
+        hover.style.minWidth = availW + 'px';
+      } else {
+        // Одна строка: не сжимать жирный текст (иначе перенос и обрезка)
+        hover.style.width = 'auto';
+        hover.style.minWidth = 'max-content';
+      }
+
+      var cs = window.getComputedStyle(pill);
+      var padX =
+        (parseFloat(cs.paddingLeft) || 0) + (parseFloat(cs.paddingRight) || 0);
+      var padY =
+        (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+      var borX =
+        (parseFloat(cs.borderLeftWidth) || 0) +
+        (parseFloat(cs.borderRightWidth) || 0);
+      var borY =
+        (parseFloat(cs.borderTopWidth) || 0) +
+        (parseFloat(cs.borderBottomWidth) || 0);
+
+      var needW = Math.max(label.scrollWidth, hover.scrollWidth) + padX + borX;
+      var needH =
+        Math.max(label.scrollHeight, hover.scrollHeight) + padY + borY;
+
+      pill.style.minHeight = Math.ceil(needH) + 'px';
+      if (isSlogan) {
+        // Ширину слогана не раздуваем — только высота, чтобы телефон не обрезался
+        pill.style.height = 'auto';
+        pill.style.maxHeight = 'none';
+      } else {
+        pill.style.minWidth = Math.ceil(needW) + 'px';
+        pill.style.height = 'auto';
+        pill.style.maxHeight = 'none';
+      }
+    }
+
     var rect = pill.getBoundingClientRect();
     var w = rect.width;
     var h = rect.height;
@@ -70,8 +124,6 @@
       transformOrigin: '50% ' + originY + 'px',
     });
 
-    var label = state.label;
-    var hover = state.hover;
     if (label) gsap.set(label, { y: 0 });
     if (hover) gsap.set(hover, { y: Math.ceil(h + 12), opacity: 0 });
 
@@ -115,7 +167,7 @@
       root.addEventListener('mouseenter', function () {
         syncHoverLabel(pill);
         state.hover = pill.querySelector('.ub-pill__label-hover');
-        if (!state.tl) layoutPill(state);
+        layoutPill(state);
         if (!state.tl) return;
         if (state.tween) state.tween.kill();
         state.tween = state.tl.tweenTo(state.tl.duration(), {
@@ -153,13 +205,18 @@
   }
 
   function init() {
+    var isMobile = window.matchMedia('(max-width: 900px)').matches;
+    if (isMobile || !canHover) {
+      // На узких экранах / touch — без GSAP-клонов, чтобы не ломать ряд кнопок
+      return;
+    }
+
     document
       .querySelectorAll('.topbar .ub-pill:not(.ub-pill--cart-icon), .account-bar .ub-pill')
       .forEach(function (pill) {
         bindPill(pill);
       });
 
-    // Корзина: анимация на иконке, hover срабатывает со всей ссылки (иконка + сумма)
     document.querySelectorAll('.topbar__cart[data-ub-pill-host]').forEach(function (host) {
       var iconPill = host.querySelector('.ub-pill--cart-icon');
       if (iconPill) bindPill(iconPill, host);

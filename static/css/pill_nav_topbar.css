@@ -11,6 +11,8 @@
   isolation: isolate;
   border-radius: 999px;
   z-index: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .ub-pill__circle {
@@ -29,8 +31,9 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  line-height: 1;
+  line-height: 1.2;
   z-index: 2;
+  flex-shrink: 0;
 }
 
 .ub-pill__label {
@@ -39,7 +42,11 @@
   display: inline-flex;
   align-items: center;
   gap: inherit;
-  line-height: inherit;
+  line-height: 1.25;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  max-width: none;
   will-change: transform;
 }
 
@@ -51,10 +58,15 @@
   display: inline-flex;
   align-items: center;
   gap: inherit;
-  line-height: inherit;
+  line-height: 1.25;
+  white-space: nowrap;
+  flex-wrap: nowrap;
   color: var(--ub-pill-hover-text);
+  font-weight: 800;
   pointer-events: none;
   will-change: transform, opacity;
+  box-sizing: border-box;
+  max-width: none;
 }
 
 /* Сброс старых hover для pill-кнопок с анимацией */
@@ -62,15 +74,40 @@
 .topbar .ub-pill.pill-link--button:hover,
 .topbar .ub-pill.auth-link:hover,
 .topbar .ub-pill.city-selector__toggle:hover,
-.topbar .city-selector.is-open .ub-pill.city-selector__toggle {
+.topbar .city-selector.is-open .ub-pill.city-selector__toggle:hover,
+.topbar .ub-pill--slogan:hover,
+.account-bar .ub-pill--slogan:hover {
   background: #fff;
   color: #111;
-  border-color: #111;
+  border-color: transparent;
+}
+
+.topbar .ub-pill .ub-pill__label-hover,
+.account-bar .ub-pill .ub-pill__label-hover {
+  font-weight: 800;
+  -webkit-text-stroke: 0.15px currentColor;
 }
 
 .topbar .ub-pill .ub-pill__label-hover .catalog-download__icon {
   color: var(--ub-pill-hover-text);
-  border-color: var(--ub-pill-hover-text);
+  border-color: transparent;
+}
+
+.topbar .ub-pill .ub-pill__label-hover .city-selector__arrow {
+  color: var(--ub-pill-hover-text);
+}
+
+/* Во время наведения — без чёрной обводки */
+.topbar .ub-pill:hover,
+.topbar .ub-pill:focus-visible,
+.account-bar .ub-pill:hover,
+.account-bar .ub-pill:focus-visible {
+  border-color: transparent !important;
+}
+
+.topbar .ub-pill--cart-icon:hover,
+.topbar .topbar__cart:hover .ub-pill--cart-icon {
+  border-color: transparent !important;
 }
 
 /* Корзина: анимация только на круглом значке, сумма снаружи */
@@ -84,14 +121,19 @@
 }
 
 .topbar .ub-pill--cart-icon {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  padding: 0;
+  width: 36px !important;
+  height: 36px !important;
+  min-width: 36px !important;
+  min-height: 36px !important;
+  max-width: 36px !important;
+  max-height: 36px !important;
+  padding: 0 !important;
   border: 2px solid #111;
+  border-radius: 50%;
   background: #fff;
   color: #111;
   box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .topbar .ub-pill--cart-icon .ub-pill__stack {
@@ -114,11 +156,11 @@
 
 .topbar .ub-pill--cart-icon .ub-pill__label-hover {
   color: var(--ub-pill-hover-text);
+  font-weight: 800;
 }
 
-.topbar .ub-pill--cart-icon:hover,
-.topbar .topbar__cart:hover .ub-pill--cart-icon {
-  border-color: var(--ub-pill-fill);
+.topbar .ub-pill--cart-icon .ub-pill__label-hover .cart-link__svg {
+  stroke: currentColor;
 }
 
 .topbar .ub-pill.catalog-download .ub-pill__label,
@@ -129,40 +171,54 @@
 .topbar .ub-pill.city-selector__toggle .ub-pill__label,
 .topbar .ub-pill.city-selector__toggle .ub-pill__label-hover {
   gap: 6px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
-/* Слоган в овале */
+/* Слоган в овале — две строки, высота по контенту */
 .ub-pill--slogan.stain-help-trigger {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: 8px 18px;
+  padding: 12px 22px;
   border: 2px solid #111;
   background: #fff;
   color: #111;
   text-decoration: none;
   text-align: center;
   box-shadow: none;
+  height: auto !important;
+  min-height: 0;
+  max-height: none !important;
+  overflow: hidden;
 }
 
 .ub-pill--slogan .ub-pill__stack {
   display: inline-flex;
+  height: auto;
+  max-width: 100%;
 }
 
 .ub-pill--slogan .ub-pill__label,
 .ub-pill--slogan .ub-pill__label-hover {
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  line-height: 1.25;
+  gap: 4px;
+  line-height: 1.35;
   text-align: center;
+  white-space: normal;
+  height: auto;
+  flex-wrap: nowrap;
 }
 
 .ub-pill--slogan .stain-help-trigger__text,
 .ub-pill--slogan .stain-help-trigger__phone {
+  display: block;
   text-decoration: none;
+  white-space: nowrap;
+  line-height: 1.35;
 }
 
 .ub-pill--slogan:hover,
@@ -172,13 +228,37 @@
 
 .account-bar .ub-pill--slogan {
   max-width: 100%;
-  padding: 8px 14px;
+  padding: 12px 16px;
+  height: auto !important;
+  max-height: none !important;
 }
 
 .account-bar .ub-pill--slogan .ub-pill__label,
 .account-bar .ub-pill--slogan .ub-pill__label-hover {
   align-items: flex-start;
   text-align: left;
+  width: 100%;
+}
+
+.account-bar .ub-pill--slogan .stain-help-trigger__text {
+  white-space: normal;
+}
+
+.account-bar .ub-pill--slogan .stain-help-trigger__phone {
+  white-space: nowrap;
+}
+
+/* Desktop: высота по тексту, чтобы hover не обрезал (мобилку не трогаем) */
+@media (min-width: 901px) {
+  .topbar .ub-pill.pill-link,
+  .topbar .ub-pill.pill-link--button,
+  .topbar .ub-pill.auth-link,
+  .topbar .ub-pill.city-selector__toggle,
+  .topbar .ub-pill.catalog-download {
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
 }
 
 @media (hover: none) {
@@ -192,5 +272,84 @@
   .ub-pill:active .catalog-download__icon {
     color: var(--ub-pill-hover-text);
     border-color: var(--ub-pill-hover-text);
+  }
+}
+
+/* Мобилка: корзина в topbar скрыта (как раньше), pill-клоны не ломают ряд */
+@media (max-width: 900px) {
+  .topbar .cart-link.topbar__cart {
+    display: none !important;
+  }
+
+  .topbar .ub-pill__circle,
+  .topbar .ub-pill__label-hover {
+    display: none !important;
+  }
+
+  .topbar .ub-pill__label {
+    transform: none !important;
+    position: relative !important;
+  }
+
+  .topbar .ub-pill {
+    overflow: hidden;
+  }
+
+  /* Вернуть компактные размеры topbar как в style.css */
+  .topbar .ub-pill.pill-link,
+  .topbar .ub-pill.pill-link--button,
+  .topbar .ub-pill.auth-link,
+  .topbar .ub-pill.catalog-download,
+  .topbar .ub-pill.city-selector__toggle {
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    padding: 0 6px !important;
+    box-sizing: border-box;
+  }
+
+  .topbar .ub-pill.catalog-download .catalog-download__icon {
+    display: none;
+  }
+
+  .account-bar .ub-pill--slogan {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    isolation: auto;
+  }
+
+  .account-bar .ub-pill--slogan .ub-pill__circle,
+  .account-bar .ub-pill--slogan .ub-pill__label-hover {
+    display: none !important;
+  }
+
+  .account-bar .ub-pill--slogan .ub-pill__stack,
+  .account-bar .ub-pill--slogan .ub-pill__label {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
+    overflow: visible;
+    transform: none !important;
+  }
+
+  .account-bar .ub-pill--slogan .stain-help-trigger__text,
+  .account-bar .ub-pill--slogan .stain-help-trigger__phone {
+    white-space: normal;
+    overflow: visible;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 }
