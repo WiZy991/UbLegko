@@ -289,24 +289,23 @@ html[data-bs-theme="dark"] .app-main textarea {
   color: #fff !important;
 }
 
-/* Поиск в changelist: поле слева, «Найти» справа, не разъезжаются на узких экранах */
+/* Поиск в changelist: поле и «Найти» рядом, без растягивания на всю ширину */
 #changelist-search .admin-search-group {
-  display: flex;
+  display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
-  flex: 1 1 320px;
-  min-width: min(100%, 280px);
+  flex: 0 1 auto;
+  width: auto;
   max-width: 100%;
   order: 100;
 }
 
 #changelist-search .admin-search-group #searchbar,
-#changelist-search .admin-search-group input[name="q"],
-#changelist-search .admin-search-group .admin-search-suggest-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto;
+#changelist-search .admin-search-group input[name="q"] {
+  flex: 0 1 250px;
+  width: 250px;
+  min-width: 160px;
   max-width: 100%;
 }
 
@@ -319,14 +318,17 @@ html[data-bs-theme="dark"] .app-main textarea {
 #changelist-search .admin-search-suggest-wrap {
   position: relative;
   display: block;
-  flex: 1 1 auto;
-  min-width: 0;
+  flex: 0 1 250px;
+  width: 250px;
+  min-width: 160px;
+  max-width: 100%;
 }
 
 #changelist-search .admin-search-suggest-wrap #searchbar,
 #changelist-search .admin-search-suggest-wrap input[name="q"] {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 
 /* Подсказки: светлый фон, чёрный текст в любой теме */

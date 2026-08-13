@@ -1,21 +1,20 @@
-/* Поиск: поле и «Найти» всегда вместе, поле слева — кнопка справа */
+/* Поиск: поле и «Найти» рядом компактно */
 .admin-search-group {
-  display: flex;
+  display: inline-flex;
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.5rem;
-  flex: 1 1 320px;
-  min-width: min(100%, 280px);
+  flex: 0 1 auto;
+  width: auto;
   max-width: 100%;
   order: 100;
 }
 
 .admin-search-group #searchbar,
-.admin-search-group input[name="q"],
-.admin-search-group .admin-search-suggest-wrap {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto;
+.admin-search-group input[name="q"] {
+  flex: 0 1 250px;
+  width: 250px;
+  min-width: 160px;
   max-width: 100%;
 }
 
@@ -30,15 +29,17 @@
   position: relative;
   display: block;
   vertical-align: middle;
+  flex: 0 1 250px;
+  width: 250px;
+  min-width: 160px;
   max-width: 100%;
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .admin-search-suggest-wrap #searchbar,
 .admin-search-suggest-wrap input[name="q"] {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
 }
 
 .admin-search-suggest {
