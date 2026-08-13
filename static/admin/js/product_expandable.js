@@ -76,7 +76,12 @@
   function readListField(row, fieldName) {
     var cell = row.querySelector('.field-' + fieldName);
     if (!cell) return null;
-    var el = cell.querySelector('input, select, textarea');
+    // Select2/autocomplete: не брать input поиска, а сам <select>
+    var el =
+      cell.querySelector('select') ||
+      cell.querySelector('input[type="checkbox"]') ||
+      cell.querySelector('textarea') ||
+      cell.querySelector('input:not(.select2-search__field)');
     return el ? fieldValue(el) : null;
   }
 
@@ -269,6 +274,26 @@
     var id = productIdFromEventTarget(target);
     if (id) refreshDirty(id);
   });
+
+  // Категория — Select2 (autocomplete): jQuery change не доходит до native listener
+  function bindCategorySelect2Dirty() {
+    var $ = window.django && window.django.jQuery;
+    if (!$) return;
+    $(document).on(
+      'change select2:select select2:clear select2:unselect',
+      '#result_list .field-category select',
+      function (event) {
+        var target = event.target || this;
+        var id = productIdFromEventTarget(target);
+        if (id) refreshDirty(id);
+      }
+    );
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindCategorySelect2Dirty);
+  } else {
+    bindCategorySelect2Dirty();
+  }
 
   document.addEventListener('input', function (event) {
     var target = event.target;
