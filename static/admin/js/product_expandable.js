@@ -29,7 +29,7 @@
     messageBox.className = 'product-row-detail__notice' + (state ? ' ' + state : '');
   }
 
-  function replaceGallery(detailRow, photosHtml, thumbHtml) {
+  function replaceGallery(detailRow, photosHtml, hasMainPhotoHtml) {
     var gallery = detailRow.querySelector('[data-photo-gallery]');
     if (gallery && photosHtml) {
       var wrap = document.createElement('div');
@@ -39,15 +39,15 @@
         gallery.replaceWith(next);
       }
     }
-    if (typeof thumbHtml === 'string') {
+    if (typeof hasMainPhotoHtml === 'string') {
       var productId = detailRow.id && detailRow.id.replace('product-detail-', '');
       var productRow = productId
         ? document.querySelector('tr.product-row[data-product-id="' + productId + '"]')
         : null;
       if (productRow) {
-        var thumbCell = productRow.querySelector('.field-thumb');
-        if (thumbCell) {
-          thumbCell.innerHTML = thumbHtml;
+        var flagCell = productRow.querySelector('.field-has_main_photo');
+        if (flagCell) {
+          flagCell.innerHTML = hasMainPhotoHtml;
         }
       }
     }
@@ -346,7 +346,7 @@
         if (!result.ok || !result.data.ok) {
           throw new Error(result.data.error || 'Ошибка загрузки');
         }
-        replaceGallery(detailRow, result.data.photos_html, result.data.thumb_html);
+        replaceGallery(detailRow, result.data.photos_html, result.data.has_main_photo_html);
         setNotice(detailRow, result.data.message || 'Фото загружено', 'is-success');
       })
       .catch(function (error) {
@@ -396,7 +396,7 @@
         if (!result.ok || !result.data.ok) {
           throw new Error(result.data.error || 'Ошибка');
         }
-        replaceGallery(detailRow, result.data.photos_html, result.data.thumb_html);
+        replaceGallery(detailRow, result.data.photos_html, result.data.has_main_photo_html);
         setNotice(detailRow, result.data.message || 'Готово', 'is-success');
       })
       .catch(function (error) {

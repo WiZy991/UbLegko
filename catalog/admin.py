@@ -251,7 +251,7 @@ class ProductAdmin(admin.ModelAdmin):
         'recommendation_codes',
         'row_save',
         'is_visible',
-        'thumb',
+        'has_main_photo',
     )
     # name в list_editable — нельзя держать в list_display_links
     list_display_links = None
@@ -531,22 +531,9 @@ class ProductAdmin(admin.ModelAdmin):
             change_url,
         )
 
-    def thumb(self, obj):
-        change_url = reverse('admin:catalog_product_change', args=[obj.pk])
-        if obj.image:
-            return format_html(
-                '<a href="{}" title="Открыть товар">'
-                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />'
-                '</a>',
-                change_url,
-                obj.image.url,
-            )
-        return format_html(
-            '<a href="{}" title="Открыть товар">Открыть</a>',
-            change_url,
-        )
-
-    thumb.short_description = 'Фото'
+    @admin.display(description='Главное фото', boolean=True)
+    def has_main_photo(self, obj):
+        return bool(obj.image)
 
     def get_urls(self):
         urls = super().get_urls()
@@ -599,34 +586,14 @@ class ProductAdmin(admin.ModelAdmin):
         return JsonResponse({'results': results})
 
     def _product_photos_response(self, product, message='Готово'):
+        from django.contrib.admin.templatetags.admin_list import _boolean_icon
+
         product.refresh_from_db()
-        change_url = reverse('admin:catalog_product_change', args=[product.pk])
-        if product.image:
-            thumb_html = format_html(
-                '<a href="{}" title="Открыть товар">'
-                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />'
-                '</a>',
-                change_url,
-                product.image.url,
-            )
-        elif product.display_image_url:
-            thumb_html = format_html(
-                '<a href="{}" title="Открыть товар">'
-                '<img src="{}" style="height:40px;width:40px;object-fit:cover;" />'
-                '</a>',
-                change_url,
-                product.display_image_url,
-            )
-        else:
-            thumb_html = format_html(
-                '<a href="{}" title="Открыть товар">Открыть</a>',
-                change_url,
-            )
         return JsonResponse({
             'ok': True,
             'message': message,
             'photos_html': str(self.photos_html(product)),
-            'thumb_html': str(thumb_html),
+            'has_main_photo_html': str(_boolean_icon(bool(product.image))),
         })
 
     def quick_update_view(self, request, product_id):
