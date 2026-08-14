@@ -444,12 +444,16 @@ class ProductAdmin(admin.ModelAdmin):
                 )
             )
 
+        gallery_cards = []
         for image in obj.images.all():
             if not image.image:
                 continue
-            cards.append(
+            gallery_cards.append(
                 format_html(
-                    '<div class="product-row-detail__photo" data-photo-kind="gallery" data-photo-id="{}">'
+                    '<div class="product-row-detail__photo product-row-detail__photo--sortable" '
+                    'data-photo-kind="gallery" data-photo-id="{}" data-photo-token="gallery:{}">'
+                    '<span class="product-photo-drag-handle" title="Перетащите для изменения порядка" '
+                    'aria-hidden="true">⠿</span>'
                     '<img src="{}" class="product-row-detail__thumb" alt="">'
                     '<span class="product-row-detail__photo-badge">Галерея</span>'
                     '<div class="product-row-detail__photo-actions">'
@@ -458,26 +462,27 @@ class ProductAdmin(admin.ModelAdmin):
                     '</div>'
                     '</div>',
                     image.pk,
+                    image.pk,
                     image.image.url,
                     image.pk,
                     image.pk,
                 )
             )
 
-        cards.append(
-            mark_safe(
-                '<label class="product-row-detail__photo product-row-detail__photo--add">'
-                '<span class="product-row-detail__photo-add-text">+ Добавить фото</span>'
-                '<span class="product-row-detail__photo-add-hint">можно несколько</span>'
-                '<input type="file" accept="image/*" multiple hidden data-photo-upload="gallery">'
-                '</label>'
-            )
-        )
-
         return format_html(
-            '<div class="product-row-detail__gallery" data-photo-gallery data-photos-url="{}">{}</div>',
+            '<div class="product-row-detail__gallery" data-photo-gallery data-photos-url="{}">'
+            '{}'
+            '<p class="product-row-detail__photo-hint">Перетащите ⠿ у фото галереи — порядок на сайте. Затем «Сохранить».</p>'
+            '<div class="product-row-detail__photos-sortable" data-photo-sortable>{}</div>'
+            '<label class="product-row-detail__photo product-row-detail__photo--add">'
+            '<span class="product-row-detail__photo-add-text">+ Добавить фото</span>'
+            '<span class="product-row-detail__photo-add-hint">можно несколько</span>'
+            '<input type="file" accept="image/*" multiple hidden data-photo-upload="gallery">'
+            '</label>'
+            '</div>',
             photos_url,
             mark_safe(''.join(str(card) for card in cards)),
+            mark_safe(''.join(str(card) for card in gallery_cards)),
         )
 
     def row_details_html(self, obj):
@@ -737,15 +742,35 @@ class ProductAdmin(admin.ModelAdmin):
             product.is_featured = str(raw).lower() in {'1', 'true', 'yes', 'on'}
             changed_fields.append('is_featured')
 
+        photo_order_changed = False
+        if 'photo_order' in payload:
+            from .photo_order import apply_product_photo_order
+
+            order = payload.get('photo_order')
+            if isinstance(order, list) and order:
+                photo_order_changed = apply_product_photo_order(product, order)
+                if photo_order_changed:
+                    changed_fields.append('photo_order')
+
         if not changed_fields:
             return JsonResponse({'ok': True, 'message': 'Нет изменений', 'slug': product.slug})
 
-        product.save()
-        return JsonResponse({
+        if any(field != 'photo_order' for field in changed_fields):
+            product.save()
+
+        response = {
             'ok': True,
             'message': 'Сохранено — изменения уже на сайте',
             'slug': product.slug,
-        })
+        }
+        if photo_order_changed:
+            product_for_html = (
+                Product.objects.filter(pk=product_id)
+                .prefetch_related('images')
+                .first()
+            )
+            response['photos_html'] = str(self.photos_html(product_for_html))
+        return JsonResponse(response)
 
     def quick_photos_view(self, request, product_id):
         try:

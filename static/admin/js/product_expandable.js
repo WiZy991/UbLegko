@@ -31,6 +31,16 @@
 
   var activeUploads = {};
 
+  function syncPhotoBaseline(detailRow) {
+    var productId = detailRow && detailRow.id
+      ? detailRow.id.replace('product-detail-', '')
+      : '';
+    if (productId) {
+      snapshot(productId);
+      setDirty(productId, false);
+    }
+  }
+
   function replaceGallery(detailRow, photosHtml, hasMainPhotoHtml) {
     var gallery = detailRow.querySelector('[data-photo-gallery]');
     if (gallery && photosHtml) {
@@ -53,6 +63,84 @@
         }
       }
     }
+    initPhotoSortable(detailRow);
+  }
+
+  function collectPhotoOrder(detail) {
+    if (!detail) return null;
+    var sortable = detail.querySelector('[data-photo-sortable]');
+    if (!sortable) return null;
+    var tokens = [];
+    sortable.querySelectorAll('[data-photo-token]').forEach(function (el) {
+      var token = el.getAttribute('data-photo-token');
+      if (token) tokens.push(token);
+    });
+    return tokens.length ? tokens : null;
+  }
+
+  function initPhotoSortable(detailRow) {
+    if (!detailRow) return;
+    var sortable = detailRow.querySelector('[data-photo-sortable]');
+    if (!sortable || sortable.getAttribute('data-sortable-ready') === '1') {
+      return;
+    }
+    sortable.setAttribute('data-sortable-ready', '1');
+
+    var dragEl = null;
+
+    sortable.querySelectorAll('.product-row-detail__photo--sortable').forEach(function (card) {
+      var handle = card.querySelector('.product-photo-drag-handle');
+      if (!handle) return;
+
+      handle.addEventListener('mousedown', function () {
+        card.draggable = true;
+      });
+      document.addEventListener('mouseup', function () {
+        card.draggable = false;
+      });
+
+      card.addEventListener('dragstart', function (event) {
+        if (!card.draggable) {
+          event.preventDefault();
+          return;
+        }
+        dragEl = card;
+        card.classList.add('is-dragging');
+        event.dataTransfer.effectAllowed = 'move';
+        try {
+          event.dataTransfer.setData('text/plain', card.getAttribute('data-photo-token') || '');
+        } catch (err) {
+          /* ignore */
+        }
+      });
+
+      card.addEventListener('dragend', function () {
+        card.classList.remove('is-dragging');
+        card.draggable = false;
+        sortable.querySelectorAll('.product-row-detail__photo--sortable').forEach(function (item) {
+          item.classList.remove('drag-over');
+        });
+        if (dragEl) {
+          dragEl = null;
+          var productId = productIdFromEventTarget(card);
+          if (productId) refreshDirty(productId);
+        }
+      });
+
+      card.addEventListener('dragover', function (event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        if (!dragEl || dragEl === card) return;
+        var rect = card.getBoundingClientRect();
+        var before = event.clientX < rect.left + rect.width / 2;
+        sortable.insertBefore(dragEl, before ? card : card.nextSibling);
+      });
+
+      card.addEventListener('drop', function (event) {
+        event.preventDefault();
+        card.classList.remove('drag-over');
+      });
+    });
   }
 
   function detailUploadKey(detailRow) {
@@ -384,6 +472,11 @@
       });
     }
 
+    if (detail) {
+      var photoOrder = collectPhotoOrder(detail);
+      if (photoOrder) payload.photo_order = photoOrder;
+    }
+
     return payload;
   }
 
@@ -477,6 +570,9 @@
         if (!result.ok || !result.data.ok) {
           throw new Error(result.data.error || 'Ошибка сохранения');
         }
+        if (detail && result.data.photos_html) {
+          replaceGallery(detail, result.data.photos_html);
+        }
         snapshot(productId);
         setDirty(productId, false);
         if (detail) {
@@ -541,6 +637,7 @@
           throw new Error((result.data && result.data.error) || 'Не удалось загрузить');
         }
         cell.innerHTML = result.data.html;
+        initPhotoSortable(detail);
         snapshot(id);
         setDirty(id, false);
       })
@@ -665,6 +762,7 @@
             result.data.photos_html,
             result.data.has_main_photo_html
           );
+          syncPhotoBaseline(detailRow);
         }
         if (result.data.cancelled) {
           setNotice(detailRow, result.data.message || 'Загрузка отменена', 'is-error');
@@ -740,6 +838,7 @@
           throw new Error(result.data.error || 'Ошибка');
         }
         replaceGallery(detailRow, result.data.photos_html, result.data.has_main_photo_html);
+        syncPhotoBaseline(detailRow);
         setNotice(detailRow, result.data.message || 'Готово', 'is-success');
       })
       .catch(function (error) {
