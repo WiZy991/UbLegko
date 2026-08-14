@@ -1,4 +1,5 @@
 from decimal import Decimal
+import logging
 import re
 
 from django.conf import settings
@@ -9,6 +10,8 @@ from django.urls import reverse
 from django.utils.text import slugify
 
 from catalog.search_utils import build_product_search_text
+
+logger = logging.getLogger(__name__)
 
 
 def normalize_recommendation_codes(value: str | None) -> str:
@@ -191,7 +194,11 @@ class Product(models.Model):
             )
         new_image_name = self.image.name if self.image else ''
         image_changed = old_image_name != new_image_name
+        uncommitted_image = bool(self.image) and not getattr(self.image, '_committed', True)
         update_fields = kwargs.get('update_fields')
+        need_card = bool(self.image) and (
+            uncommitted_image or image_changed or not self.image_card
+        )
 
         super().save(*args, **kwargs)
 
@@ -199,17 +206,25 @@ class Product(models.Model):
         if update_fields is not None and 'image' not in update_fields:
             if not (self.image and not self.image_card):
                 return
+            need_card = not self.image_card
 
-        from .image_utils import clear_card_image, ensure_card_image
+        try:
+            from .image_utils import clear_card_image, ensure_card_image, persist_card_image
 
-        if not self.image:
-            if self.image_card:
-                clear_card_image(self)
-                super().save(update_fields=['image_card'])
-            return
+            if not self.image:
+                if self.image_card:
+                    clear_card_image(self)
+                    persist_card_image(self)
+                return
 
-        if (image_changed or not self.image_card) and ensure_card_image(self, force=True):
-            super().save(update_fields=['image_card'])
+            if need_card and ensure_card_image(self, force=True):
+                persist_card_image(self)
+        except Exception:
+            # Превью каталога не должно ломать сохранение/загрузку фото
+            logger.exception(
+                'Не удалось обновить image_card для product_id=%s',
+                self.pk,
+            )
 
     def get_recommendation_code_set(self) -> set[int]:
         return parse_recommendation_codes(self.recommendation_codes)

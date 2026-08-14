@@ -138,7 +138,16 @@
         try {
           data = JSON.parse(xhr.responseText || '{}');
         } catch (err) {
-          reject(new Error('Некорректный ответ сервера'));
+          var status = xhr.status;
+          var msg = 'Сервер вернул ошибку ' + status;
+          if (status === 413) {
+            msg = 'Файл слишком большой для сервера';
+          } else if (status === 403) {
+            msg = 'Нет доступа или истекла сессия — обновите страницу';
+          } else if (status === 0 || !status) {
+            msg = 'Нет ответа сервера';
+          }
+          reject(new Error(msg));
           return;
         }
         resolve({

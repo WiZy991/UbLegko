@@ -7,12 +7,16 @@ from io import BytesIO
 from pathlib import Path
 
 from django.core.files.base import ContentFile
-from PIL import Image, ImageOps
+from django.utils.text import slugify
+from PIL import Image, ImageFile, ImageOps
 
 logger = logging.getLogger(__name__)
 
 CARD_MAX_SIDE = 600
 CARD_QUALITY = 80
+
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+Image.MAX_IMAGE_PIXELS = 500_000_000
 
 
 def _open_rgb(source) -> Image.Image:
@@ -44,6 +48,18 @@ def build_card_image_bytes(source) -> tuple[bytes, str]:
         return buf.getvalue(), 'jpg'
 
 
+def _open_stored_file(field_file):
+    """Читает уже сохранённый файл со склада, а не буфер загрузки."""
+    if not field_file or not field_file.name:
+        raise ValueError('Нет файла изображения')
+    try:
+        field_file.close()
+    except Exception:
+        pass
+    field_file._file = None
+    return field_file.storage.open(field_file.name, 'rb')
+
+
 def clear_card_image(product) -> None:
     if not getattr(product, 'image_card', None):
         return
@@ -52,6 +68,15 @@ def clear_card_image(product) -> None:
     except Exception:
         logger.exception('Не удалось удалить image_card для product_id=%s', product.pk)
     product.image_card = None
+
+
+def persist_card_image(product) -> None:
+    """Пишет путь image_card в БД без повторного Product.save()."""
+    from catalog.models import Product
+
+    Product.objects.filter(pk=product.pk).update(
+        image_card=product.image_card.name if product.image_card else '',
+    )
 
 
 def ensure_card_image(product, *, force: bool = False) -> bool:
@@ -69,20 +94,18 @@ def ensure_card_image(product, *, force: bool = False) -> bool:
         return False
 
     try:
-        product.image.open('rb')
-        try:
-            data, ext = build_card_image_bytes(product.image)
-        finally:
-            product.image.close()
+        with _open_stored_file(product.image) as src:
+            data, ext = build_card_image_bytes(src)
     except Exception:
         logger.exception(
-            'Не удалось прочитать оригинал для card preview product_id=%s',
+            'Не удалось прочитать оригинал для card preview product_id=%s name=%s',
             product.pk,
+            getattr(product.image, 'name', ''),
         )
         return False
 
-    stem = Path(product.image.name).stem or f'product-{product.pk or "new"}'
-    filename = f'{stem}.{ext}'
+    stem = slugify(Path(product.image.name).stem, allow_unicode=False) or 'product'
+    filename = f'{stem}-{product.pk or "new"}.{ext}'
 
     if product.image_card:
         try:
@@ -90,5 +113,12 @@ def ensure_card_image(product, *, force: bool = False) -> bool:
         except Exception:
             pass
 
-    product.image_card.save(filename, ContentFile(data), save=False)
+    try:
+        product.image_card.save(filename, ContentFile(data), save=False)
+    except Exception:
+        logger.exception(
+            'Не удалось сохранить image_card для product_id=%s',
+            product.pk,
+        )
+        return False
     return True

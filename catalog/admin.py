@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import logging
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -23,6 +24,8 @@ from pathlib import Path
 from .categorize import resolve_category
 from .models import Category, Product, ProductImage, ProductRecommendation, ProductReview
 from .search_utils import filter_products_by_query, rank_prefix_first
+
+logger = logging.getLogger(__name__)
 
 HEADER_ALIASES = {
     'name': {
@@ -590,15 +593,25 @@ class ProductAdmin(admin.ModelAdmin):
         ]
         return JsonResponse({'results': results})
 
-    def _product_photos_response(self, product, message='Готово'):
-        from django.contrib.admin.templatetags.admin_list import _boolean_icon
+    def _ensure_product_card_image(self, product):
+        from .image_utils import ensure_card_image, persist_card_image
 
         product.refresh_from_db()
+        if ensure_card_image(product, force=True):
+            persist_card_image(product)
+
+    def _product_photos_response(self, product, message='Готово'):
+        product.refresh_from_db()
+        icon = (
+            '<img src="/static/admin/img/icon-yes.svg" alt="True">'
+            if product.image
+            else '<img src="/static/admin/img/icon-no.svg" alt="False">'
+        )
         return JsonResponse({
             'ok': True,
             'message': message,
             'photos_html': str(self.photos_html(product)),
-            'has_main_photo_html': str(_boolean_icon(bool(product.image))),
+            'has_main_photo_html': icon,
         })
 
     def quick_details_view(self, request, product_id):
@@ -718,6 +731,16 @@ class ProductAdmin(admin.ModelAdmin):
         })
 
     def quick_photos_view(self, request, product_id):
+        try:
+            return self._quick_photos_view(request, product_id)
+        except Exception:
+            logger.exception('Ошибка загрузки фото товара id=%s', product_id)
+            return JsonResponse(
+                {'ok': False, 'error': 'Не удалось сохранить фото. Попробуйте ещё раз.'},
+                status=500,
+            )
+
+    def _quick_photos_view(self, request, product_id):
         if request.method != 'POST':
             return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
         if not self.has_change_permission(request):
@@ -739,6 +762,7 @@ class ProductAdmin(admin.ModelAdmin):
                 return JsonResponse({'ok': False, 'error': 'Файл не выбран'}, status=400)
             product.image = uploaded
             product.save()
+            self._ensure_product_card_image(product)
             return self._product_photos_response(product, 'Главное фото обновлено')
 
         if action == 'upload_gallery':
@@ -805,6 +829,7 @@ class ProductAdmin(admin.ModelAdmin):
                 image.image.close()
 
             product.image.save(new_name, ContentFile(new_content), save=True)
+            self._ensure_product_card_image(product)
             image.image.delete(save=False)
             image.delete()
 
