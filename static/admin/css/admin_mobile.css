@@ -19,12 +19,12 @@
   .content,
   #content,
   #content-main,
-  #changelist {
+  #changelist,
+  #changelist-form {
     max-width: 100% !important;
     min-width: 0 !important;
   }
 
-  /* clip не ломает вертикальный скролл Jazzmin, в отличие от overflow-x: hidden */
   html,
   body,
   .wrapper,
@@ -34,14 +34,59 @@
     overflow-x: clip;
   }
 
+  /* Убираем сложенные поля Jazzmin/Bootstrap — таблица на всю ширину экрана */
   .app-main,
   .app-content,
   .content-wrapper,
   .content,
+  .content .container-fluid,
+  .app-content .container-fluid,
+  #content,
   #content-main,
-  #changelist {
+  #changelist,
+  #changelist-form,
+  .app-main .card,
+  .app-main .card-body,
+  .app-main .col-12,
+  #change-list-filters {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .content .row,
+  .app-content .row,
+  #content-main .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .content-header,
+  .app-content-header {
     padding-left: 8px !important;
     padding-right: 8px !important;
+  }
+
+  .app-main .card {
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .product-expandable-hint,
+  .inbox-expandable-hint,
+  #changelist .actions,
+  #changelist .paginator,
+  #changelist-search,
+  #change-list-filters {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    box-sizing: border-box;
+  }
+
+  #changelist-form {
+    width: 100% !important;
+    flex: 1 1 100% !important;
   }
 
   /* Шапка: три поиска Jazzmin сжимаются в «квадратики» — оставляем один */

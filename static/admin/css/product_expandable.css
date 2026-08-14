@@ -640,20 +640,20 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     display: none !important;
   }
 
-  /* Название не сжимаем — листаем таблицу горизонтально */
+  /* Название занимает видимую ширину экрана; остальное — горизонтальный скролл */
   #result_list th.column-name,
   #result_list td.field-name,
   #result_list .field-name {
-    min-width: 260px !important;
+    min-width: calc(100vw - 104px) !important;
     max-width: none !important;
     width: auto !important;
     white-space: nowrap;
   }
 
   #result_list .field-name input {
-    min-width: 240px !important;
+    min-width: calc(100vw - 104px) !important;
     max-width: none !important;
-    width: 260px !important;
+    width: calc(100vw - 104px) !important;
     font-size: 13px;
   }
 
@@ -754,12 +754,12 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   #result_list th.column-name,
   #result_list td.field-name,
   #result_list .field-name {
-    min-width: 280px !important;
+    min-width: calc(100vw - 104px) !important;
   }
 
   #result_list .field-name input {
-    min-width: 260px !important;
-    width: 280px !important;
+    min-width: calc(100vw - 104px) !important;
+    width: calc(100vw - 104px) !important;
   }
 }
 
