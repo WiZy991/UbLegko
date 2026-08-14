@@ -171,6 +171,13 @@ def profile(request):
     addresses = DeliveryAddress.objects.filter(user=request.user)
     form = ProfileForm(instance=request.user)
     address_form = DeliveryAddressForm()
+    edit_address = None
+
+    if request.method == 'GET' and request.GET.get('edit'):
+        edit_address = get_object_or_404(
+            DeliveryAddress, pk=request.GET.get('edit'), user=request.user
+        )
+        address_form = DeliveryAddressForm(instance=edit_address)
 
     if request.method == 'POST':
         action = request.POST.get('action', 'save_profile')
@@ -189,6 +196,15 @@ def profile(request):
                     addr.is_default = True
                 addr.save()
                 messages.success(request, 'Адрес добавлен')
+                return redirect('accounts:profile')
+        elif action == 'edit_address':
+            edit_address = get_object_or_404(
+                DeliveryAddress, pk=request.POST.get('address_id'), user=request.user
+            )
+            address_form = DeliveryAddressForm(request.POST, instance=edit_address)
+            if address_form.is_valid():
+                address_form.save()
+                messages.success(request, 'Адрес обновлён')
                 return redirect('accounts:profile')
         elif action == 'delete_address':
             addr = get_object_or_404(
@@ -219,6 +235,7 @@ def profile(request):
         {
             'form': form,
             'address_form': address_form,
+            'edit_address': edit_address,
             'addresses': addresses,
             'orders': orders,
         },

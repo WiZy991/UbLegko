@@ -37,6 +37,10 @@
                 <div class="address-list__text">{{ addr.address }}</div>
               </div>
               <div class="address-list__actions">
+                <a
+                  class="link-accent address-list__btn"
+                  href="{% url 'accounts:profile' %}?edit={{ addr.id }}#address-form"
+                >Редактировать</a>
                 {% if not addr.is_default %}
                   <form method="post">
                     {% csrf_token %}
@@ -59,10 +63,17 @@
         <p class="form-hint" style="margin-top:0;">Добавьте адрес — при оформлении заказа он появится в списке доставки.</p>
       {% endif %}
 
-      <h3 style="margin:20px 0 12px;font-size:1.05rem;">Добавить адрес</h3>
+      <h3 id="address-form" style="margin:20px 0 12px;font-size:1.05rem;">
+        {% if edit_address %}Редактировать адрес{% else %}Добавить адрес{% endif %}
+      </h3>
       <form method="post" novalidate>
         {% csrf_token %}
-        <input type="hidden" name="action" value="add_address">
+        {% if edit_address %}
+          <input type="hidden" name="action" value="edit_address">
+          <input type="hidden" name="address_id" value="{{ edit_address.id }}">
+        {% else %}
+          <input type="hidden" name="action" value="add_address">
+        {% endif %}
         {% for field in address_form %}
           <div class="form-group{% if field.name == 'is_default' %} form-group--checkbox{% endif %}">
             {% if field.name == 'is_default' %}
@@ -75,7 +86,14 @@
             {% if field.errors %}<div class="messages"><li class="error">{{ field.errors|striptags }}</li></div>{% endif %}
           </div>
         {% endfor %}
-        <button class="btn btn-primary" type="submit">Добавить адрес</button>
+        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+          <button class="btn btn-primary" type="submit">
+            {% if edit_address %}Сохранить адрес{% else %}Добавить адрес{% endif %}
+          </button>
+          {% if edit_address %}
+            <a class="link-accent" href="{% url 'accounts:profile' %}#address-form">Отмена</a>
+          {% endif %}
+        </div>
       </form>
     </div>
   </div>
