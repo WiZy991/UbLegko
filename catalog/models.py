@@ -117,6 +117,13 @@ class Product(models.Model):
         blank=True,
         help_text='Показывается в каталоге и первым в галерее на странице товара',
     )
+    image_card = models.ImageField(
+        'Превью для каталога',
+        upload_to='products/cards/',
+        blank=True,
+        editable=False,
+        help_text='Автоматически создаётся из главного фото для быстрой загрузки каталога',
+    )
     rating = models.DecimalField('Рейтинг', max_digits=3, decimal_places=1, default=Decimal('0'))
     reviews_count = models.PositiveIntegerField('Число оценок', default=0)
     status = models.CharField(
@@ -173,7 +180,36 @@ class Product(models.Model):
             sku=self.sku,
             country=self.country,
         )
+
+        old_image_name = ''
+        if self.pk:
+            old_image_name = (
+                Product.objects.filter(pk=self.pk)
+                .values_list('image', flat=True)
+                .first()
+                or ''
+            )
+        new_image_name = self.image.name if self.image else ''
+        image_changed = old_image_name != new_image_name
+        update_fields = kwargs.get('update_fields')
+
         super().save(*args, **kwargs)
+
+        # Не гоняем превью при точечном save без image
+        if update_fields is not None and 'image' not in update_fields:
+            if not (self.image and not self.image_card):
+                return
+
+        from .image_utils import clear_card_image, ensure_card_image
+
+        if not self.image:
+            if self.image_card:
+                clear_card_image(self)
+                super().save(update_fields=['image_card'])
+            return
+
+        if (image_changed or not self.image_card) and ensure_card_image(self, force=True):
+            super().save(update_fields=['image_card'])
 
     def get_recommendation_code_set(self) -> set[int]:
         return parse_recommendation_codes(self.recommendation_codes)
@@ -219,13 +255,20 @@ class Product(models.Model):
 
     @property
     def display_image_url(self):
-        """URL для превью в каталоге: главное фото или первое из галереи."""
+        """URL полного фото: главное или первое из галереи."""
         if self.image:
             return self.image.url
         for item in self.images.all():
             if item.image:
                 return item.image.url
         return ''
+
+    @property
+    def card_image_url(self):
+        """Лёгкое превью для каталога/корзины; иначе полный файл."""
+        if self.image_card:
+            return self.image_card.url
+        return self.display_image_url
 
     @property
     def can_add_to_cart(self):
