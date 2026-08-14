@@ -619,6 +619,18 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
 
 /* Мобилка: компактный список товаров */
 @media (max-width: 900px) {
+  #changelist .results,
+  .app-main .results {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #result_list {
+    table-layout: auto !important;
+    width: max-content;
+    min-width: 100%;
+  }
+
   #result_list th.column-old_price,
   #result_list td.field-old_price,
   #result_list th.column-recommendation_codes,
@@ -628,15 +640,20 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     display: none !important;
   }
 
+  /* Название не сжимаем — листаем таблицу горизонтально */
+  #result_list th.column-name,
+  #result_list td.field-name,
   #result_list .field-name {
-    min-width: 0;
-    max-width: 140px;
+    min-width: 260px !important;
+    max-width: none !important;
+    width: auto !important;
+    white-space: nowrap;
   }
 
   #result_list .field-name input {
-    min-width: 0 !important;
-    max-width: 100% !important;
-    width: 100% !important;
+    min-width: 240px !important;
+    max-width: none !important;
+    width: 260px !important;
     font-size: 13px;
   }
 
@@ -654,13 +671,13 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   }
 
   #result_list .field-category {
-    white-space: normal;
+    white-space: nowrap;
   }
 
   #result_list .field-category select,
   #result_list .field-category .select2-container {
-    width: 110px !important;
-    max-width: 110px !important;
+    width: 140px !important;
+    max-width: 140px !important;
   }
 
   #result_list .field-status {
@@ -683,6 +700,18 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     height: 40px;
     padding: 0 8px;
     font-size: 11px;
+  }
+
+  .product-row-detail td {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #f4f8fb;
+  }
+
+  .product-row-detail__inner {
+    max-width: calc(100vw - 20px);
+    box-sizing: border-box;
   }
 
   .product-row-detail__actions {
@@ -722,13 +751,18 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     display: none !important;
   }
 
+  #result_list th.column-name,
+  #result_list td.field-name,
   #result_list .field-name {
-    max-width: 160px;
+    min-width: 280px !important;
   }
 
-  #result_list .field-category select,
-  #result_list .field-category .select2-container {
-    width: 96px !important;
-    max-width: 96px !important;
+  #result_list .field-name input {
+    min-width: 260px !important;
+    width: 280px !important;
   }
+}
+
+html[data-bs-theme="dark"] .product-row-detail td {
+  background: #1e2a32;
 }
