@@ -254,38 +254,82 @@
 
   #result_list tbody tr.inbox-row > td.field-full_name,
   #result_list tbody tr.inbox-row > td.field-phone {
-    max-width: 120px;
+    max-width: 96px;
+    overflow: hidden !important;
+    text-overflow: ellipsis;
   }
 
+  #result_list th.column-phone,
+  #result_list td.field-phone,
+  #result_list th.column-id,
+  #result_list td.field-id,
+  #result_list th.column-full_name,
+  #result_list td.field-full_name {
+    overflow: hidden !important;
+  }
+
+  /* Статус не должен вылезать поверх телефона/номера */
   #result_list th.column-status_control,
   #result_list td.field-status_control {
+    width: 86px !important;
+    min-width: 86px !important;
+    max-width: 92px !important;
     white-space: normal !important;
+    overflow: hidden !important;
+    vertical-align: middle !important;
+    padding-left: 4px !important;
+    padding-right: 4px !important;
   }
 
   .inbox-status-btns {
     flex-direction: column;
     align-items: stretch;
-    gap: 6px;
-    min-width: 88px;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .inbox-status-btn {
-    min-height: 36px;
-    padding: 6px 8px;
-    font-size: 12px;
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 32px;
+    padding: 4px 2px;
+    font-size: 11px;
+    line-height: 1.15;
   }
 }
 
 @media (max-width: 600px) {
+  #result_list {
+    table-layout: fixed;
+    width: 100%;
+  }
+
   #result_list th.column-id,
-  #result_list td.field-id,
+  #result_list td.field-id {
+    width: 36px !important;
+    font-size: 11px;
+  }
+
   #result_list th.column-total_display,
   #result_list td.field-total_display {
+    width: 44px !important;
     font-size: 12px;
   }
 
-  #result_list tbody tr.inbox-row > td.field-full_name {
-    max-width: 96px;
+  #result_list tbody tr.inbox-row > td.field-full_name,
+  #result_list tbody tr.inbox-row > td.field-phone {
+    max-width: none;
+  }
+
+  #result_list th.column-status_control,
+  #result_list td.field-status_control {
+    width: 78px !important;
+    min-width: 78px !important;
+    max-width: 82px !important;
   }
 }
 
