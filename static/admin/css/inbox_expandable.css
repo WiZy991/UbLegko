@@ -218,15 +218,38 @@
 }
 
 @media (max-width: 900px) {
+  /* Горизонтальный скролл вместо сжатия колонок в кашу */
+  .app-main .results,
+  #changelist .results {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #result_list {
+    table-layout: auto !important;
+    width: max-content;
+    min-width: 100%;
+  }
+
   .inbox-row-detail__grid {
     grid-template-columns: 1fr;
   }
 
-  .inbox-row-detail__inner {
-    padding: 12px;
+  .inbox-row-detail td {
+    /* Панель деталей «прилипает» к экрану при горизонтальном скролле */
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #f4f8fb;
   }
 
-  /* Заявки: прячем то, что уже в ▼ */
+  .inbox-row-detail__inner {
+    padding: 12px;
+    width: auto;
+    max-width: calc(100vw - 20px);
+    box-sizing: border-box;
+  }
+  /* Заявки: прячем вторичные колонки */
   #result_list th.column-email,
   #result_list td.field-email,
   #result_list th.column-email_sent_col,
@@ -240,7 +263,9 @@
   #result_list th.column-delivery_col,
   #result_list td.field-delivery_col,
   #result_list th.column-created_col,
-  #result_list td.field-created_col {
+  #result_list td.field-created_col,
+  #result_list th.column-id,
+  #result_list td.field-id {
     display: none !important;
   }
 
@@ -252,33 +277,59 @@
     display: none !important;
   }
 
+  /* Галочка и ▼ — отдельные фиксированные ячейки, без наложений */
+  #result_list th.action-checkbox-column,
+  #result_list td.action-checkbox,
+  #result_list .action-checkbox {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    padding: 6px 4px !important;
+    overflow: visible !important;
+  }
+
+  #result_list th.column-expand_toggle,
+  #result_list td.field-expand_toggle {
+    width: 48px !important;
+    min-width: 48px !important;
+    max-width: 48px !important;
+    padding: 6px 4px !important;
+    overflow: visible !important;
+  }
+
+  .inbox-row-expand {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Имя можно чуть обрезать, телефон — целиком */
   #result_list tbody tr.inbox-row > td.field-full_name,
-  #result_list tbody tr.inbox-row > td.field-phone {
-    max-width: 96px;
-    overflow: hidden !important;
+  #result_list th.column-full_name {
+    max-width: 88px;
+    white-space: nowrap;
+    overflow: hidden;
     text-overflow: ellipsis;
   }
 
   #result_list th.column-phone,
   #result_list td.field-phone,
-  #result_list th.column-id,
-  #result_list td.field-id,
-  #result_list th.column-full_name,
-  #result_list td.field-full_name {
-    overflow: hidden !important;
+  #result_list tbody tr.inbox-row > td.field-phone {
+    max-width: none !important;
+    min-width: 148px !important;
+    width: auto !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
   }
 
-  /* Статус не должен вылезать поверх телефона/номера */
   #result_list th.column-status_control,
   #result_list td.field-status_control {
-    width: 86px !important;
-    min-width: 86px !important;
-    max-width: 92px !important;
+    width: 90px !important;
+    min-width: 90px !important;
+    max-width: 96px !important;
     white-space: normal !important;
     overflow: hidden !important;
     vertical-align: middle !important;
-    padding-left: 4px !important;
-    padding-right: 4px !important;
   }
 
   .inbox-status-btns {
@@ -287,7 +338,6 @@
     gap: 4px;
     width: 100%;
     min-width: 0;
-    max-width: 100%;
     box-sizing: border-box;
   }
 
@@ -298,44 +348,24 @@
     min-height: 32px;
     padding: 4px 2px;
     font-size: 11px;
-    line-height: 1.15;
-  }
-}
-
-@media (max-width: 600px) {
-  #result_list {
-    table-layout: fixed;
-    width: 100%;
-  }
-
-  #result_list th.column-id,
-  #result_list td.field-id {
-    width: 36px !important;
-    font-size: 11px;
   }
 
   #result_list th.column-total_display,
   #result_list td.field-total_display {
-    width: 44px !important;
-    font-size: 12px;
-  }
-
-  #result_list tbody tr.inbox-row > td.field-full_name,
-  #result_list tbody tr.inbox-row > td.field-phone {
-    max-width: none;
-  }
-
-  #result_list th.column-status_control,
-  #result_list td.field-status_control {
-    width: 78px !important;
-    min-width: 78px !important;
-    max-width: 82px !important;
+    min-width: 72px;
+    white-space: nowrap;
   }
 }
 
 html[data-bs-theme="dark"] .inbox-row-detail td,
 html[data-bs-theme="dark"] .inbox-row-detail__inner {
   background: #1e2a32;
+}
+
+@media (max-width: 900px) {
+  html[data-bs-theme="dark"] .inbox-row-detail td {
+    background: #1e2a32;
+  }
 }
 
 html[data-bs-theme="dark"] .inbox-row-detail__block {
