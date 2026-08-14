@@ -172,6 +172,23 @@ class CategoryAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(products_count=Count('products'))
 
+    def get_search_results(self, request, queryset, search_term):
+        """
+        Подстрочный поиск без учёта регистра (и для кириллицы).
+        «руч» → «Для ручной мойки посуды».
+        SQLite LIKE/icontains регистронезависим только для латиницы.
+        """
+        term = (search_term or '').strip()
+        if not term:
+            return queryset, False
+        needle = term.replace('ё', 'е').replace('Ё', 'е').casefold()
+        matching_ids = [
+            pk
+            for pk, name in queryset.values_list('pk', 'name')
+            if needle in (name or '').replace('ё', 'е').replace('Ё', 'е').casefold()
+        ]
+        return queryset.filter(pk__in=matching_ids).order_by('sort_order', 'name'), False
+
     def get_urls(self):
         urls = super().get_urls()
         custom = [
