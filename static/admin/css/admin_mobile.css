@@ -1,0 +1,224 @@
+/* ========== Мобильная админка (телефон) ========== */
+
+@media (max-width: 900px) {
+  /* Контент на всю ширину, удобный скролл таблиц */
+  .app-main,
+  .app-content,
+  .content-wrapper,
+  .content,
+  #content-main,
+  #changelist {
+    max-width: 100% !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+
+  /* Шапка: три поиска Jazzmin сжимаются в «квадратики» — оставляем один */
+  #jazzy-navbar form.d-flex.ms-2 ~ form.d-flex {
+    display: none !important;
+  }
+
+  #jazzy-navbar .container-fluid {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  #jazzy-navbar form.d-flex.ms-2 {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin-left: 0.35rem !important;
+    margin-right: 0.25rem !important;
+  }
+
+  #jazzy-navbar form.d-flex .input-group {
+    width: 100%;
+    flex-wrap: nowrap;
+  }
+
+  #jazzy-navbar form.d-flex .form-control-navbar,
+  #jazzy-navbar form.d-flex input[type="search"] {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 38px;
+    font-size: 14px;
+  }
+
+  #jazzy-navbar form.d-flex .btn,
+  #jazzy-navbar form.d-flex button[type="submit"] {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 38px;
+    padding: 0;
+  }
+
+  /* Иконки справа не сжимать поиск */
+  #jazzy-navbar .navbar-nav.ms-auto,
+  #jazzy-navbar .navbar-nav:last-child {
+    flex: 0 0 auto;
+  }
+
+  #changelist .results,
+  .app-main .results {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -4px;
+    padding-bottom: 4px;
+  }
+
+  #result_list {
+    min-width: 0 !important;
+  }
+
+  /* Крупнее зоны нажатия */
+  #result_list .action-select,
+  #action-toggle {
+    width: 22px;
+    height: 22px;
+  }
+
+  .product-row-expand,
+  .inbox-row-expand {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 1rem;
+  }
+
+  /* Поиск на всю ширину */
+  #changelist-search .admin-search-group,
+  .admin-search-group {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  #changelist-search .admin-search-group #searchbar,
+  #changelist-search .admin-search-group input[name="q"],
+  #changelist-search .admin-search-suggest-wrap,
+  .admin-search-group #searchbar,
+  .admin-search-group input[name="q"],
+  .admin-search-suggest-wrap {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #changelist-search .admin-search-group .btn,
+  #changelist-search .admin-search-group button[type="submit"],
+  .admin-search-group .btn,
+  .admin-search-group button[type="submit"] {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  /* Фильтры / действия — удобнее пальцем */
+  #changelist .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  #changelist .actions select,
+  #changelist .actions .button,
+  #changelist .actions button {
+    min-height: 42px;
+    font-size: 15px !important;
+  }
+
+  #changelist .actions select {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  #changelist .actions .button,
+  #changelist .actions button[type="submit"] {
+    flex: 1 1 auto;
+    min-width: 120px;
+  }
+
+  /* Подсказки короче на телефоне */
+  .product-expandable-hint,
+  .inbox-expandable-hint {
+    font-size: 12px;
+    padding: 8px 10px;
+    line-height: 1.35;
+  }
+
+  /* Пагинация */
+  .paginator {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .paginator a,
+  .paginator .this-page {
+    min-width: 36px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Формы изменения — поля на всю ширину */
+  .form-row,
+  .form-group,
+  .fieldBox {
+    max-width: 100%;
+  }
+
+  .app-main .select2-container,
+  .app-main .related-widget-wrapper .select2-container {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Submit row — кнопки крупнее */
+  .submit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .submit-row input,
+  .submit-row a.button,
+  .submit-row button {
+    flex: 1 1 calc(50% - 8px);
+    min-height: 44px !important;
+    text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Ещё плотнее на узких телефонах */
+  .content-header h1,
+  .app-main h1 {
+    font-size: 1.25rem !important;
+  }
+
+  #jazzy-navbar .navbar-nav .nav-link {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* На очень узких — только лупа у оставшегося поиска, без длинного placeholder */
+  #jazzy-navbar form.d-flex .form-control-navbar {
+    font-size: 13px;
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  #jazzy-navbar form.d-flex .form-control-navbar::placeholder {
+    color: transparent;
+  }
+
+  #jazzy-navbar form.d-flex .form-control-navbar:focus::placeholder {
+    color: #999;
+    font-size: 12px;
+  }
+}

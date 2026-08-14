@@ -616,3 +616,119 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   border-color: #00acd7;
   color: #fff;
 }
+
+/* Мобилка: компактный список товаров */
+@media (max-width: 900px) {
+  #result_list th.column-old_price,
+  #result_list td.field-old_price,
+  #result_list th.column-recommendation_codes,
+  #result_list td.field-recommendation_codes,
+  #result_list th.column-has_main_photo,
+  #result_list td.field-has_main_photo {
+    display: none !important;
+  }
+
+  #result_list .field-name {
+    min-width: 0;
+    max-width: 140px;
+  }
+
+  #result_list .field-name input {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    font-size: 13px;
+  }
+
+  #result_list .field-price {
+    width: 72px;
+    min-width: 72px;
+    max-width: 84px;
+  }
+
+  #result_list .field-price input {
+    width: 68px !important;
+    min-width: 60px !important;
+    max-width: 76px !important;
+    font-size: 13px;
+  }
+
+  #result_list .field-category {
+    white-space: normal;
+  }
+
+  #result_list .field-category select,
+  #result_list .field-category .select2-container {
+    width: 110px !important;
+    max-width: 110px !important;
+  }
+
+  #result_list .field-status {
+    min-width: 100px;
+    width: 110px;
+  }
+
+  #result_list .field-status select {
+    min-width: 96px !important;
+    max-width: 110px !important;
+    font-size: 12px;
+  }
+
+  #result_list .field-row_save {
+    width: 84px;
+  }
+
+  #result_list .product-row-save {
+    min-width: 72px;
+    height: 40px;
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .product-row-detail__actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .product-row-detail__actions .button,
+  .product-row-detail__actions a.button {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .product-row-detail__gallery {
+    gap: 8px;
+  }
+
+  .product-row-detail__photo {
+    width: calc(50% - 6px);
+    min-width: 140px;
+  }
+
+  .product-row-detail__photo-actions {
+    flex-wrap: wrap;
+  }
+
+  .product-row-detail__photo-actions .button {
+    min-height: 36px;
+  }
+}
+
+@media (max-width: 600px) {
+  #result_list th.column-is_visible,
+  #result_list td.field-is_visible {
+    display: none !important;
+  }
+
+  #result_list .field-name {
+    max-width: 160px;
+  }
+
+  #result_list .field-category select,
+  #result_list .field-category .select2-container {
+    width: 96px !important;
+    max-width: 96px !important;
+  }
+}

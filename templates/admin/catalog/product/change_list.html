@@ -3,7 +3,7 @@
 
 {% block extrahead %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=21">
+  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=22">
   <script defer src="{% static 'admin/js/product_expandable.js' %}?v=13"></script>
   <script>
     window.UBLEGKO_PRODUCT_SEARCH_SUGGEST = "{{ product_search_suggest_url|default:''|escapejs }}";
@@ -13,9 +13,8 @@
 
 {% block result_list %}
   <p class="product-expandable-hint">
-    Нажмите <strong>▼</strong>, чтобы раскрыть товар: править поля и управлять фото.
-    Кнопка <strong>Сохранить</strong> серая, пока нет изменений; после правок становится зелёной
-    и сразу применяет изменения на сайт.
+    <strong>▼</strong> — подробности и фото.
+    <strong>Сохранить</strong> зелёная после правок.
   </p>
   {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
   {% if expandable_rows %}

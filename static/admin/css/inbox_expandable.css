@@ -221,6 +221,72 @@
   .inbox-row-detail__grid {
     grid-template-columns: 1fr;
   }
+
+  .inbox-row-detail__inner {
+    padding: 12px;
+  }
+
+  /* Заявки: прячем то, что уже в ▼ */
+  #result_list th.column-email,
+  #result_list td.field-email,
+  #result_list th.column-email_sent_col,
+  #result_list td.field-email_sent_col,
+  #result_list th.column-address_col,
+  #result_list td.field-address_col,
+  #result_list th.column-address_name_col,
+  #result_list td.field-address_name_col,
+  #result_list th.column-city,
+  #result_list td.field-city,
+  #result_list th.column-delivery_col,
+  #result_list td.field-delivery_col,
+  #result_list th.column-created_col,
+  #result_list td.field-created_col {
+    display: none !important;
+  }
+
+  /* Запросы: длинные колонки в ▼ */
+  #result_list th.column-contact_col,
+  #result_list td.field-contact_col,
+  #result_list th.column-short_problem,
+  #result_list td.field-short_problem {
+    display: none !important;
+  }
+
+  #result_list tbody tr.inbox-row > td.field-full_name,
+  #result_list tbody tr.inbox-row > td.field-phone {
+    max-width: 120px;
+  }
+
+  #result_list th.column-status_control,
+  #result_list td.field-status_control {
+    white-space: normal !important;
+  }
+
+  .inbox-status-btns {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 88px;
+  }
+
+  .inbox-status-btn {
+    min-height: 36px;
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 600px) {
+  #result_list th.column-id,
+  #result_list td.field-id,
+  #result_list th.column-total_display,
+  #result_list td.field-total_display {
+    font-size: 12px;
+  }
+
+  #result_list tbody tr.inbox-row > td.field-full_name {
+    max-width: 96px;
+  }
 }
 
 html[data-bs-theme="dark"] .inbox-row-detail td,
