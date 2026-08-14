@@ -115,11 +115,11 @@ def build_price_per_liter_map(
     products: Iterable[tuple[int, str, Decimal, str]] | None = None,
 ) -> dict[int, PackUnitPrice]:
     """
-    product_id → цена меньшей фасовки в пересчёте с большей.
+    product_id → цена меньшей фасовки в пересчёте с этой канистры.
 
-    Линейка = база артикула (034-1 и 034-5). На большой фасовке
-    показываем «0,5л = Nр.» / «0,3л = Nр.» / «1л = Nр.» —
-    объём берём от минимальной фасовки в линейке.
+    Линейка = база артикула (FS-108-01 / FS-108-05 / FS-108-21).
+    На каждой фасовке больше минимальной показываем
+    «1л = Nр.» / «0,5л = Nр.» — объём от самой маленькой в линейке.
     """
     if products is None:
         products = Product.objects.filter(is_visible=True).values_list(
@@ -152,15 +152,19 @@ def build_price_per_liter_map(
         if len(sized) < 2:
             continue
 
-        max_pid, max_liters, max_price = max(sized, key=lambda item: item[1])
         min_liters = min(liters for _pid, liters, _price in sized)
+        max_liters = max(liters for _pid, liters, _price in sized)
         if min_liters >= max_liters:
             continue
 
-        result[max_pid] = PackUnitPrice(
-            unit_liters=min_liters,
-            unit_price=_unit_price(max_price, max_liters, min_liters),
-        )
+        # Все фасовки крупнее минимальной — своя «выгода» (пересчёт в мин. объём)
+        for product_id, liters, price in sized:
+            if liters <= min_liters:
+                continue
+            result[product_id] = PackUnitPrice(
+                unit_liters=min_liters,
+                unit_price=_unit_price(price, liters, min_liters),
+            )
 
     return result
 

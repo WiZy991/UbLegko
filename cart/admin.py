@@ -1,15 +1,20 @@
+import io
 import json
+from urllib.parse import quote
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_list import (
     ResultList,
     items_for_result,
     result_headers,
     result_hidden_fields,
 )
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.urls import path, reverse
+from django.utils import timezone
 from django.utils.html import escape, format_html, mark_safe
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
 
 from .models import Favorite, Order, OrderItem, StainHelpRequest
 
@@ -149,6 +154,77 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     )
     inlines = [OrderItemInline]
     list_per_page = 50
+    actions = ('export_delivery_sheet', 'delete_selected')
+
+    @admin.action(description='Сформировать лист доставки')
+    def export_delivery_sheet(self, request, queryset):
+        orders = list(queryset.order_by('created_at', 'id'))
+        if not orders:
+            self.message_user(request, 'Не выбрано ни одной заявки', level=messages.WARNING)
+            return None
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Лист доставки'
+        headers = ('Имя', 'Телефон', 'Адрес доставки', 'Комментарий')
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+
+        for order in orders:
+            address = self._delivery_address_for_sheet(order)
+            comment = (order.comment or '').strip()
+            row = (
+                (order.full_name or '').strip(),
+                (order.phone or '').strip(),
+                address,
+                comment,
+            )
+            ws.append(row)
+            for cell in ws[ws.max_row]:
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+
+        ws.column_dimensions['A'].width = 24
+        ws.column_dimensions['B'].width = 18
+        ws.column_dimensions['C'].width = 42
+        ws.column_dimensions['D'].width = 40
+        ws.freeze_panes = 'A2'
+        ws.auto_filter.ref = f'A1:D{ws.max_row}'
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        date_label = timezone.localtime().strftime('%d.%m.%y')
+        download_name = f'Лист доставки на {date_label}.xlsx'
+        ascii_fallback = f'delivery_list_{timezone.localtime().strftime("%d.%m.%y")}.xlsx'
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type=(
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ),
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="{ascii_fallback}"; '
+            f"filename*=UTF-8''{quote(download_name)}"
+        )
+        return response
+
+    @staticmethod
+    def _delivery_address_for_sheet(order):
+        if order.delivery_method == 'pickup' and not (order.address or '').strip():
+            return 'Самовывоз'
+        parts = []
+        if (order.city or '').strip():
+            parts.append(order.city.strip())
+        if (order.address or '').strip():
+            parts.append(order.address.strip())
+        address = ', '.join(parts)
+        name = (order.address_name or '').strip()
+        if name and address:
+            return f'{name}: {address}'
+        return name or address or '—'
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('items')
