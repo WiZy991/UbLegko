@@ -1,14 +1,45 @@
 /* ========== Мобильная админка (телефон) ========== */
 
 @media (max-width: 900px) {
-  /* Контент на всю ширину, удобный скролл таблиц */
+  /* Страница не должна ездить влево-вправо — только таблица */
+  html,
+  body {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+
+  .wrapper,
+  .app-wrapper,
+  .app-header,
+  .main-header,
+  #jazzy-navbar,
+  .app-main,
+  .app-content,
+  .content-wrapper,
+  .content,
+  #content,
+  #content-main,
+  #changelist {
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  /* clip не ломает вертикальный скролл Jazzmin, в отличие от overflow-x: hidden */
+  html,
+  body,
+  .wrapper,
+  .app-wrapper,
+  .app-main,
+  #changelist {
+    overflow-x: clip;
+  }
+
   .app-main,
   .app-content,
   .content-wrapper,
   .content,
   #content-main,
   #changelist {
-    max-width: 100% !important;
     padding-left: 8px !important;
     padding-right: 8px !important;
   }
@@ -63,14 +94,19 @@
 
   #changelist .results,
   .app-main .results {
+    display: block;
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
+    overflow-y: visible;
     -webkit-overflow-scrolling: touch;
-    margin: 0 -4px;
+    overscroll-behavior-x: contain;
     padding-bottom: 4px;
   }
 
   #result_list {
-    min-width: 0 !important;
+    width: max-content;
+    min-width: 100%;
   }
 
   /* Крупнее зоны нажатия */

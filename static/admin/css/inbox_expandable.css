@@ -246,7 +246,7 @@
   .inbox-row-detail__inner {
     padding: 12px;
     width: auto;
-    max-width: calc(100vw - 20px);
+    max-width: 100%;
     box-sizing: border-box;
   }
   /* Заявки: прячем вторичные колонки */

@@ -710,7 +710,7 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   }
 
   .product-row-detail__inner {
-    max-width: calc(100vw - 20px);
+    max-width: 100%;
     box-sizing: border-box;
   }
 
