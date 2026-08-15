@@ -14,7 +14,7 @@ from openpyxl.drawing.spreadsheet_drawing import AnchorMarker, OneCellAnchor
 from openpyxl.drawing.xdr import XDRPositiveSize2D
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils.units import pixels_to_EMU
-from PIL import Image as PILImage
+from PIL import Image as PILImage, ImageOps
 
 from .models import Product
 
@@ -63,31 +63,46 @@ def _badge_akciya_path() -> Path | None:
 
 
 def _product_image_path(product: Product) -> Path | None:
-    if product.image:
-        path = Path(product.image.path)
+    """Для Excel берём лёгкое превью каталога, иначе оригинал."""
+    for field_name in ('image_card', 'image'):
+        field = getattr(product, field_name, None)
+        if not field:
+            continue
+        try:
+            path = Path(field.path)
+        except Exception:
+            continue
         if path.is_file():
             return path
     for item in product.images.all():
         if not item.image:
             continue
-        path = Path(item.image.path)
+        try:
+            path = Path(item.image.path)
+        except Exception:
+            continue
         if path.is_file():
             return path
     return None
 
 
-def _thumb_png_bytes(path: Path, thumb_size: tuple[int, int]) -> tuple[BytesIO, int, int] | None:
-    """Уменьшенная картинка (без огромного холста). Возвращает буфер и фактический размер."""
+def _thumb_bytes(path: Path, thumb_size: tuple[int, int]) -> tuple[BytesIO, int, int] | None:
+    """Уменьшенная картинка для ячейки Excel (JPEG — быстрее PNG)."""
     try:
         with PILImage.open(path) as img:
-            img = img.convert('RGBA')
-            img.thumbnail(thumb_size, PILImage.Resampling.LANCZOS)
-            out = PILImage.new('RGB', img.size, (255, 255, 255))
-            out.paste(img, (0, 0), img)
+            img = ImageOps.exif_transpose(img)
+            if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                rgba = img.convert('RGBA')
+                background = PILImage.new('RGB', rgba.size, (255, 255, 255))
+                background.paste(rgba, mask=rgba.split()[-1])
+                img = background
+            else:
+                img = img.convert('RGB')
+            img.thumbnail(thumb_size, PILImage.Resampling.BILINEAR)
             buf = BytesIO()
-            out.save(buf, format='PNG', optimize=True)
+            img.save(buf, format='JPEG', quality=72, optimize=True)
             buf.seek(0)
-            return buf, out.width, out.height
+            return buf, img.width, img.height
     except Exception:
         return None
 
@@ -160,12 +175,12 @@ def _write_product_row(
     wrap: Alignment,
     center: Alignment,
     image_buffers: list[BytesIO],
-    badge_path: Path | None,
+    badge_cache: tuple[bytes, int, int] | None,
 ) -> None:
     is_promo = bool(product.is_promo or (product.old_price and product.old_price > 0))
     path = _product_image_path(product)
     if path:
-        result = _thumb_png_bytes(path, PHOTO_THUMB)
+        result = _thumb_bytes(path, PHOTO_THUMB)
         if result:
             buf, iw, ih = result
             image_buffers.append(buf)
@@ -180,21 +195,20 @@ def _write_product_row(
                 img_h=ih,
             )
 
-    if is_promo and badge_path:
-        result = _thumb_png_bytes(badge_path, BADGE_THUMB)
-        if result:
-            buf, iw, ih = result
-            image_buffers.append(buf)
-            _add_image_centered_in_cell(
-                ws,
-                buf,
-                col_idx=6,
-                row_idx=row_idx,
-                col_width_excel=COL_WIDTHS['F'],
-                row_height_pt=ROW_HEIGHT,
-                img_w=iw,
-                img_h=ih,
-            )
+    if is_promo and badge_cache:
+        raw, iw, ih = badge_cache
+        buf = BytesIO(raw)
+        image_buffers.append(buf)
+        _add_image_centered_in_cell(
+            ws,
+            buf,
+            col_idx=6,
+            row_idx=row_idx,
+            col_width_excel=COL_WIDTHS['F'],
+            row_height_pt=ROW_HEIGHT,
+            img_w=iw,
+            img_h=ih,
+        )
 
     values = [
         '',
@@ -262,6 +276,12 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
 
     image_buffers: list[BytesIO] = []
     badge_path = _badge_akciya_path()
+    badge_cache: tuple[bytes, int, int] | None = None
+    if badge_path:
+        badge_result = _thumb_bytes(badge_path, BADGE_THUMB)
+        if badge_result:
+            buf, iw, ih = badge_result
+            badge_cache = (buf.getvalue(), iw, ih)
     row_idx = 2
 
     for category_key, group in groupby(
@@ -288,7 +308,7 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
                 wrap=wrap,
                 center=center,
                 image_buffers=image_buffers,
-                badge_path=badge_path,
+                badge_cache=badge_cache,
             )
             row_idx += 1
 

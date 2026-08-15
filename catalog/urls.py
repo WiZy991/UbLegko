@@ -19,7 +19,9 @@ app_name = 'catalog'
 
 urlpatterns = [
     path('', views.HomeView.as_view(), name='home'),
-    path('catalog.xlsx', views.download_catalog_xlsx, name='download_xlsx'),
+    path('price-ubiraemsya-legko.xlsx', views.download_catalog_xlsx, name='download_xlsx'),
+    # Старый адрес — чтобы закладки/ссылки не ломались
+    path('catalog.xlsx', views.download_catalog_xlsx),
     path('category/<uslug:slug>/', views.CategoryView.as_view(), name='category'),
     path('product/<uslug:slug>/', views.ProductDetailView.as_view(), name='product'),
     path('search/', views.SearchView.as_view(), name='search'),

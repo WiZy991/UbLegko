@@ -291,15 +291,14 @@ def download_catalog_xlsx(request):
     """Скачать весь видимый каталог в Excel с фото и полями с сайта."""
     payload = build_catalog_xlsx(site_origin=request.build_absolute_uri('/').rstrip('/'))
     filename = catalog_xlsx_filename()
-    ascii_fallback = (
-        f"price-ubiraemsya-legko-na-{timezone.localdate().strftime('%d-%m-%y')}.xlsx"
-    )
+    # Только русское имя (RFC 5987). ASCII filename= не ставим — иначе браузер
+    # часто сохраняет price-... / catalog вместо нужного названия.
+    encoded = quote(filename, safe='')
     response = HttpResponse(
         payload,
         content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     )
-    response['Content-Disposition'] = (
-        f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{quote(filename)}"
-    )
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{encoded}"
+    response['Content-Length'] = str(len(payload))
     response['Cache-Control'] = 'no-store'
     return response
