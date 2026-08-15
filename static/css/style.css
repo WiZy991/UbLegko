@@ -707,6 +707,65 @@ select {
   display: block;
 }
 
+.catalog-download.is-busy {
+  pointer-events: none;
+}
+
+.catalog-download.is-busy .catalog-download__idle {
+  display: none;
+}
+
+.catalog-download__progress {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex-shrink: 0;
+}
+
+.catalog-download__progress[hidden] {
+  display: none !important;
+}
+
+.catalog-download.is-busy .catalog-download__progress {
+  display: inline-grid;
+}
+
+.catalog-download__ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.catalog-download__ring-bg {
+  stroke: rgba(15, 30, 40, 0.16);
+  stroke-width: 3.2;
+}
+
+.catalog-download__ring-fg {
+  stroke: var(--cyan, #00acd7);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  transition: stroke-dashoffset 0.18s linear;
+}
+
+.catalog-download__pct {
+  position: relative;
+  z-index: 1;
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: #1b2228;
+  pointer-events: none;
+  user-select: none;
+}
+
 .link-accent {
   color: var(--cyan);
 }

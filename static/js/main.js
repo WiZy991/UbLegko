@@ -2260,4 +2260,157 @@
       }
     });
   })();
+
+  // Скачивание Excel-каталога: кольцо прогресса на кнопке
+  (function () {
+    const links = document.querySelectorAll("[data-catalog-xlsx-download]");
+    if (!links.length) return;
+
+    let busy = false;
+
+    function filenameFromDisposition(header, fallback) {
+      if (!header) return fallback;
+      const utf = /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(header);
+      if (utf && utf[1]) {
+        try {
+          return decodeURIComponent(utf[1].trim().replace(/["']/g, ""));
+        } catch (_err) {
+          /* ignore */
+        }
+      }
+      const plain = /filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)/i.exec(header);
+      if (plain) {
+        return (plain[1] || plain[2] || "").trim().replace(/^["']|["']$/g, "") || fallback;
+      }
+      return fallback;
+    }
+
+    function saveBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function bindProgress(link) {
+      const panel = link.querySelector("[data-catalog-xlsx-progress]");
+      const ring = link.querySelector("[data-catalog-xlsx-ring]");
+      const pctEl = link.querySelector("[data-catalog-xlsx-pct]");
+      let fakeTimer = null;
+      let value = 0;
+      let downloadStarted = false;
+
+      function setPercent(percent) {
+        value = Math.max(0, Math.min(100, Math.round(percent)));
+        if (pctEl) pctEl.textContent = value + "%";
+        if (ring) ring.style.strokeDashoffset = String(100 - value);
+      }
+
+      function startFake() {
+        downloadStarted = false;
+        value = 0;
+        setPercent(0);
+        fakeTimer = window.setInterval(() => {
+          if (downloadStarted) return;
+          const step = value < 40 ? 2.2 : value < 70 ? 1.2 : 0.45;
+          setPercent(Math.min(88, value + step));
+        }, 220);
+      }
+
+      function stopFake() {
+        if (fakeTimer) {
+          clearInterval(fakeTimer);
+          fakeTimer = null;
+        }
+      }
+
+      function show() {
+        link.classList.add("is-busy");
+        if (panel) {
+          panel.hidden = false;
+          panel.setAttribute("aria-hidden", "false");
+        }
+        startFake();
+      }
+
+      function hide() {
+        stopFake();
+        downloadStarted = false;
+        setPercent(0);
+        link.classList.remove("is-busy");
+        if (panel) {
+          panel.hidden = true;
+          panel.setAttribute("aria-hidden", "true");
+        }
+      }
+
+      return {
+        show,
+        hide,
+        setPercent,
+        markDownload(pct) {
+          downloadStarted = true;
+          stopFake();
+          setPercent(Math.max(value, pct));
+        },
+      };
+    }
+
+    links.forEach((link) => {
+      const progress = bindProgress(link);
+
+      link.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (busy) return;
+
+        const url = link.getAttribute("href");
+        const fallbackName =
+          link.getAttribute("download") ||
+          "Прайс магазина Убираемся легко.xlsx";
+        if (!url) return;
+
+        busy = true;
+        progress.show();
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("GET", url);
+        xhr.responseType = "blob";
+        xhr.onprogress = (e) => {
+          if (!e.lengthComputable || e.total <= 0) return;
+          const pct = Math.round((e.loaded / e.total) * 100);
+          progress.markDownload(pct);
+        };
+        xhr.onload = () => {
+          if (xhr.status < 200 || xhr.status >= 300) {
+            progress.hide();
+            busy = false;
+            showToast("Не удалось сформировать каталог. Попробуйте ещё раз.");
+            return;
+          }
+          progress.markDownload(100);
+          progress.setPercent(100);
+          const name = filenameFromDisposition(
+            xhr.getResponseHeader("Content-Disposition"),
+            fallbackName
+          );
+          saveBlob(xhr.response, name);
+          window.setTimeout(() => {
+            progress.hide();
+            busy = false;
+            showToast("Каталог скачан");
+          }, 420);
+        };
+        xhr.onerror = () => {
+          progress.hide();
+          busy = false;
+          showToast("Ошибка сети при скачивании каталога");
+        };
+        xhr.send();
+      });
+    });
+  })();
 })();

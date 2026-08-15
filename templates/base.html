@@ -23,7 +23,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260815desc3">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260815xlsxring">
   <link rel="stylesheet" href="{% static 'css/pill_nav_topbar.css' %}?v=12">
   {% block extra_css %}{% endblock %}
 </head>
@@ -135,17 +135,33 @@
             href="{% url 'catalog:download_xlsx' %}"
             title="Скачать каталог в Excel"
             aria-label="Скачать каталог в Excel"
+            data-catalog-xlsx-download
             download="Прайс магазина Убираемся легко по состоянию на {% now 'd.m.y' %}.xlsx"
           >
             <span class="ub-pill__circle" aria-hidden="true"></span>
             <span class="ub-pill__stack">
-              <span class="ub-pill__label">
+              <span class="ub-pill__label catalog-download__idle">
                 <span class="catalog-download__icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="14" height="14" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 19h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </span>
                 <span class="catalog-download__text">Excel</span>
+              </span>
+              <span class="catalog-download__progress" data-catalog-xlsx-progress hidden aria-hidden="true">
+                <svg class="catalog-download__ring" viewBox="0 0 36 36" aria-hidden="true">
+                  <circle class="catalog-download__ring-bg" cx="18" cy="18" r="15" fill="none" />
+                  <circle
+                    class="catalog-download__ring-fg"
+                    data-catalog-xlsx-ring
+                    cx="18"
+                    cy="18"
+                    r="15"
+                    fill="none"
+                    pathLength="100"
+                  />
+                </svg>
+                <span class="catalog-download__pct" data-catalog-xlsx-pct>0%</span>
               </span>
             </span>
           </a>
@@ -463,8 +479,7 @@
     </div>
   </div>
 
-  <script src="{% static 'js/main.js' %}?v=20260813stain2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+  <script src="{% static 'js/main.js' %}?v=20260815xlsxring"></script>  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
   <script src="{% static 'js/pill_nav_topbar.js' %}?v=10" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
