@@ -6,7 +6,10 @@ from catalog.models import Product
 
 
 class Command(BaseCommand):
-    help = 'Создаёт лёгкие превью image_card для товаров с главным фото'
+    help = (
+        'Разовая догонка: создаёт image_card для старых товаров без превью. '
+        'Новые загрузки главного фото обрабатываются сами в Product.save().'
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(

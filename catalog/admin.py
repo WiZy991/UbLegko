@@ -606,12 +606,24 @@ class ProductAdmin(admin.ModelAdmin):
         ]
         return JsonResponse({'results': results})
 
-    def _ensure_product_card_image(self, product):
+    def _ensure_product_card_image(self, product) -> bool:
+        """Создаёт лёгкое превью для каталога. True — превью есть."""
         from .image_utils import ensure_card_image, persist_card_image
 
         product.refresh_from_db()
-        if ensure_card_image(product, force=True):
-            persist_card_image(product)
+        if not product.image:
+            return False
+        try:
+            if ensure_card_image(product, force=True):
+                persist_card_image(product)
+                product.refresh_from_db()
+        except Exception:
+            logger.exception(
+                'Не удалось создать image_card при загрузке product_id=%s',
+                product.pk,
+            )
+            return False
+        return bool(product.image_card)
 
     def _product_photos_response(self, product, message='Готово'):
         product.refresh_from_db()
@@ -625,6 +637,7 @@ class ProductAdmin(admin.ModelAdmin):
             'message': message,
             'photos_html': str(self.photos_html(product)),
             'has_main_photo_html': icon,
+            'has_card_image': bool(product.image_card),
         })
 
     def quick_details_view(self, request, product_id):
@@ -817,7 +830,11 @@ class ProductAdmin(admin.ModelAdmin):
                 return JsonResponse({'ok': False, 'error': 'Файл не выбран'}, status=400)
             product.image = uploaded
             product.save()
-            self._ensure_product_card_image(product)
+            if not self._ensure_product_card_image(product):
+                return self._product_photos_response(
+                    product,
+                    'Главное фото сохранено, но превью каталога не создалось — проверьте логи сервера',
+                )
             return self._product_photos_response(product, 'Главное фото обновлено')
 
         if action == 'upload_gallery':
