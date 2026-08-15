@@ -2383,41 +2383,69 @@
     }
 
     function startNativeDownload(url) {
-      // Top-level navigation на attachment → системный Download Manager.
-      // Blob / <a download> / iframe на Android не работают надёжно.
-      window.location.assign(url);
+      // Не location.assign: он убивает таймеры страницы → кольцо не бежит.
+      // target=_blank оставляет текущую страницу живой, файл всё равно идёт в Download Manager.
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
     }
 
     function bindProgress(link) {
       const panel = link.querySelector("[data-catalog-xlsx-progress]");
       const ring = link.querySelector("[data-catalog-xlsx-ring]");
       const pctEl = link.querySelector("[data-catalog-xlsx-pct]");
-      let fakeTimer = null;
+      let rafId = 0;
       let value = 0;
       let downloadStarted = false;
+      let fakeActive = false;
+      const ringLen = 2 * Math.PI * 15;
 
-      function setPercent(percent) {
-        value = Math.max(0, Math.min(100, Math.round(percent)));
-        if (pctEl) pctEl.textContent = value + "%";
-        if (ring) ring.style.strokeDashoffset = String(100 - value);
+      if (ring) {
+        ring.style.strokeDasharray = String(ringLen);
+        ring.style.strokeDashoffset = String(ringLen);
       }
 
-      function startFake() {
-        downloadStarted = false;
-        value = 0;
-        setPercent(0);
-        fakeTimer = window.setInterval(() => {
-          if (downloadStarted) return;
-          const step = value < 40 ? 2.2 : value < 70 ? 1.2 : 0.45;
-          setPercent(Math.min(88, value + step));
-        }, 220);
+      function setPercent(percent) {
+        value = Math.max(0, Math.min(100, percent));
+        const shown = Math.round(value);
+        if (pctEl) pctEl.textContent = shown + "%";
+        if (ring) {
+          ring.style.strokeDasharray = String(ringLen);
+          ring.style.strokeDashoffset = String(ringLen * (1 - value / 100));
+        }
       }
 
       function stopFake() {
-        if (fakeTimer) {
-          clearInterval(fakeTimer);
-          fakeTimer = null;
+        fakeActive = false;
+        if (rafId) {
+          window.cancelAnimationFrame(rafId);
+          rafId = 0;
         }
+      }
+
+      function startFake() {
+        stopFake();
+        downloadStarted = false;
+        fakeActive = true;
+        value = 0;
+        setPercent(0);
+        let last = performance.now();
+
+        function tick(now) {
+          if (!fakeActive || downloadStarted) return;
+          const dt = Math.min(100, now - last);
+          last = now;
+          // ~0→90% за ~12с, потом медленно до 96%
+          const step =
+            value < 50 ? 0.045 * dt : value < 80 ? 0.022 * dt : 0.006 * dt;
+          setPercent(Math.min(96, value + step));
+          rafId = window.requestAnimationFrame(tick);
+        }
+        rafId = window.requestAnimationFrame(tick);
       }
 
       function show() {
@@ -2465,19 +2493,20 @@
         busy = true;
         progress.show();
 
-        // Мобильные: системная загрузка → полоска в шторке и файл в «Загрузках»
+        // Мобильные: системная загрузка + живое кольцо на этой странице
         if (prefersNativeDownload()) {
-          startNativeDownload(url);
-          // Файл ещё формируется на сервере — кольцо держим дольше
+          // Сначала кадр с кольцом, потом старт загрузки
+          window.requestAnimationFrame(() => {
+            startNativeDownload(url);
+          });
           window.setTimeout(() => {
             progress.markDownload(100);
             progress.setPercent(100);
-          }, 2800);
+          }, 12000);
           window.setTimeout(() => {
             progress.hide();
             busy = false;
-            showToast("Скачивание идёт в шторке уведомлений. Файл — в «Загрузках»");
-          }, 3400);
+          }, 12600);
           return;
         }
 

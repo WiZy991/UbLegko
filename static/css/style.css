@@ -749,9 +749,8 @@ select {
   stroke: var(--cyan, #00acd7);
   stroke-width: 3.2;
   stroke-linecap: round;
-  stroke-dasharray: 100;
-  stroke-dashoffset: 100;
-  transition: stroke-dashoffset 0.18s linear;
+  stroke-dasharray: 94.2;
+  stroke-dashoffset: 94.2;
 }
 
 .catalog-download__pct {
