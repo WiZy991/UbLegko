@@ -3598,16 +3598,19 @@ select.form-input {
 
   .product-card__desc {
     grid-area: desc;
-    font-size: 0.62rem;
-    line-height: 1.2;
+    font-size: 0.72rem;
+    line-height: 1.25;
+    color: var(--text-muted);
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    line-clamp: 3;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
     overflow: hidden;
-    min-height: 0;
+    min-width: 0;
+    min-height: calc(0.72rem * 1.25 * 2);
     margin: 0;
     align-self: center;
+    white-space: pre-line;
   }
 
   .product-card__meta--price {
@@ -3714,8 +3717,9 @@ select.form-input {
   .product-card__actions .qty {
     border-radius: 8px;
     height: 32px;
-    min-width: 84px;
-    max-width: min(120px, 58%);
+    width: 96px;
+    min-width: 96px;
+    max-width: 96px;
   }
 
   .product-card__actions .qty button {
