@@ -461,9 +461,9 @@ class ProductAdmin(admin.ModelAdmin):
 
         return format_html(
             '<div class="product-row-detail__gallery" data-photo-gallery data-photos-url="{}">'
-            '<div class="product-row-detail__photos-row">'
+            '<div class="product-row-detail__photos-row" data-photo-sortable>'
             '{}'
-            '<div class="product-row-detail__photos-sortable" data-photo-sortable>{}</div>'
+            '{}'
             '<label class="product-row-detail__photo product-row-detail__photo--add">'
             '<span class="product-row-detail__photo-add-text">+ Добавить фото</span>'
             '<span class="product-row-detail__photo-add-hint">можно несколько</span>'

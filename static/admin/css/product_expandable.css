@@ -425,23 +425,22 @@
 
 .product-row-detail__gallery {
   margin-top: 8px;
+  max-width: 100%;
 }
 
+/* Ровно 8 карточек 140px + 7 промежутков 12px = 1204px, дальше перенос */
 .product-row-detail__photos-row {
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 12px;
+  width: 100%;
+  max-width: calc(8 * 140px + 7 * 12px);
+  box-sizing: border-box;
   overflow: visible;
 }
 
-/* Галерея в общей строке с главным — перенос по 8 шт. (при ширине ~140px) */
-.product-row-detail__photos-sortable {
-  display: contents;
-}
-
-.product-row-detail__photos-row > .product-row-detail__photo,
-.product-row-detail__photos-sortable > .product-row-detail__photo {
+.product-row-detail__photos-row > .product-row-detail__photo {
   flex: 0 0 140px;
   width: 140px;
   min-width: 140px;
@@ -786,10 +785,10 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
 
   .product-row-detail__photos-row {
     gap: 8px;
+    max-width: calc(8 * 140px + 7 * 8px);
   }
 
-  .product-row-detail__photos-row > .product-row-detail__photo,
-  .product-row-detail__photos-sortable > .product-row-detail__photo {
+  .product-row-detail__photos-row > .product-row-detail__photo {
     flex: 0 0 140px;
     width: 140px;
     min-width: 140px;
