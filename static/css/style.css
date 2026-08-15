@@ -3486,7 +3486,8 @@ select.form-input {
       "media name name"
       "media desc actions"
       "status price price";
-    gap: 2px 8px;
+    column-gap: 8px;
+    row-gap: 0;
     padding: 8px;
     align-items: center;
     position: relative;
@@ -3574,6 +3575,8 @@ select.form-input {
     grid-area: name;
     font-size: 0.9rem;
     margin: 0;
+    margin-bottom: 0;
+    padding-bottom: 0;
     min-height: 0;
     display: block;
     overflow: hidden;
@@ -3603,13 +3606,14 @@ select.form-input {
     color: var(--text-muted);
     display: -webkit-box;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
     overflow: hidden;
     min-width: 0;
-    min-height: calc(0.72rem * 1.25 * 2);
+    min-height: calc(0.72rem * 1.25 * 3);
     margin: 0;
-    align-self: center;
+    padding: 0;
+    align-self: start;
     white-space: pre-line;
   }
 
@@ -3619,13 +3623,17 @@ select.form-input {
     flex-wrap: nowrap;
     align-items: center;
     gap: 6px;
-    margin-top: 0;
+    margin-top: 4px;
     min-height: 0;
     min-width: 0;
     max-width: 100%;
     overflow: visible;
     padding-right: 0;
     align-self: center;
+  }
+
+  .product-card__meta--status {
+    margin-top: 4px;
   }
 
   .product-card__actions {
