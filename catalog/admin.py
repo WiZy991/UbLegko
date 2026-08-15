@@ -288,38 +288,28 @@ class ProductAdmin(admin.ModelAdmin):
     list_select_related = ('category',)
     list_per_page = 50
     search_fields = ('name', 'sku', 'barcode', 'description', 'country', 'recommendation_codes')
-    prepopulated_fields = {'slug': ('name',)}
     autocomplete_fields = ['category']
     inlines = [ProductImageInline]
     change_list_template = 'admin/catalog/product/change_list.html'
-    readonly_fields = ('rating', 'reviews_count')
     fieldsets = (
-        (None, {
+        ('Основная информация', {
             'fields': (
-                'name', 'slug', 'category', 'sku', 'barcode',
+                'name',
+                'category',
                 'description',
-                'unit', 'country', 'image',
-            ),
-        }),
-        ('Цены и статус', {
-            'fields': (
+                'sku',
+                'country',
                 'price',
                 'old_price',
                 'status',
                 'recommendation_codes',
-                'rating',
-                'reviews_count',
-                'is_promo',
-                'is_featured',
+                'image',
                 'is_visible',
             ),
             'description': (
-                'Если указана «Старая цена», товар автоматически становится акционным '
-                'и на сайте показывается бэйдж «Акция». '
-                'Если «Старую цену» очистить — товар снимается с акции и бэйдж пропадает. '
-                'В «Цена» — текущая цена, в «Старая цена» — прежняя (зачёркнутая). '
-                '«Рекомендация» — номера групп через запятую (1 или 1,3,5): товары с общим '
-                'номером показываются друг другу в блоке рекомендаций.'
+                'Слаг создаётся сам из названия. '
+                'Если указать «Старую цену» — товар станет акцией (бэйдж на сайте). '
+                '«Рекомендация» — номера групп через запятую (1 или 1,3,5).'
             ),
         }),
     )

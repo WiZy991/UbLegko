@@ -91,7 +91,7 @@ JAZZMIN_SETTINGS = {
     'changeform_format_overrides': {
         'auth.user': 'collapsible',
         'auth.group': 'vertical_tabs',
-        'catalog.product': 'horizontal_tabs',
+        'catalog.product': 'single',
     },
     'language_chooser': False,
 }
