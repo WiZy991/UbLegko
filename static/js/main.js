@@ -2341,17 +2341,15 @@
     });
   })();
 
-  // Скачивание Excel-каталога: кольцо на кнопке (desktop), нативно на Android/iOS
+  // Скачивание Excel-каталога: кольцо на кнопке
   (function () {
     const links = document.querySelectorAll("[data-catalog-xlsx-download]");
     if (!links.length) return;
 
     let busy = false;
 
-    function prefersNativeDownload() {
-      const ua = navigator.userAgent || "";
-      // Blob + <a download> на Android/iOS часто не попадает в «Загрузки» / шторку
-      return /Android|iPhone|iPad|iPod/i.test(ua);
+    function isMobileUa() {
+      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
     }
 
     function filenameFromDisposition(header, fallback) {
@@ -2376,21 +2374,11 @@
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
+      a.style.display = "none";
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }
-
-    function startNativeDownload(url) {
-      // Тот же таб, без location.assign (убивает JS) и без target=_blank.
-      // Обычный клик по attachment → системная загрузка, страница живая.
-      const a = document.createElement("a");
-      a.href = url;
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
 
     function bindProgress(link) {
@@ -2438,10 +2426,9 @@
           if (!fakeActive || downloadStarted) return;
           const dt = Math.min(100, now - last);
           last = now;
-          // ~0→90% за ~12с, потом медленно до 96%
           const step =
             value < 50 ? 0.045 * dt : value < 80 ? 0.022 * dt : 0.006 * dt;
-          setPercent(Math.min(96, value + step));
+          setPercent(Math.min(92, value + step));
           rafId = window.requestAnimationFrame(tick);
         }
         rafId = window.requestAnimationFrame(tick);
@@ -2492,26 +2479,9 @@
         busy = true;
         progress.show();
 
-        // Мобильные: системная загрузка + живое кольцо на этой странице
-        if (prefersNativeDownload()) {
-          // Сначала кадр с кольцом, потом старт загрузки
-          window.requestAnimationFrame(() => {
-            startNativeDownload(url);
-          });
-          window.setTimeout(() => {
-            progress.markDownload(100);
-            progress.setPercent(100);
-          }, 12000);
-          window.setTimeout(() => {
-            progress.hide();
-            busy = false;
-          }, 12600);
-          return;
-        }
-
-        const fallbackName =
-          link.getAttribute("download") ||
-          "Прайс магазина Убираемся легко.xlsx";
+        const fallbackName = isMobileUa()
+          ? "price-ubiraemsya-legko.xlsx"
+          : "Прайс магазина Убираемся легко.xlsx";
 
         const xhr = new XMLHttpRequest();
         xhr.open("GET", url);
@@ -2530,15 +2500,16 @@
           }
           progress.markDownload(100);
           progress.setPercent(100);
-          const name = filenameFromDisposition(
-            xhr.getResponseHeader("Content-Disposition"),
-            fallbackName
-          );
+          const name = isMobileUa()
+            ? "price-ubiraemsya-legko.xlsx"
+            : filenameFromDisposition(
+                xhr.getResponseHeader("Content-Disposition"),
+                fallbackName
+              );
           saveBlob(xhr.response, name);
           window.setTimeout(() => {
             progress.hide();
             busy = false;
-            showToast("Каталог скачан");
           }, 420);
         };
         xhr.onerror = () => {
