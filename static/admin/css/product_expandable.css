@@ -435,17 +435,17 @@
   overflow: visible;
 }
 
-/* Галерея участвует в общей сетке строки: по 8 фото, 9-е на новую строку */
+/* Галерея в общей строке с главным — перенос по 8 шт. (при ширине ~140px) */
 .product-row-detail__photos-sortable {
   display: contents;
 }
 
 .product-row-detail__photos-row > .product-row-detail__photo,
 .product-row-detail__photos-sortable > .product-row-detail__photo {
-  flex: 0 0 calc((100% - 7 * 12px) / 8);
-  width: calc((100% - 7 * 12px) / 8);
-  max-width: none;
-  min-width: 0;
+  flex: 0 0 140px;
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
   box-sizing: border-box;
 }
 
@@ -790,9 +790,10 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
 
   .product-row-detail__photos-row > .product-row-detail__photo,
   .product-row-detail__photos-sortable > .product-row-detail__photo {
-    flex: 0 0 calc((100% - 7 * 8px) / 8);
-    width: calc((100% - 7 * 8px) / 8);
-    min-width: 0;
+    flex: 0 0 140px;
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
   }
 
   .product-row-detail__photo-actions {
