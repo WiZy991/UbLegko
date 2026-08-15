@@ -2383,12 +2383,11 @@
     }
 
     function startNativeDownload(url) {
-      // Не location.assign: он убивает таймеры страницы → кольцо не бежит.
-      // target=_blank оставляет текущую страницу живой, файл всё равно идёт в Download Manager.
+      // Тот же таб, без location.assign (убивает JS) и без target=_blank.
+      // Обычный клик по attachment → системная загрузка, страница живая.
       const a = document.createElement("a");
       a.href = url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
+      a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
       a.remove();
