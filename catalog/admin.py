@@ -663,6 +663,9 @@ class ProductAdmin(admin.ModelAdmin):
         if not product:
             return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
 
+        old_name = product.name
+        old_slug = product.slug or ''
+
         changed_fields = []
         text_fields = (
             'name', 'sku', 'barcode', 'slug', 'unit', 'country',
@@ -679,6 +682,25 @@ class ProductAdmin(admin.ModelAdmin):
                     value = normalize_recommendation_codes(value)
                 setattr(product, field, value)
                 changed_fields.append(field)
+
+        name_changed = 'name' in payload and product.name != old_name
+        slug_from_payload = 'slug' in payload
+        new_slug_raw = (product.slug or '').strip() if slug_from_payload else ''
+        slug_edited = slug_from_payload and new_slug_raw != old_slug
+
+        if name_changed:
+            # Новое название → новый слаг (как при первом создании)
+            product._regenerate_slug = True
+            if 'slug' not in changed_fields:
+                changed_fields.append('slug')
+        elif slug_edited:
+            # Вручную поменяли только слаг
+            product.slug = product.build_unique_slug(new_slug_raw)
+        elif slug_from_payload and not new_slug_raw:
+            product._regenerate_slug = True
+            if 'slug' not in changed_fields:
+                changed_fields.append('slug')
+
 
         if 'status' in payload:
             status = str(payload.get('status') or '').strip()

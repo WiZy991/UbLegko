@@ -480,6 +480,43 @@
     return payload;
   }
 
+  function roughSlugify(text) {
+    return String(text || '')
+      .trim()
+      .toLowerCase()
+      .replace(/ё/g, 'е')
+      .replace(/\s+/g, '-')
+      .replace(/[^\w\u0400-\u04FF-]+/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+
+  function syncSlugFromName(productId) {
+    var detail = document.getElementById('product-detail-' + productId);
+    if (!detail) return;
+    var slugField = detail.querySelector('[data-quick-field="slug"]');
+    if (!slugField || slugField.getAttribute('data-slug-manual') === '1') return;
+    var nameValue = '';
+    var detailName = detail.querySelector('[data-quick-field="name"]');
+    if (detailName) nameValue = fieldValue(detailName);
+    if (!nameValue) {
+      var row = document.querySelector('tr.product-row[data-product-id="' + productId + '"]');
+      var listName = row && readListField(row, 'name');
+      if (listName !== null) nameValue = listName;
+    }
+    slugField.value = roughSlugify(nameValue);
+  }
+
+  function applySavedSlug(productId, slug) {
+    if (!slug) return;
+    var detail = document.getElementById('product-detail-' + productId);
+    var slugField = detail && detail.querySelector('[data-quick-field="slug"]');
+    if (slugField) {
+      slugField.value = slug;
+      slugField.removeAttribute('data-slug-manual');
+    }
+  }
+
   function syncSharedFields(source, fieldName) {
     var productId = productIdFromEventTarget(source);
     if (!productId) return;
@@ -572,6 +609,9 @@
         }
         if (detail && result.data.photos_html) {
           replaceGallery(detail, result.data.photos_html);
+        }
+        if (result.data.slug) {
+          applySavedSlug(productId, result.data.slug);
         }
         snapshot(productId);
         setDirty(productId, false);
@@ -672,8 +712,15 @@
     }
     if (target.matches && target.matches('[data-quick-field="name"]')) {
       syncSharedFields(target, 'name');
+      var nameIdChange = productIdFromEventTarget(target);
+      if (nameIdChange) syncSlugFromName(nameIdChange);
     } else if (target.closest && target.closest('.field-name input')) {
       syncSharedFields(target.closest('.field-name input') || target, 'name');
+      var listNameIdChange = productIdFromEventTarget(target);
+      if (listNameIdChange) syncSlugFromName(listNameIdChange);
+    }
+    if (target.matches && target.matches('[data-quick-field="slug"]')) {
+      target.setAttribute('data-slug-manual', '1');
     }
     if (target.matches && target.matches('[data-quick-field="recommendation_codes"]')) {
       syncSharedFields(target, 'recommendation_codes');
@@ -711,8 +758,15 @@
     var target = event.target;
     if (target.matches && target.matches('[data-quick-field="name"]')) {
       syncSharedFields(target, 'name');
+      var nameIdInput = productIdFromEventTarget(target);
+      if (nameIdInput) syncSlugFromName(nameIdInput);
     } else if (target.closest && target.closest('.field-name input')) {
       syncSharedFields(target.closest('.field-name input') || target, 'name');
+      var listNameIdInput = productIdFromEventTarget(target);
+      if (listNameIdInput) syncSlugFromName(listNameIdInput);
+    }
+    if (target.matches && target.matches('[data-quick-field="slug"]')) {
+      target.setAttribute('data-slug-manual', '1');
     }
     if (target.matches && target.matches('[data-quick-field="recommendation_codes"]')) {
       syncSharedFields(target, 'recommendation_codes');

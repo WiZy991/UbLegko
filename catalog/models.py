@@ -159,17 +159,22 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+    def build_unique_slug(self, source: str | None = None) -> str:
+        """Слаг из названия (или source), уникальный среди товаров."""
+        base = slugify(source or self.name or '', allow_unicode=True) or 'product'
+        slug = base
+        n = 1
+        while Product.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+            slug = f'{base}-{n}'
+            n += 1
+        return slug
+
     def save(self, *args, **kwargs):
-        if self.slug:
+        regenerate_slug = bool(getattr(self, '_regenerate_slug', False))
+        if self.slug and not regenerate_slug:
             self.slug = slugify(self.slug, allow_unicode=True)
-        if not self.slug:
-            base = slugify(self.name, allow_unicode=True) or 'product'
-            slug = base
-            n = 1
-            while Product.objects.filter(slug=slug).exclude(pk=self.pk).exists():
-                slug = f'{base}-{n}'
-                n += 1
-            self.slug = slug
+        if not self.slug or regenerate_slug:
+            self.slug = self.build_unique_slug(self.name)
         # Старая цена → товар автоматически акционный (бэйдж на сайте).
         # Без старой цены — не акция.
         if self.old_price is not None and self.old_price > 0:
