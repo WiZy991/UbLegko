@@ -20,10 +20,8 @@
             >
               <img
                 src="{{ gallery.0.preview }}"
-                data-full-src="{{ gallery.0.full }}"
                 alt="{{ product.name }}"
                 data-gallery-main-img
-                class="{% if gallery.0.preview != gallery.0.full %}is-preview{% endif %}"
                 decoding="async"
                 fetchpriority="high"
               >
@@ -41,9 +39,7 @@
                   >
                     <img
                       src="{{ item.preview }}"
-                      data-full-src="{{ item.full }}"
                       alt=""
-                      class="{% if item.preview != item.full %}is-preview{% endif %}"
                       decoding="async"
                       loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
                     >
@@ -313,9 +309,8 @@
         <button type="button" class="gallery-lightbox__nav gallery-lightbox__nav--next" data-gallery-next aria-label="Следующее фото">›</button>
       {% endif %}
       <img
-        class="gallery-lightbox__img{% if gallery.0.preview != gallery.0.full %} is-preview{% endif %}"
+        class="gallery-lightbox__img"
         src="{{ gallery.0.preview }}"
-        data-full-src="{{ gallery.0.full }}"
         alt="{{ product.name }}"
         data-gallery-lightbox-img
         decoding="async"

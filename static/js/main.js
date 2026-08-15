@@ -2016,64 +2016,16 @@
     let index = 0;
     const mainImg = root.querySelector("[data-gallery-main-img]");
     const thumbs = Array.from(root.querySelectorAll(".product-gallery__thumb"));
-    const thumbImgs = thumbs.map((thumb) => thumb.querySelector("img"));
     const lightboxImg = lightbox.querySelector("[data-gallery-lightbox-img]");
     const currentEl = lightbox.querySelector("[data-gallery-current]");
     const fullReady = images.map((item) => item.preview === item.full);
     const fullLoading = images.map(() => false);
 
-    function applySrc(img, url, isFull) {
+    function setImgSrc(img, url) {
       if (!img || !url) return;
       if (img.getAttribute("src") !== url) {
         img.src = url;
       }
-      img.classList.toggle("is-preview", !isFull);
-      if (isFull) {
-        img.removeAttribute("data-full-src");
-      }
-    }
-
-    function currentSrc(i) {
-      return fullReady[i] ? images[i].full : images[i].preview;
-    }
-
-    function upgradeVisible(i) {
-      if (!fullReady[i]) return;
-      const full = images[i].full;
-      if (index === i) {
-        applySrc(mainImg, full, true);
-        if (!lightbox.hidden) {
-          applySrc(lightboxImg, full, true);
-        }
-      }
-      applySrc(thumbImgs[i], full, true);
-    }
-
-    function loadFull(i) {
-      if (i < 0 || i >= images.length) return;
-      if (fullReady[i] || fullLoading[i]) {
-        if (fullReady[i]) upgradeVisible(i);
-        return;
-      }
-      const full = images[i].full;
-      const preview = images[i].preview;
-      if (!full || full === preview) {
-        fullReady[i] = true;
-        upgradeVisible(i);
-        return;
-      }
-      fullLoading[i] = true;
-      const probe = new Image();
-      probe.decoding = "async";
-      probe.onload = () => {
-        fullReady[i] = true;
-        fullLoading[i] = false;
-        upgradeVisible(i);
-      };
-      probe.onerror = () => {
-        fullLoading[i] = false;
-      };
-      probe.src = full;
     }
 
     function setActiveThumb(i) {
@@ -2084,27 +2036,62 @@
       });
     }
 
+    function preloadFull(i) {
+      if (i < 0 || i >= images.length) return;
+      if (fullReady[i] || fullLoading[i]) return;
+      const { preview, full } = images[i];
+      if (!full || full === preview) {
+        fullReady[i] = true;
+        return;
+      }
+      fullLoading[i] = true;
+      const probe = new Image();
+      probe.decoding = "async";
+      probe.onload = () => {
+        fullReady[i] = true;
+        fullLoading[i] = false;
+        // В галерее на странице превью не трогаем — только lightbox
+        if (!lightbox.hidden && index === i) {
+          setLightboxSrc(i);
+        }
+      };
+      probe.onerror = () => {
+        fullLoading[i] = false;
+      };
+      probe.src = full;
+    }
+
+    function setLightboxSrc(i) {
+      if (!lightboxImg) return;
+      const { preview, full } = images[i];
+      const url = fullReady[i] ? full : preview;
+      setImgSrc(lightboxImg, url);
+    }
+
     function show(i) {
       index = (i + images.length) % images.length;
-      const src = currentSrc(index);
-      const isFull = fullReady[index];
-      applySrc(mainImg, src, isFull);
-      applySrc(lightboxImg, src, isFull);
+      // На странице товара всегда только превью — без подмены = без моргания
+      setImgSrc(mainImg, images[index].preview);
+      if (!lightbox.hidden) {
+        setLightboxSrc(index);
+        preloadFull(index);
+      }
       if (currentEl) currentEl.textContent = String(index + 1);
       setActiveThumb(index);
-      loadFull(index);
-      // Подгружаем соседние полные чуть позже
-      window.setTimeout(() => {
-        loadFull(index + 1);
-        loadFull(index - 1);
-      }, 120);
     }
 
     function open(i) {
-      show(i);
+      index = (i + images.length) % images.length;
+      setActiveThumb(index);
+      if (currentEl) currentEl.textContent = String(index + 1);
+      setLightboxSrc(index);
       lightbox.hidden = false;
       document.body.style.overflow = "hidden";
-      loadFull(index);
+      preloadFull(index);
+      window.setTimeout(() => {
+        preloadFull(index + 1);
+        preloadFull(index - 1);
+      }, 80);
     }
 
     function close() {
@@ -2146,18 +2133,18 @@
       else if (event.key === "ArrowRight") show(index + 1);
     });
 
-    // Сначала рисуем превью, через кадр начинаем тянуть полные
-    const startUpgrade = () => {
-      loadFull(0);
+    // Фоновая подгрузка полных только в кэш браузера — DOM галереи не меняем
+    const warmCache = () => {
+      preloadFull(0);
       images.forEach((_item, i) => {
         if (i === 0) return;
-        window.setTimeout(() => loadFull(i), 250 + i * 180);
+        window.setTimeout(() => preloadFull(i), 400 + i * 250);
       });
     };
     if (typeof window.requestIdleCallback === "function") {
-      window.requestIdleCallback(startUpgrade, { timeout: 700 });
+      window.requestIdleCallback(warmCache, { timeout: 1500 });
     } else {
-      window.setTimeout(startUpgrade, 120);
+      window.setTimeout(warmCache, 400);
     }
   }
 
