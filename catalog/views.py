@@ -153,7 +153,7 @@ class ProductDetailView(DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['gallery'] = self.object.gallery_urls()
+        context['gallery'] = self.object.gallery_entries()
         context['categories'] = Category.objects.filter(is_visible=True)
         context['recommendations'] = get_recommendations_for_product(self.object, limit=8)
         context['similar_products'] = context['recommendations'].similar

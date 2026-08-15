@@ -2284,6 +2284,12 @@ a.btn-primary:hover {
   max-height: 420px;
   object-fit: cover;
   display: block;
+  transition: filter 0.35s ease, opacity 0.35s ease;
+}
+
+.product-gallery__main img.is-preview,
+.gallery-lightbox__img.is-preview {
+  filter: blur(3px);
 }
 
 .product-gallery__thumbs {
@@ -2314,6 +2320,11 @@ a.btn-primary:hover {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: filter 0.3s ease;
+}
+
+.product-gallery__thumb img.is-preview {
+  filter: blur(2px);
 }
 
 .gallery-lightbox {
@@ -2351,6 +2362,7 @@ a.btn-primary:hover {
   border-radius: 8px;
   background: #111;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  transition: filter 0.35s ease;
 }
 
 .gallery-lightbox__close,

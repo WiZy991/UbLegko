@@ -18,11 +18,19 @@
               data-index="0"
               aria-label="Открыть фото"
             >
-              <img src="{{ gallery.0 }}" alt="{{ product.name }}" data-gallery-main-img>
+              <img
+                src="{{ gallery.0.preview }}"
+                data-full-src="{{ gallery.0.full }}"
+                alt="{{ product.name }}"
+                data-gallery-main-img
+                class="{% if gallery.0.preview != gallery.0.full %}is-preview{% endif %}"
+                decoding="async"
+                fetchpriority="high"
+              >
             </button>
             {% if gallery|length > 1 %}
               <div class="product-gallery__thumbs" role="list">
-                {% for url in gallery %}
+                {% for item in gallery %}
                   <button
                     type="button"
                     class="product-gallery__thumb{% if forloop.first %} is-active{% endif %}"
@@ -31,7 +39,14 @@
                     aria-label="Фото {{ forloop.counter }}"
                     aria-current="{% if forloop.first %}true{% else %}false{% endif %}"
                   >
-                    <img src="{{ url }}" alt="">
+                    <img
+                      src="{{ item.preview }}"
+                      data-full-src="{{ item.full }}"
+                      alt=""
+                      class="{% if item.preview != item.full %}is-preview{% endif %}"
+                      decoding="async"
+                      loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+                    >
                   </button>
                 {% endfor %}
               </div>
@@ -297,7 +312,14 @@
         <button type="button" class="gallery-lightbox__nav gallery-lightbox__nav--prev" data-gallery-prev aria-label="Предыдущее фото">‹</button>
         <button type="button" class="gallery-lightbox__nav gallery-lightbox__nav--next" data-gallery-next aria-label="Следующее фото">›</button>
       {% endif %}
-      <img class="gallery-lightbox__img" src="{{ gallery.0 }}" alt="{{ product.name }}" data-gallery-lightbox-img>
+      <img
+        class="gallery-lightbox__img{% if gallery.0.preview != gallery.0.full %} is-preview{% endif %}"
+        src="{{ gallery.0.preview }}"
+        data-full-src="{{ gallery.0.full }}"
+        alt="{{ product.name }}"
+        data-gallery-lightbox-img
+        decoding="async"
+      >
       <p class="gallery-lightbox__counter" data-gallery-counter {% if gallery|length < 2 %}hidden{% endif %}>
         <span data-gallery-current>1</span> / {{ gallery|length }}
       </p>

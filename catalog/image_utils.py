@@ -1,4 +1,4 @@
-"""Превью главного фото для карточек каталога."""
+"""Превью фото для каталога и быстрой отрисовки страницы товара."""
 
 from __future__ import annotations
 
@@ -60,65 +60,70 @@ def _open_stored_file(field_file):
     return field_file.storage.open(field_file.name, 'rb')
 
 
-def clear_card_image(product) -> None:
-    if not getattr(product, 'image_card', None):
+def clear_card_image(instance) -> None:
+    if not getattr(instance, 'image_card', None):
         return
     try:
-        product.image_card.delete(save=False)
+        instance.image_card.delete(save=False)
     except Exception:
-        logger.exception('Не удалось удалить image_card для product_id=%s', product.pk)
-    product.image_card = None
+        logger.exception(
+            'Не удалось удалить image_card для %s pk=%s',
+            instance.__class__.__name__,
+            getattr(instance, 'pk', None),
+        )
+    instance.image_card = None
 
 
-def persist_card_image(product) -> None:
-    """Пишет путь image_card в БД без повторного Product.save()."""
-    from catalog.models import Product
-
-    Product.objects.filter(pk=product.pk).update(
-        image_card=product.image_card.name if product.image_card else '',
+def persist_card_image(instance) -> None:
+    """Пишет путь image_card в БД без повторного Model.save()."""
+    type(instance).objects.filter(pk=instance.pk).update(
+        image_card=instance.image_card.name if instance.image_card else '',
     )
 
 
-def ensure_card_image(product, *, force: bool = False) -> bool:
+def ensure_card_image(instance, *, force: bool = False) -> bool:
     """
-    Создаёт/обновляет product.image_card из product.image.
+    Создаёт/обновляет instance.image_card из instance.image.
+    Работает для Product и ProductImage.
     Возвращает True, если поле изменилось и его нужно сохранить.
     """
-    if not product.image:
-        if product.image_card:
-            clear_card_image(product)
+    if not instance.image:
+        if instance.image_card:
+            clear_card_image(instance)
             return True
         return False
 
-    if product.image_card and not force:
+    if instance.image_card and not force:
         return False
 
     try:
-        with _open_stored_file(product.image) as src:
+        with _open_stored_file(instance.image) as src:
             data, ext = build_card_image_bytes(src)
     except Exception:
         logger.exception(
-            'Не удалось прочитать оригинал для card preview product_id=%s name=%s',
-            product.pk,
-            getattr(product.image, 'name', ''),
+            'Не удалось прочитать оригинал для card preview %s pk=%s name=%s',
+            instance.__class__.__name__,
+            getattr(instance, 'pk', None),
+            getattr(instance.image, 'name', ''),
         )
         return False
 
-    stem = slugify(Path(product.image.name).stem, allow_unicode=False) or 'product'
-    filename = f'{stem}-{product.pk or "new"}.{ext}'
+    stem = slugify(Path(instance.image.name).stem, allow_unicode=False) or 'photo'
+    filename = f'{stem}-{instance.pk or "new"}.{ext}'
 
-    if product.image_card:
+    if instance.image_card:
         try:
-            product.image_card.delete(save=False)
+            instance.image_card.delete(save=False)
         except Exception:
             pass
 
     try:
-        product.image_card.save(filename, ContentFile(data), save=False)
+        instance.image_card.save(filename, ContentFile(data), save=False)
     except Exception:
         logger.exception(
-            'Не удалось сохранить image_card для product_id=%s',
-            product.pk,
+            'Не удалось сохранить image_card для %s pk=%s',
+            instance.__class__.__name__,
+            getattr(instance, 'pk', None),
         )
         return False
     return True

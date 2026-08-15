@@ -258,20 +258,34 @@ class Product(models.Model):
         return '\n'.join(lines[:3])
 
     def gallery_urls(self):
-        """URL всех фото товара: главное + дополнительные, без дублей."""
-        urls = []
+        """URL полных фото товара: главное + дополнительные, без дублей."""
+        return [item['full'] for item in self.gallery_entries()]
+
+    def gallery_entries(self):
+        """
+        Фото для страницы товара: preview (лёгкое) + full (оригинал).
+        Если превью ещё нет — preview совпадает с full.
+        """
+        entries = []
         seen = set()
+
         if self.image:
-            urls.append(self.image.url)
+            full = self.image.url
+            preview = self.image_card.url if self.image_card else full
+            entries.append({'preview': preview, 'full': full})
             seen.add(self.image.name)
+
         for item in self.images.all():
             if not item.image:
                 continue
             if item.image.name in seen:
                 continue
-            urls.append(item.image.url)
+            full = item.image.url
+            preview = item.image_card.url if item.image_card else full
+            entries.append({'preview': preview, 'full': full})
             seen.add(item.image.name)
-        return urls
+
+        return entries
 
     @property
     def display_image_url(self):
@@ -313,6 +327,13 @@ class ProductImage(models.Model):
         verbose_name='Товар',
     )
     image = models.ImageField('Фото', upload_to='products/gallery/')
+    image_card = models.ImageField(
+        'Превью для страницы товара',
+        upload_to='products/gallery/cards/',
+        blank=True,
+        editable=False,
+        help_text='Автоматически создаётся для быстрой первой отрисовки галереи',
+    )
     sort_order = models.PositiveIntegerField('Порядок', default=0)
 
     class Meta:
@@ -322,6 +343,47 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f'Фото {self.pk} — {self.product}'
+
+    def save(self, *args, **kwargs):
+        old_image_name = ''
+        if self.pk:
+            old_image_name = (
+                ProductImage.objects.filter(pk=self.pk)
+                .values_list('image', flat=True)
+                .first()
+                or ''
+            )
+        new_image_name = self.image.name if self.image else ''
+        image_changed = old_image_name != new_image_name
+        uncommitted_image = bool(self.image) and not getattr(self.image, '_committed', True)
+        update_fields = kwargs.get('update_fields')
+        need_card = bool(self.image) and (
+            uncommitted_image or image_changed or not self.image_card
+        )
+
+        super().save(*args, **kwargs)
+
+        if update_fields is not None and 'image' not in update_fields:
+            if not (self.image and not self.image_card):
+                return
+            need_card = not self.image_card
+
+        try:
+            from .image_utils import clear_card_image, ensure_card_image, persist_card_image
+
+            if not self.image:
+                if self.image_card:
+                    clear_card_image(self)
+                    persist_card_image(self)
+                return
+
+            if need_card and ensure_card_image(self, force=True):
+                persist_card_image(self)
+        except Exception:
+            logger.exception(
+                'Не удалось обновить image_card для ProductImage pk=%s',
+                self.pk,
+            )
 
 
 class ProductRecommendation(models.Model):

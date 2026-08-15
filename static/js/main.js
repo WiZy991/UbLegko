@@ -1992,19 +1992,89 @@
     const dataEl = document.getElementById("product-gallery-data");
     if (!root || !lightbox || !dataEl) return;
 
-    let images = [];
+    let raw = [];
     try {
-      images = JSON.parse(dataEl.textContent || "[]");
+      raw = JSON.parse(dataEl.textContent || "[]");
     } catch (_err) {
       return;
     }
+    if (!raw.length) return;
+
+    // Поддержка старого формата ["url", ...] и нового [{preview, full}, ...]
+    const images = raw.map((item) => {
+      if (item && typeof item === "object") {
+        const full = item.full || item.preview || "";
+        const preview = item.preview || full;
+        return { preview, full };
+      }
+      const url = String(item || "");
+      return { preview: url, full: url };
+    }).filter((item) => item.full);
+
     if (!images.length) return;
 
     let index = 0;
     const mainImg = root.querySelector("[data-gallery-main-img]");
     const thumbs = Array.from(root.querySelectorAll(".product-gallery__thumb"));
+    const thumbImgs = thumbs.map((thumb) => thumb.querySelector("img"));
     const lightboxImg = lightbox.querySelector("[data-gallery-lightbox-img]");
     const currentEl = lightbox.querySelector("[data-gallery-current]");
+    const fullReady = images.map((item) => item.preview === item.full);
+    const fullLoading = images.map(() => false);
+
+    function applySrc(img, url, isFull) {
+      if (!img || !url) return;
+      if (img.getAttribute("src") !== url) {
+        img.src = url;
+      }
+      img.classList.toggle("is-preview", !isFull);
+      if (isFull) {
+        img.removeAttribute("data-full-src");
+      }
+    }
+
+    function currentSrc(i) {
+      return fullReady[i] ? images[i].full : images[i].preview;
+    }
+
+    function upgradeVisible(i) {
+      if (!fullReady[i]) return;
+      const full = images[i].full;
+      if (index === i) {
+        applySrc(mainImg, full, true);
+        if (!lightbox.hidden) {
+          applySrc(lightboxImg, full, true);
+        }
+      }
+      applySrc(thumbImgs[i], full, true);
+    }
+
+    function loadFull(i) {
+      if (i < 0 || i >= images.length) return;
+      if (fullReady[i] || fullLoading[i]) {
+        if (fullReady[i]) upgradeVisible(i);
+        return;
+      }
+      const full = images[i].full;
+      const preview = images[i].preview;
+      if (!full || full === preview) {
+        fullReady[i] = true;
+        upgradeVisible(i);
+        return;
+      }
+      fullLoading[i] = true;
+      const probe = new Image();
+      probe.decoding = "async";
+      probe.onload = () => {
+        fullReady[i] = true;
+        fullLoading[i] = false;
+        upgradeVisible(i);
+      };
+      probe.onerror = () => {
+        fullLoading[i] = false;
+      };
+      probe.src = full;
+    }
 
     function setActiveThumb(i) {
       thumbs.forEach((thumb, idx) => {
@@ -2016,16 +2086,25 @@
 
     function show(i) {
       index = (i + images.length) % images.length;
-      if (mainImg) mainImg.src = images[index];
-      if (lightboxImg) lightboxImg.src = images[index];
+      const src = currentSrc(index);
+      const isFull = fullReady[index];
+      applySrc(mainImg, src, isFull);
+      applySrc(lightboxImg, src, isFull);
       if (currentEl) currentEl.textContent = String(index + 1);
       setActiveThumb(index);
+      loadFull(index);
+      // Подгружаем соседние полные чуть позже
+      window.setTimeout(() => {
+        loadFull(index + 1);
+        loadFull(index - 1);
+      }, 120);
     }
 
     function open(i) {
       show(i);
       lightbox.hidden = false;
       document.body.style.overflow = "hidden";
+      loadFull(index);
     }
 
     function close() {
@@ -2066,6 +2145,20 @@
       else if (event.key === "ArrowLeft") show(index - 1);
       else if (event.key === "ArrowRight") show(index + 1);
     });
+
+    // Сначала рисуем превью, через кадр начинаем тянуть полные
+    const startUpgrade = () => {
+      loadFull(0);
+      images.forEach((_item, i) => {
+        if (i === 0) return;
+        window.setTimeout(() => loadFull(i), 250 + i * 180);
+      });
+    };
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(startUpgrade, { timeout: 700 });
+    } else {
+      window.setTimeout(startUpgrade, 120);
+    }
   }
 
   // Модалка «Что-то не отмывается»
