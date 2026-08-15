@@ -2341,12 +2341,18 @@
     });
   })();
 
-  // Скачивание Excel-каталога: кольцо прогресса на кнопке
+  // Скачивание Excel-каталога: кольцо на кнопке (desktop), нативно на Android/iOS
   (function () {
     const links = document.querySelectorAll("[data-catalog-xlsx-download]");
     if (!links.length) return;
 
     let busy = false;
+
+    function prefersNativeDownload() {
+      const ua = navigator.userAgent || "";
+      // Blob + <a download> на Android/iOS часто не попадает в «Загрузки» / шторку
+      return /Android|iPhone|iPad|iPod/i.test(ua);
+    }
 
     function filenameFromDisposition(header, fallback) {
       if (!header) return fallback;
@@ -2374,6 +2380,12 @@
       a.click();
       a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function startNativeDownload(url) {
+      // Top-level navigation на attachment → системный Download Manager.
+      // Blob / <a download> / iframe на Android не работают надёжно.
+      window.location.assign(url);
     }
 
     function bindProgress(link) {
@@ -2448,13 +2460,30 @@
         if (busy) return;
 
         const url = link.getAttribute("href");
-        const fallbackName =
-          link.getAttribute("download") ||
-          "Прайс магазина Убираемся легко.xlsx";
         if (!url) return;
 
         busy = true;
         progress.show();
+
+        // Мобильные: системная загрузка → полоска в шторке и файл в «Загрузках»
+        if (prefersNativeDownload()) {
+          startNativeDownload(url);
+          // Файл ещё формируется на сервере — кольцо держим дольше
+          window.setTimeout(() => {
+            progress.markDownload(100);
+            progress.setPercent(100);
+          }, 2800);
+          window.setTimeout(() => {
+            progress.hide();
+            busy = false;
+            showToast("Скачивание идёт в шторке уведомлений. Файл — в «Загрузках»");
+          }, 3400);
+          return;
+        }
+
+        const fallbackName =
+          link.getAttribute("download") ||
+          "Прайс магазина Убираемся легко.xlsx";
 
         const xhr = new XMLHttpRequest();
         xhr.open("GET", url);
