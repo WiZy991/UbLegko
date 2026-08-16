@@ -1687,6 +1687,10 @@ select {
   overflow: hidden;
   white-space: pre-line;
   min-height: calc(0.95rem * 1.35 * 3);
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual;
+  -webkit-hyphens: manual;
 }
 
 .product-card__meta {
@@ -3673,6 +3677,10 @@ select.form-input {
     padding: 0;
     align-self: start;
     white-space: pre-line;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: manual;
+    -webkit-hyphens: manual;
   }
 
   .product-card__meta--price {

@@ -10,3 +10,4 @@ python-dotenv==1.1.1
 sqlparse==0.5.5
 tzdata==2026.3
 xlrd==1.2.0
+pyphen==0.17.2

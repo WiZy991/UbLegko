@@ -255,7 +255,9 @@ class Product(models.Model):
         lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
         if not lines:
             return ''
-        return '\n'.join(lines[:3])
+        from catalog.hyphenation import hyphenate_ru
+
+        return hyphenate_ru('\n'.join(lines[:3]))
 
     def gallery_urls(self):
         """URL полных фото товара: главное + дополнительные, без дублей."""
