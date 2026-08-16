@@ -3,7 +3,6 @@ import io
 import json
 import logging
 import re
-import uuid
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import admin, messages
@@ -13,14 +12,12 @@ from django.contrib.admin.templatetags.admin_list import (
     result_headers,
     result_hidden_fields,
 )
-from django.core.files.base import ContentFile
 from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import escape, format_html, format_html_join, mark_safe
 from openpyxl import load_workbook
-from pathlib import Path
 
 from .categorize import resolve_category
 from .models import Category, Product, ProductImage, ProductRecommendation, ProductReview
@@ -977,57 +974,29 @@ class ProductAdmin(admin.ModelAdmin):
             if not image or not image.image:
                 return JsonResponse({'ok': False, 'error': 'Фото не найдено'}, status=404)
 
-            from .image_utils import clear_card_image
+            from .photo_order import promote_gallery_image_to_main
 
-            old_main_name = None
-            old_main_content = None
-            if product.image:
-                product.image.open('rb')
-                try:
-                    old_main_content = product.image.read()
-                    old_main_name = Path(product.image.name).name
-                finally:
-                    product.image.close()
-                # Убираем старое главное с диска, чтобы не пересечься по имени файла
-                product.image.delete(save=False)
-
-            image.image.open('rb')
             try:
-                new_content = image.image.read()
-                new_suffix = Path(image.image.name).suffix or '.jpg'
-                new_stem = Path(image.image.name).stem or 'photo'
-            finally:
-                image.image.close()
+                promote_gallery_image_to_main(product, image)
+            except ValueError as exc:
+                return JsonResponse({'ok': False, 'error': str(exc)}, status=400)
+            except Exception:
+                logger.exception(
+                    'Не удалось сделать главным photo product_id=%s image_id=%s',
+                    product.pk,
+                    image_id,
+                )
+                return JsonResponse(
+                    {'ok': False, 'error': 'Не удалось поменять фото местами'},
+                    status=500,
+                )
 
-            # Новое уникальное имя → новый URL на витрине (и полное фото, и превью)
-            new_name = f'{new_stem}-{uuid.uuid4().hex[:10]}{new_suffix}'
-            product.image.save(new_name, ContentFile(new_content), save=False)
-            if product.image_card:
-                clear_card_image(product)
-            product.save()
-            if not self._ensure_product_card_image(product):
+            product.refresh_from_db()
+            if product.image and not self._ensure_product_card_image(product):
                 return self._product_photos_response(
                     product,
-                    'Главное фото сохранено, но превью каталога не создалось — проверьте логи',
+                    'Главное фото заменено, но превью каталога не создалось — проверьте логи',
                 )
-
-            image.image.delete(save=False)
-            image.delete()
-
-            if old_main_content and old_main_name:
-                next_order = (
-                    ProductImage.objects.filter(product=product)
-                    .order_by('-sort_order')
-                    .values_list('sort_order', flat=True)
-                    .first()
-                )
-                order = 0 if next_order is None else next_order + 1
-                gallery = ProductImage(product=product, sort_order=order)
-                old_stem = Path(old_main_name).stem or 'photo'
-                old_suffix = Path(old_main_name).suffix or '.jpg'
-                gallery_name = f'{old_stem}-{uuid.uuid4().hex[:10]}{old_suffix}'
-                gallery.image.save(gallery_name, ContentFile(old_main_content), save=True)
-
             return self._product_photos_response(product, 'Главное фото заменено')
 
         return JsonResponse({'ok': False, 'error': 'Unknown action'}, status=400)
