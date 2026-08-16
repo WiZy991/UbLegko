@@ -13,7 +13,7 @@ from django.contrib.admin.templatetags.admin_list import (
     result_hidden_fields,
 )
 from django.core.files.base import ContentFile
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
@@ -259,6 +259,37 @@ class ProductSortFilter(admin.SimpleListFilter):
         return queryset
 
 
+class RecommendationCodeFilter(admin.SimpleListFilter):
+    title = 'Рекомендация'
+    parameter_name = 'rec'
+
+    def lookups(self, request, model_admin):
+        from .models import parse_recommendation_codes
+
+        codes: set[int] = set()
+        for raw in (
+            Product.objects.exclude(recommendation_codes='')
+            .values_list('recommendation_codes', flat=True)
+            .iterator(chunk_size=500)
+        ):
+            codes |= parse_recommendation_codes(raw)
+        items = [('none', 'Без рекомендации')]
+        items.extend((str(code), f'Группа {code}') for code in sorted(codes))
+        return items
+
+    def queryset(self, request, queryset):
+        value = self.value()
+        if value is None:
+            return queryset
+        if value == 'none':
+            return queryset.filter(Q(recommendation_codes='') | Q(recommendation_codes__isnull=True))
+        try:
+            code = int(value)
+        except (TypeError, ValueError):
+            return queryset
+        return queryset.filter(recommendation_codes__regex=rf'(^|,){code}(,|$)')
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
@@ -275,7 +306,16 @@ class ProductAdmin(admin.ModelAdmin):
     )
     # name в list_editable — нельзя держать в list_display_links
     list_display_links = None
-    list_filter = (ProductSortFilter, 'category', 'status', 'is_promo', 'is_visible', 'is_featured', 'country')
+    list_filter = (
+        ProductSortFilter,
+        RecommendationCodeFilter,
+        'category',
+        'status',
+        'is_promo',
+        'is_visible',
+        'is_featured',
+        'country',
+    )
     list_editable = (
         'name',
         'category',
@@ -325,11 +365,30 @@ class ProductAdmin(admin.ModelAdmin):
         return ('name',)
 
     def get_search_results(self, request, queryset, search_term):
-        """Тот же поиск, что на сайте: название, описание, артикул, раскладка, стемминг."""
+        """Поиск как на сайте + поиск по номерам групп рекомендаций (например: 3 или 1,5)."""
         search_term = (search_term or '').strip()
         if not search_term:
             return queryset, False
-        return filter_products_by_query(queryset, search_term, prefix_only=False), False
+
+        from .models import parse_recommendation_codes
+
+        codes = parse_recommendation_codes(search_term)
+        only_codes = bool(re.fullmatch(r'[\d,\s;]+', search_term)) and bool(codes)
+        if only_codes:
+            parts = [Q(recommendation_codes__regex=rf'(^|,){code}(,|$)') for code in codes]
+            combined = parts[0]
+            for part in parts[1:]:
+                combined |= part
+            return queryset.filter(combined), False
+
+        qs = filter_products_by_query(queryset, search_term, prefix_only=False)
+        if codes:
+            parts = [Q(recommendation_codes__regex=rf'(^|,){code}(,|$)') for code in codes]
+            combined = parts[0]
+            for part in parts[1:]:
+                combined |= part
+            qs = (qs | queryset.filter(combined)).distinct()
+        return qs, False
 
     def changelist_view(self, request, extra_context=None):
         extra_context = extra_context or {}
