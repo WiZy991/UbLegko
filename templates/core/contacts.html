@@ -1,7 +1,12 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Контакты — {{ site_settings.brand_name }}{% endblock %}
+{% block title %}Контакты — магазин профессиональной химии в Уссурийске | {{ site_settings.brand_name }}{% endblock %}
+{% block meta_description %}Адрес, телефон и режим работы магазина профессиональной химии «{{ site_settings.brand_name }}» в Уссурийске. {{ site_settings.full_address|default:site_settings.address }}{% endblock %}
+{% block og_title %}Контакты — {{ site_settings.brand_name }}{% endblock %}
+{% block og_description %}Магазин профессиональной химии в Уссурийске: {{ site_settings.phone }}, {{ site_settings.full_address|default:site_settings.address }}{% endblock %}
+{% block twitter_title %}Контакты — {{ site_settings.brand_name }}{% endblock %}
+{% block twitter_description %}Магазин профессиональной химии в Уссурийске: {{ site_settings.phone }}{% endblock %}
 
 {% block content %}
 <h1>Контакты</h1>

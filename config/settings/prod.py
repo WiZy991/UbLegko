@@ -41,6 +41,12 @@ def _expand_allowed_hosts(hosts: list[str]) -> list[str]:
 
 ALLOWED_HOSTS = _expand_allowed_hosts(ALLOWED_HOSTS)
 
+# На проде SITE_URL обязателен для корректного canonical/OG
+if not SITE_URL:  # noqa: F405
+    _host = ALLOWED_HOSTS[0]
+    if _host and _host != '*':
+        SITE_URL = f'https://{_host}'  # noqa: F405
+
 _csrf_origins = os.environ.get('CSRF_TRUSTED_ORIGINS', '')
 CSRF_TRUSTED_ORIGINS = [o.strip() for o in _csrf_origins.split(',') if o.strip()]
 

@@ -1,7 +1,21 @@
 {% extends "base.html" %}
 {% load catalog_extras static %}
 
-{% block title %}{{ product.name }} — {{ site_settings.brand_name }}{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block meta_description %}{{ page_description }}{% endblock %}
+{% block og_type %}product{% endblock %}
+{% block og_title %}{{ page_title }}{% endblock %}
+{% block og_description %}{{ page_description }}{% endblock %}
+{% block og_image %}{% if og_image_abs %}{{ og_image_abs }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
+{% block twitter_title %}{{ page_title }}{% endblock %}
+{% block twitter_description %}{{ page_description }}{% endblock %}
+{% block twitter_image %}{% if og_image_abs %}{{ og_image_abs }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
+
+{% block json_ld %}
+  {{ block.super }}
+  {% if breadcrumb_json_ld %}<script type="application/ld+json">{{ breadcrumb_json_ld|safe }}</script>{% endif %}
+  {% if product_json_ld %}<script type="application/ld+json">{{ product_json_ld|safe }}</script>{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="layout">

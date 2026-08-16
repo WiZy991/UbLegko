@@ -1,12 +1,18 @@
 {% extends "base.html" %}
 
-{% block title %}Убираемся легко{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block meta_description %}{{ page_description }}{% endblock %}
+{% block og_title %}{{ page_title }}{% endblock %}
+{% block og_description %}{{ page_description }}{% endblock %}
+{% block twitter_title %}{{ page_title }}{% endblock %}
+{% block twitter_description %}{{ page_description }}{% endblock %}
 
 {% block content %}
 <div class="layout" data-catalog-root>
   {% include "includes/sidebar.html" %}
   <div class="catalog-main">
     <div class="catalog-body">
+      <h1 class="catalog-home-h1">Каталог</h1>
       {% if grouped_products %}
         {% for category, items in grouped_products.items %}
           <section class="category-block" id="category-{{ category.slug }}" data-category-section="category-{{ category.slug }}">

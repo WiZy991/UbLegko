@@ -167,6 +167,14 @@ select {
   white-space: nowrap;
 }
 
+.catalog-home-h1 {
+  margin: 0 0 14px;
+  font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.25;
+  color: var(--text, #1b2228);
+}
+
 .brand-banner__tagline {
   margin: 6px 0 0;
   font-size: clamp(0.82rem, 1.5vw, 1rem);

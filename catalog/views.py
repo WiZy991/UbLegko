@@ -19,6 +19,8 @@ from .models import Category, Product, ProductReview
 from .pack_pricing import attach_price_per_liter
 from .recommendations import get_recommendations_for_product
 from .search_utils import filter_products_by_query, rank_prefix_first
+from . import seo as seo_mod
+from core.models import SiteSettings
 
 
 SORT_OPTIONS = {
@@ -111,6 +113,9 @@ class HomeView(CatalogMixin, ListView):
             context['result_count'] = len(products)
         else:
             context['grouped_products'] = None
+        ss = SiteSettings.load()
+        context['page_title'] = seo_mod.home_meta_title(ss)
+        context['page_description'] = seo_mod.home_meta_description(ss)
         return context
 
 
@@ -127,6 +132,18 @@ class CategoryView(CatalogMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['current_category'] = self.category
+        ss = SiteSettings.load()
+        context['page_title'] = seo_mod.category_meta_title(self.category, ss)
+        context['page_description'] = seo_mod.category_meta_description(self.category)
+        context['breadcrumb_json_ld'] = seo_mod.dumps_ld(
+            seo_mod.breadcrumb_ld(
+                [
+                    ('Главная', '/'),
+                    (self.category.name, self.category.get_absolute_url()),
+                ],
+                self.request,
+            )
+        )
         return context
 
 
@@ -195,6 +212,32 @@ class ProductDetailView(DetailView):
             context['review_form'] = None
         attach_price_per_liter(
             [self.object, *context['similar_products'], *context['bought_together']]
+        )
+        ss = SiteSettings.load()
+        product = self.object
+        context['page_title'] = seo_mod.product_meta_title(product, ss)
+        context['page_description'] = seo_mod.product_meta_description(product)
+        og_image = ''
+        if product.image:
+            try:
+                og_image = seo_mod.absolute_url(self.request, product.image.url)
+            except Exception:
+                og_image = ''
+        if not og_image and product.image_card:
+            try:
+                og_image = seo_mod.absolute_url(self.request, product.image_card.url)
+            except Exception:
+                og_image = ''
+        context['og_image_abs'] = og_image
+        crumbs = [('Главная', '/')]
+        if product.category_id:
+            crumbs.append((product.category.name, product.category.get_absolute_url()))
+        crumbs.append((product.name, product.get_absolute_url()))
+        context['breadcrumb_json_ld'] = seo_mod.dumps_ld(
+            seo_mod.breadcrumb_ld(crumbs, self.request)
+        )
+        context['product_json_ld'] = seo_mod.dumps_ld(
+            seo_mod.product_ld(product, self.request, ss)
         )
         return context
 

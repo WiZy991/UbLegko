@@ -19,6 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     'core',
     'catalog',
     'accounts',
@@ -154,6 +155,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.site_settings',
+                'core.context_processors.seo',
                 'cart.context_processors.cart',
             ],
         },
@@ -207,3 +209,6 @@ EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', '0') == '1'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@ubiraemsya-legko.ru')
 ORDER_EMAIL_TO = os.environ.get('ORDER_EMAIL_TO', 'pro-brite_uss@mail.ru')
 SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Публичный origin сайта для canonical / OG / sitemap (без слэша в конце)
+SITE_URL = os.environ.get('SITE_URL', '').strip().rstrip('/')

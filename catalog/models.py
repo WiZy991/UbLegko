@@ -53,6 +53,29 @@ class Category(models.Model):
     )
     sort_order = models.PositiveIntegerField('Порядок', default=0)
     is_visible = models.BooleanField('Показывать', default=True)
+    seo_title = models.CharField(
+        'SEO title',
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Только для поисковиков (тег title). На витрине не показывается. Пусто — автошаблон.',
+    )
+    seo_description = models.CharField(
+        'SEO description',
+        max_length=320,
+        blank=True,
+        default='',
+        help_text='Только для поисковиков (meta description). На витрине не показывается.',
+    )
+    seo_text = models.TextField(
+        'SEO-текст (для meta)',
+        blank=True,
+        default='',
+        help_text=(
+            'Доп. текст только для meta description, если SEO description пустой. '
+            'На странице сайта посетителям не показывается.'
+        ),
+    )
 
     class Meta:
         verbose_name = 'Категория'
@@ -126,6 +149,20 @@ class Product(models.Model):
         blank=True,
         editable=False,
         help_text='Автоматически создаётся из главного фото для быстрой загрузки каталога',
+    )
+    seo_title = models.CharField(
+        'SEO title',
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Только для поисковиков (тег title). На витрине не показывается.',
+    )
+    seo_description = models.CharField(
+        'SEO description',
+        max_length=320,
+        blank=True,
+        default='',
+        help_text='Только для поисковиков (meta description). На витрине не показывается.',
     )
     rating = models.DecimalField('Рейтинг', max_digits=3, decimal_places=1, default=Decimal('0'))
     reviews_count = models.PositiveIntegerField('Число оценок', default=0)

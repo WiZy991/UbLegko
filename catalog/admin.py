@@ -155,6 +155,19 @@ class CategoryAdmin(admin.ModelAdmin):
     ordering = ('sort_order', 'name')
     prepopulated_fields = {'slug': ('name',)}
     change_list_template = 'admin/catalog/category/change_list.html'
+    fieldsets = (
+        (None, {
+            'fields': ('name', 'slug', 'sort_order', 'is_visible'),
+        }),
+        ('SEO', {
+            'classes': ('collapse',),
+            'fields': ('seo_title', 'seo_description', 'seo_text'),
+            'description': (
+                'Только для поисковиков (title / meta description). '
+                'На витрине сайта эти тексты посетителям не показываются.'
+            ),
+        }),
+    )
 
     class Media:
         css = {'all': ('admin/css/category_sortable.css',)}
@@ -350,6 +363,14 @@ class ProductAdmin(admin.ModelAdmin):
                 'Слаг создаётся сам из названия. '
                 'Если указать «Старую цену» — товар станет акцией (бэйдж на сайте). '
                 '«Рекомендация» — номера групп через запятую (1 или 1,3,5).'
+            ),
+        }),
+        ('SEO', {
+            'classes': ('collapse',),
+            'fields': ('seo_title', 'seo_description'),
+            'description': (
+                'Только для поисковиков (title / meta description). '
+                'На витрине сайта эти тексты посетителям не показываются.'
             ),
         }),
     )

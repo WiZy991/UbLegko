@@ -6,26 +6,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ site_settings.brand_name }}{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}{{ site_settings.slogan|default:site_settings.tagline|default:site_settings.brand_name }}{% endblock %}">
+  {% block meta_robots_tag %}{% if meta_robots %}<meta name="robots" content="{{ meta_robots }}">{% endif %}{% endblock %}
+  <link rel="canonical" href="{% block canonical %}{{ canonical_url }}{% endblock %}">
   <link rel="icon" href="{% static 'img/favicon.ico' %}?v=4" sizes="any">
   <link rel="icon" type="image/png" href="{% static 'img/favicon-32.png' %}?v=4" sizes="32x32">
   <link rel="icon" type="image/png" href="{% static 'img/favicon-192.png' %}?v=4" sizes="192x192">
   <link rel="apple-touch-icon" href="{% static 'img/apple-touch-icon.png' %}?v=4">
-  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:type" content="{% block og_type %}website{% endblock %}">
   <meta property="og:site_name" content="{{ site_settings.brand_name }}">
   <meta property="og:title" content="{% block og_title %}{{ site_settings.brand_name }}{% endblock %}">
   <meta property="og:description" content="{% block og_description %}{{ site_settings.slogan|default:site_settings.tagline|default:site_settings.brand_name }}{% endblock %}">
-  <meta property="og:image" content="{% block og_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-image.jpg' %}{% endblock %}">
-  <meta property="og:url" content="{% block og_url %}{{ request.scheme }}://{{ request.get_host }}{{ request.path }}{% endblock %}">
+  <meta property="og:image" content="{% block og_image %}{{ default_og_image }}{% endblock %}">
+  <meta property="og:url" content="{% block og_url %}{{ canonical_url }}{% endblock %}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{% block twitter_title %}{{ site_settings.brand_name }}{% endblock %}">
   <meta name="twitter:description" content="{% block twitter_description %}{{ site_settings.slogan|default:site_settings.tagline|default:site_settings.brand_name }}{% endblock %}">
-  <meta name="twitter:image" content="{% block twitter_image %}{{ request.scheme }}://{{ request.get_host }}{% static 'img/og-image.jpg' %}{% endblock %}">
+  <meta name="twitter:image" content="{% block twitter_image %}{{ default_og_image }}{% endblock %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260816hyphen">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260816seo">
   <link rel="stylesheet" href="{% static 'css/pill_nav_topbar.css' %}?v=12">
   {% block extra_css %}{% endblock %}
+  {% block json_ld %}
+  {% if org_json_ld %}<script type="application/ld+json">{{ org_json_ld|safe }}</script>{% endif %}
+  {% endblock %}
 </head>
 <body>
   <a href="{% url 'catalog:home' %}" class="brand-banner">
@@ -50,7 +56,7 @@
       <span class="brand-stars__item brand-stars__item--sm brand-stars__item--extra">✦</span>
     </span>
     <span class="brand-banner__content">
-      <h1 class="brand-banner__title">УБИРАЕМСЯ ЛЕГКО</h1>
+      <p class="brand-banner__title">УБИРАЕМСЯ ЛЕГКО</p>
       <p class="brand-banner__tagline">{{ site_settings.tagline }}</p>
     </span>
     <span class="brand-stars brand-stars--right" aria-hidden="true">

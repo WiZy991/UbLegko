@@ -1,13 +1,23 @@
 {% extends "base.html" %}
 
-{% block title %}{{ current_category.name }} — {{ site_settings.brand_name }}{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block meta_description %}{{ page_description }}{% endblock %}
+{% block og_title %}{{ page_title }}{% endblock %}
+{% block og_description %}{{ page_description }}{% endblock %}
+{% block twitter_title %}{{ page_title }}{% endblock %}
+{% block twitter_description %}{{ page_description }}{% endblock %}
+
+{% block json_ld %}
+  {{ block.super }}
+  {% if breadcrumb_json_ld %}<script type="application/ld+json">{{ breadcrumb_json_ld|safe }}</script>{% endif %}
+{% endblock %}
 
 {% block content %}
 <div class="layout" data-catalog-root>
   {% include "includes/sidebar.html" %}
   <div class="catalog-main">
     <div class="catalog-body">
-      <h2 class="category-block__title">{{ current_category.name }}</h2>
+      <h1 class="category-block__title">{{ current_category.name }}</h1>
       <div class="category-block__line"></div>
       <div class="product-grid">
         {% for product in products %}

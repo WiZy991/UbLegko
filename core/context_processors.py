@@ -41,3 +41,26 @@ def site_settings(request):
             selected_city.display_name if selected_city else settings_obj.city
         ),
     }
+
+
+def seo(request):
+    """Canonical без query-string; SITE_URL для абсолютных ссылок."""
+    from catalog.seo import absolute_url, dumps_ld, organization_localbusiness_ld, site_origin
+
+    try:
+        settings_obj = SiteSettings.load()
+    except Exception:  # noqa: BLE001
+        settings_obj = SiteSettings(
+            brand_name='УБИРАЕМСЯЛЕГКО',
+            company_name='ООО СОЛНЕЧНЫЙ МЕЧ',
+            phone='8-991-496-18-97',
+            email='pro-brite_uss@mail.ru',
+        )
+
+    return {
+        'site_url': site_origin(request),
+        'canonical_url': absolute_url(request, request.path),
+        'default_og_image': absolute_url(request, '/static/img/og-image.jpg'),
+        'org_json_ld': dumps_ld(organization_localbusiness_ld(settings_obj, request)),
+        'meta_robots': '',
+    }
