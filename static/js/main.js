@@ -2382,14 +2382,15 @@
     }
 
     // Android/iOS: blob + <a download> не попадает в системные «Загрузки».
-    // Обычный клик по URL с Content-Disposition: attachment — да.
+    // iframe: Content-Disposition: attachment + UI/JS не зависают на время генерации.
     function startNativeDownload(url) {
-      const a = document.createElement("a");
-      a.href = url;
-      a.rel = "noopener";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const iframe = document.createElement("iframe");
+      iframe.setAttribute("hidden", "");
+      iframe.setAttribute("aria-hidden", "true");
+      iframe.style.cssText = "position:fixed;width:0;height:0;border:0;visibility:hidden";
+      iframe.src = url;
+      document.body.appendChild(iframe);
+      window.setTimeout(() => iframe.remove(), 120000);
     }
 
     function bindProgress(link) {
@@ -2490,19 +2491,22 @@
         busy = true;
         progress.show();
 
-        // Телефон: системная загрузка (файл в «Загрузки»), кольцо — анимация на странице
+        // Телефон: сначала кольцо (отрисовать кадр), потом системная загрузка в iframe —
+        // иначе генерация Excel блокирует UI и проценты стартуют уже после файла.
         if (isMobileUa()) {
+          const panel = link.querySelector("[data-catalog-xlsx-progress]");
+          if (panel) void panel.offsetWidth;
           window.requestAnimationFrame(() => {
             startNativeDownload(url);
           });
           window.setTimeout(() => {
             progress.markDownload(100);
             progress.setPercent(100);
-          }, 10000);
+          }, 8500);
           window.setTimeout(() => {
             progress.hide();
             busy = false;
-          }, 10600);
+          }, 9000);
           return;
         }
 
