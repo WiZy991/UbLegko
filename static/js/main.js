@@ -2381,6 +2381,17 @@
       window.setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
 
+    // Android/iOS: blob + <a download> не попадает в системные «Загрузки».
+    // Обычный клик по URL с Content-Disposition: attachment — да.
+    function startNativeDownload(url) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
     function bindProgress(link) {
       const panel = link.querySelector("[data-catalog-xlsx-progress]");
       const ring = link.querySelector("[data-catalog-xlsx-ring]");
@@ -2479,10 +2490,23 @@
         busy = true;
         progress.show();
 
-        const fallbackName = isMobileUa()
-          ? "price-ubiraemsya-legko.xlsx"
-          : "Прайс магазина Убираемся легко.xlsx";
+        // Телефон: системная загрузка (файл в «Загрузки»), кольцо — анимация на странице
+        if (isMobileUa()) {
+          window.requestAnimationFrame(() => {
+            startNativeDownload(url);
+          });
+          window.setTimeout(() => {
+            progress.markDownload(100);
+            progress.setPercent(100);
+          }, 10000);
+          window.setTimeout(() => {
+            progress.hide();
+            busy = false;
+          }, 10600);
+          return;
+        }
 
+        const fallbackName = "Прайс магазина Убираемся легко.xlsx";
         const xhr = new XMLHttpRequest();
         xhr.open("GET", url);
         xhr.responseType = "blob";
@@ -2500,12 +2524,10 @@
           }
           progress.markDownload(100);
           progress.setPercent(100);
-          const name = isMobileUa()
-            ? "price-ubiraemsya-legko.xlsx"
-            : filenameFromDisposition(
-                xhr.getResponseHeader("Content-Disposition"),
-                fallbackName
-              );
+          const name = filenameFromDisposition(
+            xhr.getResponseHeader("Content-Disposition"),
+            fallbackName
+          );
           saveBlob(xhr.response, name);
           window.setTimeout(() => {
             progress.hide();
