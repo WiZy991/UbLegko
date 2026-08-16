@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import re
+import uuid
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import admin, messages
@@ -75,6 +76,19 @@ HEADER_ALIASES = {
         'штрихкод',
         'штрих-код',
         'ean',
+    },
+    'unit': {
+        'unit',
+        'ед',
+        'ед.',
+        'ед.изм',
+        'ед. изм',
+        'ед. изм.',
+        'ед измерение',
+        'ед. измерения',
+        'единица',
+        'единица измерения',
+        'единицы измерения',
     },
     'category': {
         'category',
@@ -963,6 +977,8 @@ class ProductAdmin(admin.ModelAdmin):
             if not image or not image.image:
                 return JsonResponse({'ok': False, 'error': 'Фото не найдено'}, status=404)
 
+            from .image_utils import clear_card_image
+
             old_main_name = None
             old_main_content = None
             if product.image:
@@ -972,16 +988,29 @@ class ProductAdmin(admin.ModelAdmin):
                     old_main_name = Path(product.image.name).name
                 finally:
                     product.image.close()
+                # Убираем старое главное с диска, чтобы не пересечься по имени файла
+                product.image.delete(save=False)
 
             image.image.open('rb')
             try:
                 new_content = image.image.read()
-                new_name = Path(image.image.name).name
+                new_suffix = Path(image.image.name).suffix or '.jpg'
+                new_stem = Path(image.image.name).stem or 'photo'
             finally:
                 image.image.close()
 
-            product.image.save(new_name, ContentFile(new_content), save=True)
-            self._ensure_product_card_image(product)
+            # Новое уникальное имя → новый URL на витрине (и полное фото, и превью)
+            new_name = f'{new_stem}-{uuid.uuid4().hex[:10]}{new_suffix}'
+            product.image.save(new_name, ContentFile(new_content), save=False)
+            if product.image_card:
+                clear_card_image(product)
+            product.save()
+            if not self._ensure_product_card_image(product):
+                return self._product_photos_response(
+                    product,
+                    'Главное фото сохранено, но превью каталога не создалось — проверьте логи',
+                )
+
             image.image.delete(save=False)
             image.delete()
 
@@ -994,7 +1023,10 @@ class ProductAdmin(admin.ModelAdmin):
                 )
                 order = 0 if next_order is None else next_order + 1
                 gallery = ProductImage(product=product, sort_order=order)
-                gallery.image.save(old_main_name, ContentFile(old_main_content), save=True)
+                old_stem = Path(old_main_name).stem or 'photo'
+                old_suffix = Path(old_main_name).suffix or '.jpg'
+                gallery_name = f'{old_stem}-{uuid.uuid4().hex[:10]}{old_suffix}'
+                gallery.image.save(gallery_name, ContentFile(old_main_content), save=True)
 
             return self._product_photos_response(product, 'Главное фото заменено')
 
@@ -1087,7 +1119,7 @@ class ProductAdmin(admin.ModelAdmin):
             'price': price,
             'old_price': old_price,
             'description': description,
-            'unit': '',
+            'unit': (row.get('unit') or '').strip(),
             'country': (row.get('country') or '').strip(),
             'sku': '',
             'barcode': '',
@@ -1104,6 +1136,9 @@ class ProductAdmin(admin.ModelAdmin):
             product = Product.objects.filter(name=data['name']).first()
         if product:
             for key, value in data.items():
+                # Пустые код/штрихкод/ед. не затирают уже заполненные значения
+                if key in {'sku', 'barcode', 'unit'} and value == '':
+                    continue
                 setattr(product, key, value)
             product.save()
             return False

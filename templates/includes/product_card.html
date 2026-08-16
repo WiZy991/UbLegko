@@ -75,6 +75,9 @@
         <span class="price">{{ product.price|floatformat:0 }} руб</span>
         <span class="price-old">{% if product.old_price %}{{ product.old_price|floatformat:0 }} руб{% endif %}</span>
       </div>
+      {% if product.unit %}
+        <span class="product-card__unit" title="Ед. измерения">Ед.: {{ product.unit }}</span>
+      {% endif %}
       {% if product.is_promo %}
         <img
           class="badge-promo-img badge-promo-img--desktop"

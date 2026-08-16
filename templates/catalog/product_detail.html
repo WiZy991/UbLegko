@@ -145,6 +145,9 @@
           {% if product.sku %}
             <span class="product-detail__sku">Артикул: {{ product.sku }}</span>
           {% endif %}
+          {% if product.unit %}
+            <span class="product-card__unit" title="Ед. измерения">Ед.: {{ product.unit }}</span>
+          {% endif %}
         </div>
         {% if product.description %}
           <div class="product-detail__description">{{ product.description }}</div>

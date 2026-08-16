@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import uuid
 from io import BytesIO
 from pathlib import Path
 
@@ -108,14 +109,17 @@ def ensure_card_image(instance, *, force: bool = False) -> bool:
         )
         return False
 
+    # Уникальное имя: иначе после смены главного URL превью тот же → браузер/CDN
+    # отдают старую картинку, хотя в админке уже новое полное фото.
     stem = slugify(Path(instance.image.name).stem, allow_unicode=False) or 'photo'
-    filename = f'{stem}-{instance.pk or "new"}.{ext}'
+    filename = f'{stem}-{instance.pk or "new"}-{uuid.uuid4().hex[:10]}.{ext}'
 
     if instance.image_card:
         try:
             instance.image_card.delete(save=False)
         except Exception:
             pass
+        instance.image_card = None
 
     try:
         instance.image_card.save(filename, ContentFile(data), save=False)
