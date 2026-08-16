@@ -154,7 +154,11 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     )
     inlines = [OrderItemInline]
     list_per_page = 50
-    actions = ('export_delivery_sheet', 'delete_selected')
+    actions = (
+        'export_delivery_sheet',
+        'export_orders_sheet',
+        'delete_selected',
+    )
 
     @admin.action(description='Сформировать лист доставки')
     def export_delivery_sheet(self, request, queryset):
@@ -192,13 +196,75 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         ws.freeze_panes = 'A2'
         ws.auto_filter.ref = f'A1:D{ws.max_row}'
 
+        return self._xlsx_response(
+            wb,
+            download_name=f'Лист доставки на {timezone.localtime().strftime("%d.%m.%y")}.xlsx',
+            ascii_fallback=f'delivery_list_{timezone.localtime().strftime("%d.%m.%y")}.xlsx',
+        )
+
+    @admin.action(description='Сформировать лист заявок')
+    def export_orders_sheet(self, request, queryset):
+        orders = list(
+            queryset.order_by('created_at', 'id').prefetch_related('items')
+        )
+        if not orders:
+            self.message_user(request, 'Не выбрано ни одной заявки', level=messages.WARNING)
+            return None
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Лист заявок'
+        headers = (
+            'Имя',
+            'Телефон',
+            'Адрес',
+            'Товары',
+            'Количество',
+            'Общая сумма',
+        )
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+
+        for order in orders:
+            items = list(order.items.all())
+            products = '\n'.join(
+                (item.product_name or '').strip() or '—' for item in items
+            ) or '—'
+            quantities = '\n'.join(str(item.quantity) for item in items) or '0'
+            row = (
+                (order.full_name or '').strip(),
+                (order.phone or '').strip(),
+                self._delivery_address_for_sheet(order),
+                products,
+                quantities,
+                f'{order.total:.0f} руб',
+            )
+            ws.append(row)
+            for cell in ws[ws.max_row]:
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+
+        ws.column_dimensions['A'].width = 24
+        ws.column_dimensions['B'].width = 18
+        ws.column_dimensions['C'].width = 42
+        ws.column_dimensions['D'].width = 40
+        ws.column_dimensions['E'].width = 14
+        ws.column_dimensions['F'].width = 14
+        ws.freeze_panes = 'A2'
+        ws.auto_filter.ref = f'A1:F{ws.max_row}'
+
+        return self._xlsx_response(
+            wb,
+            download_name=f'Лист заявок на {timezone.localtime().strftime("%d.%m.%y")}.xlsx',
+            ascii_fallback=f'orders_list_{timezone.localtime().strftime("%d.%m.%y")}.xlsx',
+        )
+
+    @staticmethod
+    def _xlsx_response(wb, *, download_name, ascii_fallback):
         buffer = io.BytesIO()
         wb.save(buffer)
         buffer.seek(0)
-
-        date_label = timezone.localtime().strftime('%d.%m.%y')
-        download_name = f'Лист доставки на {date_label}.xlsx'
-        ascii_fallback = f'delivery_list_{timezone.localtime().strftime("%d.%m.%y")}.xlsx'
         response = HttpResponse(
             buffer.getvalue(),
             content_type=(
@@ -417,6 +483,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     ordering = ('-created_at',)
     date_hierarchy = 'created_at'
     list_per_page = 50
+    actions = ('export_requests_sheet', 'resend_email', 'delete_selected')
 
     def get_urls(self):
         urls = super().get_urls()
@@ -522,7 +589,58 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    actions = ('resend_email',)
+    @admin.action(description='Сформировать лист запросов')
+    def export_requests_sheet(self, request, queryset):
+        requests_list = list(queryset.order_by('created_at', 'id'))
+        if not requests_list:
+            self.message_user(request, 'Не выбрано ни одного запроса', level=messages.WARNING)
+            return None
+
+        wb = Workbook()
+        ws = wb.active
+        ws.title = 'Лист запросов'
+        headers = ('Имя', 'Телефон', 'Способ связи', 'Содержание запроса')
+        ws.append(headers)
+        for cell in ws[1]:
+            cell.font = Font(bold=True)
+            cell.alignment = Alignment(vertical='center', wrap_text=True)
+
+        for obj in requests_list:
+            row = (
+                (obj.full_name or '').strip(),
+                (obj.phone or '').strip(),
+                (obj.contact_method or '').strip(),
+                (obj.problem or '').strip(),
+            )
+            ws.append(row)
+            for cell in ws[ws.max_row]:
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+
+        ws.column_dimensions['A'].width = 24
+        ws.column_dimensions['B'].width = 18
+        ws.column_dimensions['C'].width = 22
+        ws.column_dimensions['D'].width = 50
+        ws.freeze_panes = 'A2'
+        ws.auto_filter.ref = f'A1:D{ws.max_row}'
+
+        buffer = io.BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+
+        date_label = timezone.localtime().strftime('%d.%m.%y')
+        download_name = f'Лист запросов на {date_label}.xlsx'
+        ascii_fallback = f'requests_list_{timezone.localtime().strftime("%d.%m.%y")}.xlsx'
+        response = HttpResponse(
+            buffer.getvalue(),
+            content_type=(
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            ),
+        )
+        response['Content-Disposition'] = (
+            f'attachment; filename="{ascii_fallback}"; '
+            f"filename*=UTF-8''{quote(download_name)}"
+        )
+        return response
 
     @admin.action(description='Отправить письмо на почту магазина ещё раз')
     def resend_email(self, request, queryset):
