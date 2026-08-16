@@ -12,7 +12,7 @@ from django.db.models import Q, QuerySet
 
 from .models import Product
 
-DEFAULT_LIMIT = 8
+DEFAULT_LIMIT = None  # без ограничения: все товары с общей группой рекомендации
 
 STOP_WORDS = (
     'бумага',
@@ -256,11 +256,13 @@ def products_by_recommendation_codes(
     product: Product,
     *,
     exclude_ids: set[int] | None = None,
-    limit: int = DEFAULT_LIMIT,
+    limit: int | None = DEFAULT_LIMIT,
 ) -> list[Product]:
     """Товары, у которых есть хотя бы один общий номер рекомендации."""
     codes = product.get_recommendation_code_set()
-    if not codes or limit <= 0:
+    if not codes:
+        return []
+    if limit is not None and limit <= 0:
         return []
 
     exclude = set(exclude_ids or ()) | {product.id}
@@ -275,14 +277,15 @@ def products_by_recommendation_codes(
     picked: list[Product] = []
     seen = set(exclude)
     own = codes
-    for candidate in qs[: max(limit * 4, 40)]:
+    candidates = qs if limit is None else qs[: max(limit * 4, 40)]
+    for candidate in candidates:
         if candidate.id in seen or _is_stop_product(candidate):
             continue
         if not (own & candidate.get_recommendation_code_set()):
             continue
         seen.add(candidate.id)
         picked.append(candidate)
-        if len(picked) >= limit:
+        if limit is not None and len(picked) >= limit:
             break
     return picked
 
@@ -416,17 +419,19 @@ def _chemistry_for_accessory(product: Product, exclude: set[int], limit: int) ->
     return picked
 
 
-def get_recommendations_for_product(product: Product, limit: int = DEFAULT_LIMIT) -> RecommendationSet:
+def get_recommendations_for_product(
+    product: Product, limit: int | None = DEFAULT_LIMIT
+) -> RecommendationSet:
     """Только товары с общими номерами «Рекомендация» из админки."""
     coded = products_by_recommendation_codes(product, limit=limit)
-    return RecommendationSet(similar=[], bought_together=coded[:limit])
+    return RecommendationSet(similar=[], bought_together=coded)
 
 
 def get_recommendations_for_products(
     products: Iterable[Product],
     *,
     exclude_ids: Iterable[int] | None = None,
-    limit: int = DEFAULT_LIMIT,
+    limit: int | None = DEFAULT_LIMIT,
 ) -> list[Product]:
     """Для корзины — только по общим номерам рекомендации."""
     exclude = set(exclude_ids or [])
@@ -435,16 +440,19 @@ def get_recommendations_for_products(
 
     for product in products:
         seen.add(product.id)
+        remaining = None if limit is None else max(0, limit - len(collected))
+        if remaining is not None and remaining <= 0:
+            break
         coded = products_by_recommendation_codes(
             product,
             exclude_ids=seen,
-            limit=limit - len(collected),
+            limit=remaining,
         )
         for rec in coded:
             if rec.id in seen:
                 continue
             seen.add(rec.id)
             collected.append(rec)
-            if len(collected) >= limit:
-                return collected[:limit]
-    return collected[:limit]
+            if limit is not None and len(collected) >= limit:
+                return collected
+    return collected

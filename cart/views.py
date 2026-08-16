@@ -36,7 +36,6 @@ def cart_detail(request):
     recommendations = get_recommendations_for_products(
         cart_products,
         exclude_ids=cart.product_ids(),
-        limit=8,
     )
     attach_price_per_liter([*cart_products, *recommendations])
     favorite_ids = set()
