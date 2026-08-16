@@ -144,6 +144,16 @@ class ProductDetailView(DetailView):
             .prefetch_related('images')
         )
 
+    def get(self, request, *args, **kwargs):
+        response = super().get(request, *args, **kwargs)
+        try:
+            from core.analytics import record_product_view
+
+            record_product_view(request, self.object)
+        except Exception:
+            pass
+        return response
+
     def get_user_review(self):
         if not self.request.user.is_authenticated:
             return None

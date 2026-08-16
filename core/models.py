@@ -92,3 +92,27 @@ class SiteSettings(models.Model):
     def load(cls):
         obj, _ = cls.objects.get_or_create(pk=1)
         return obj
+
+
+class ProductPageView(models.Model):
+    """Просмотр карточки товара (для статистики в админке)."""
+
+    product = models.ForeignKey(
+        'catalog.Product',
+        on_delete=models.CASCADE,
+        related_name='page_views',
+        verbose_name='Товар',
+    )
+    visitor_key = models.CharField('Посетитель', max_length=64, db_index=True)
+    viewed_at = models.DateTimeField('Когда', auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Статистика'
+        verbose_name_plural = 'Статистика'
+        indexes = [
+            models.Index(fields=['viewed_at', 'product']),
+            models.Index(fields=['product', 'visitor_key', 'viewed_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.product_id} @ {self.viewed_at:%Y-%m-%d %H:%M}'
