@@ -29,7 +29,11 @@ COL_WIDTHS = {
     'H': 14,
 }
 NUM_COLS = 8
-ROW_HEIGHT = 100
+ROW_HEIGHT_MIN = 22
+ROW_HEIGHT_MIN_WITH_PHOTO = 52
+ROW_HEIGHT_MAX = 280
+LINE_HEIGHT_PT = 13.5
+ROW_PADDING_PT = 10
 CATEGORY_ROW_HEIGHT = 26
 PHOTO_THUMB = (78, 78)
 BADGE_THUMB = (40, 40)
@@ -49,6 +53,39 @@ def _col_width_px(excel_width: float) -> int:
 
 def _row_height_px(points: float) -> int:
     return max(1, int(points * 96 / 72))
+
+
+def _wrapped_line_count(text: str, excel_width: float) -> int:
+    """Грубая оценка числа строк при wrap_text в Excel."""
+    text = (text or '').replace('\r\n', '\n').replace('\r', '\n')
+    if not text.strip():
+        return 1
+    # Ширина колонки ≈ число символов «0»; кириллица чуть шире
+    chars_per_line = max(4.0, excel_width * 0.92)
+    total = 0
+    for paragraph in text.split('\n'):
+        if paragraph == '':
+            total += 1
+            continue
+        total += max(1, int((len(paragraph) + chars_per_line - 1) // chars_per_line))
+    return max(1, total)
+
+
+def _row_height_for_content(
+    name: str,
+    description: str,
+    *,
+    has_photo: bool,
+) -> float:
+    """Высота строки по названию/описанию: мало текста — низкая, много — высокая."""
+    lines = max(
+        _wrapped_line_count(name, COL_WIDTHS['C']),
+        _wrapped_line_count(description, COL_WIDTHS['D']),
+        1,
+    )
+    height = lines * LINE_HEIGHT_PT + ROW_PADDING_PT
+    min_h = ROW_HEIGHT_MIN_WITH_PHOTO if has_photo else ROW_HEIGHT_MIN
+    return max(min_h, min(ROW_HEIGHT_MAX, height))
 
 
 def _badge_akciya_path() -> Path | None:
@@ -179,6 +216,10 @@ def _write_product_row(
 ) -> None:
     is_promo = bool(product.is_promo or (product.old_price and product.old_price > 0))
     path = _product_image_path(product)
+    name = product.name or ''
+    description = product.description or ''
+    row_height = _row_height_for_content(name, description, has_photo=bool(path))
+
     if path:
         result = _thumb_bytes(path, PHOTO_THUMB)
         if result:
@@ -190,7 +231,7 @@ def _write_product_row(
                 col_idx=1,
                 row_idx=row_idx,
                 col_width_excel=COL_WIDTHS['A'],
-                row_height_pt=ROW_HEIGHT,
+                row_height_pt=row_height,
                 img_w=iw,
                 img_h=ih,
             )
@@ -205,7 +246,7 @@ def _write_product_row(
             col_idx=6,
             row_idx=row_idx,
             col_width_excel=COL_WIDTHS['F'],
-            row_height_pt=ROW_HEIGHT,
+            row_height_pt=row_height,
             img_w=iw,
             img_h=ih,
         )
@@ -213,8 +254,8 @@ def _write_product_row(
     values = [
         '',
         product.sku or '',
-        product.name,
-        product.description or '',
+        name,
+        description,
         float(product.price) if product.price is not None else '',
         '',
         float(product.rating) if product.rating is not None else '',
@@ -225,7 +266,7 @@ def _write_product_row(
         cell.border = thin
         cell.alignment = center if col in (1, 2, 5, 6, 7, 8) else wrap
 
-    ws.row_dimensions[row_idx].height = ROW_HEIGHT
+    ws.row_dimensions[row_idx].height = row_height
 
 
 def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
