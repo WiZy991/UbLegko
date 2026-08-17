@@ -80,7 +80,9 @@
         {% if form.site_feedback.errors %}<div class="messages"><li class="error">{{ form.site_feedback.errors|striptags }}</li></div>{% endif %}
       </div>
 
-      <button class="btn btn-primary" type="submit">Отправить заявку</button>
+      {% include "includes/privacy_consent.html" with consent_id="privacy-consent-checkout" checked=form.privacy_consent.value error=form.privacy_consent.errors.0 %}
+
+      <button class="btn btn-primary" type="submit" data-privacy-submit disabled>Отправить заявку</button>
     </form>
   </div>
   <div class="content-card">

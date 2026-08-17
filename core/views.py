@@ -26,6 +26,16 @@ def contacts(request):
     )
 
 
+def privacy(request):
+    return render(
+        request,
+        'core/privacy.html',
+        {
+            'site': SiteSettings.load(),
+        },
+    )
+
+
 @require_POST
 def set_city(request):
     city = get_object_or_404(City, pk=request.POST.get('city_id'), is_active=True)

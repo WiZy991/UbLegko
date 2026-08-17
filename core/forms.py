@@ -43,6 +43,13 @@ class StainHelpForm(forms.Form):
             'placeholder': 'Звонок, WhatsApp, Telegram, MAX…',
         }),
     )
+    privacy_consent = forms.BooleanField(
+        label='Согласие с политикой конфиденциальности',
+        required=True,
+        error_messages={
+            'required': 'Нужно согласие с политикой конфиденциальности',
+        },
+    )
 
     def clean_phone(self):
         return clean_ru_phone(self.cleaned_data['phone'])

@@ -9,11 +9,13 @@ class StaticViewSitemap(Sitemap):
     protocol = None
 
     def items(self):
-        return ['home', 'contacts']
+        return ['home', 'contacts', 'privacy']
 
     def location(self, item):
         if item == 'home':
             return '/'
+        if item == 'privacy':
+            return '/privacy/'
         return '/contacts/'
 
 

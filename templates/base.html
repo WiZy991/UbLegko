@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260816unit2">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260817unitmobile">
   <link rel="stylesheet" href="{% static 'css/pill_nav_topbar.css' %}?v=12">
   {% block extra_css %}{% endblock %}
   {% block json_ld %}
@@ -376,6 +376,7 @@
           <ul class="site-footer__nav">
             <li><a class="site-footer__link" href="{% url 'catalog:home' %}">Каталог</a></li>
             <li><a class="site-footer__link" href="{% url 'core:contacts' %}">Контакты</a></li>
+            <li><a class="site-footer__link" href="{% url 'core:privacy' %}">Политика конфиденциальности</a></li>
             <li><a class="site-footer__link" href="{% url 'cart:detail' %}">Корзина</a></li>
             {% if user.is_authenticated %}
               <li><a class="site-footer__link" href="{% url 'accounts:profile' %}">Личный кабинет</a></li>
@@ -478,13 +479,15 @@
           >
           <span class="field-error" data-error-for="contact_method" hidden></span>
         </label>
+        {% include "includes/privacy_consent.html" with consent_id="privacy-consent-stain" %}
         <p class="stain-help-form__status" data-stain-help-status hidden></p>
-        <button class="btn btn-primary stain-help-form__submit" type="submit">Отправить</button>
+        <button class="btn btn-primary stain-help-form__submit" type="submit" data-privacy-submit disabled>Отправить</button>
       </form>
     </div>
   </div>
 
-  <script src="{% static 'js/main.js' %}?v=20260816xlsxandroid4"></script>  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+  <script src="{% static 'js/main.js' %}?v=20260817privacy"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
   <script src="{% static 'js/pill_nav_topbar.js' %}?v=10" defer></script>
   {% block extra_js %}{% endblock %}
 </body>

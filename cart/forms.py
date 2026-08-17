@@ -106,6 +106,13 @@ class CheckoutForm(forms.Form):
             'placeholder': 'Замечания/Недостатки/Что неудобно/Что нам улучшить?',
         }),
     )
+    privacy_consent = forms.BooleanField(
+        label='Согласие с политикой конфиденциальности',
+        required=True,
+        error_messages={
+            'required': 'Нужно согласие с политикой конфиденциальности',
+        },
+    )
 
     def __init__(self, *args, user=None, **kwargs):
         self.user = user

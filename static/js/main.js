@@ -1895,6 +1895,27 @@
   });
   syncCheckoutDelivery();
 
+  function bindPrivacyConsent(root) {
+    if (!root) return;
+    const checkbox = root.querySelector("[data-privacy-consent]");
+    const submitBtn = root.querySelector("[data-privacy-submit], button[type='submit']");
+    if (!checkbox || !submitBtn) return;
+
+    function sync() {
+      submitBtn.disabled = !checkbox.checked;
+    }
+
+    checkbox.addEventListener("change", sync);
+    root.querySelectorAll("[data-privacy-policy-link]").forEach((link) => {
+      link.addEventListener("click", (event) => {
+        event.stopPropagation();
+      });
+    });
+    sync();
+  }
+
+  document.querySelectorAll("[data-checkout-form], [data-stain-help-form]").forEach(bindPrivacyConsent);
+
   function enhanceSelect(select) {
     if (!select || select.dataset.customSelect === "1") return;
     select.dataset.customSelect = "1";
@@ -2156,9 +2177,15 @@
 
     const statusEl = form.querySelector("[data-stain-help-status]");
     const submitBtn = form.querySelector(".stain-help-form__submit");
+    const consentCheckbox = form.querySelector("[data-privacy-consent]");
     const nameInput = form.querySelector("[name='full_name']");
     const phoneInput = form.querySelector("[name='phone']");
     let lastFocus = null;
+
+    function syncConsentSubmit() {
+      if (!submitBtn) return;
+      submitBtn.disabled = !(consentCheckbox && consentCheckbox.checked);
+    }
 
     function applyPrefill() {
       const name = (form.getAttribute("data-prefill-name") || "").trim();
@@ -2260,8 +2287,16 @@
         showFieldError("contact_method", "Укажите удобный способ связи");
         hasError = true;
       }
-      if (hasError) {
+      if (!consentCheckbox || !consentCheckbox.checked) {
+        hasError = true;
         if (statusEl) {
+          statusEl.textContent = "Нужно согласие с политикой конфиденциальности";
+          statusEl.classList.add("is-error");
+          statusEl.hidden = false;
+        }
+      }
+      if (hasError) {
+        if (statusEl && (!statusEl.textContent || statusEl.hidden)) {
           statusEl.textContent = "Проверьте поля и попробуйте ещё раз.";
           statusEl.classList.add("is-error");
           statusEl.hidden = false;
@@ -2313,6 +2348,7 @@
         const savedPhone = phoneInput ? phoneInput.value : "";
         form.reset();
         applyPrefill();
+        syncConsentSubmit();
         if (nameInput && !nameInput.value && savedName) nameInput.value = savedName;
         if (phoneInput && !phoneInput.value && savedPhone) {
           phoneInput.value = formatPhoneMask(savedPhone);
@@ -2334,8 +2370,8 @@
         }
       } finally {
         if (submitBtn) {
-          submitBtn.disabled = false;
           submitBtn.textContent = "Отправить";
+          syncConsentSubmit();
         }
       }
     });

@@ -1,0 +1,28 @@
+{# Обязательное согласие с политикой конфиденциальности #}
+{% with consent_id=consent_id|default:'privacy-consent' %}
+<div class="privacy-consent{% if error %} is-invalid{% endif %}">
+  <input
+    class="privacy-consent__input"
+    type="checkbox"
+    name="privacy_consent"
+    id="{{ consent_id }}"
+    value="1"
+    data-privacy-consent
+    {% if checked %}checked{% endif %}
+  >
+  <label class="privacy-consent__label" for="{{ consent_id }}">
+    Я согласен(а) с
+    <a
+      class="privacy-consent__link link-accent"
+      href="{% url 'core:privacy' %}"
+      target="_blank"
+      rel="noopener noreferrer"
+      data-privacy-policy-link
+    >политикой</a>
+    конфиденциальности
+  </label>
+  {% if error %}
+    <p class="privacy-consent__error">{{ error }}</p>
+  {% endif %}
+</div>
+{% endwith %}
