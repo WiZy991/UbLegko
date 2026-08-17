@@ -3960,6 +3960,12 @@ select.form-input {
     grid-template-columns: 1fr;
   }
 
+  /* На карточке товара мобильная шторка категорий/фильтров не нужна */
+  .layout--product > .catalog-nav-anchor,
+  .layout--product > .catalog-nav {
+    display: none !important;
+  }
+
   /* Компактная липкая шапка на мобиле */
   :root {
     --header-sticky-height: 100px;
