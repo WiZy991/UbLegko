@@ -5,7 +5,7 @@ from django.urls import include, path
 
 from cart.views import favorites
 from catalog.sitemaps import CategorySitemap, ProductSitemap, StaticViewSitemap
-from core.views_seo import robots_txt
+from core.views_seo import robots_txt, yandex_verify
 
 admin.site.site_header = 'Убираемся Легко — админпанель'
 admin.site.site_title = 'Убираемся Легко'
@@ -20,6 +20,11 @@ sitemaps = {
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('robots.txt', robots_txt, name='robots_txt'),
+    path(
+        'yandex_a48eb77a88713753.html',
+        yandex_verify,
+        name='yandex_verify',
+    ),
     path(
         'sitemap.xml',
         sitemap,
