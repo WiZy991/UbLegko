@@ -1,5 +1,8 @@
-from django.http import HttpResponse
+from django.http import FileResponse, Http404, HttpResponse
 from django.views.decorators.http import require_GET
+from pathlib import Path
+
+from django.conf import settings
 
 from catalog.seo import site_origin
 
@@ -44,3 +47,22 @@ YANDEX_VERIFY_HTML = (
 def yandex_verify(request):
     """HTML-файл для подтверждения прав в Яндекс.Вебмастере."""
     return HttpResponse(YANDEX_VERIFY_HTML, content_type='text/html; charset=UTF-8')
+
+
+def _first_existing(*paths: Path) -> Path | None:
+    for path in paths:
+        if path.is_file():
+            return path
+    return None
+
+
+@require_GET
+def favicon_ico(request):
+    """Браузеры (особенно мобильный Chrome) запрашивают /favicon.ico с корня."""
+    path = _first_existing(
+        Path(settings.STATIC_ROOT) / 'img' / 'favicon.ico',
+        Path(settings.BASE_DIR) / 'static' / 'img' / 'favicon.ico',
+    )
+    if not path:
+        raise Http404()
+    return FileResponse(path.open('rb'), content_type='image/x-icon')
