@@ -3960,9 +3960,11 @@ select.form-input {
     grid-template-columns: 1fr;
   }
 
-  /* На карточке товара мобильная шторка категорий/фильтров не нужна */
+  /* На карточке товара и в избранном мобильная шторка категорий/фильтров не нужна */
   .layout--product > .catalog-nav-anchor,
-  .layout--product > .catalog-nav {
+  .layout--product > .catalog-nav,
+  .layout--favorites > .catalog-nav-anchor,
+  .layout--favorites > .catalog-nav {
     display: none !important;
   }
 

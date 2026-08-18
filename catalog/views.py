@@ -20,6 +20,7 @@ from .pack_pricing import attach_price_per_liter
 from .recommendations import get_recommendations_for_product
 from .search_utils import filter_products_by_query, rank_prefix_first
 from . import seo as seo_mod
+from core.analytics import record_search_query
 from core.models import SiteSettings
 
 
@@ -286,6 +287,13 @@ class SearchView(CatalogMixin, ListView):
     template_name = 'catalog/search.html'
     context_object_name = 'products'
     paginate_by = 48
+
+    def get(self, request, *args, **kwargs):
+        q = (request.GET.get('q') or '').strip()
+        page = (request.GET.get('page') or '').strip()
+        if q and page in {'', '1'}:
+            record_search_query(request, q)
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         qs = Product.objects.filter(is_visible=True).select_related('category').prefetch_related('images')

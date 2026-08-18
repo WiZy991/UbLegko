@@ -116,3 +116,21 @@ class ProductPageView(models.Model):
 
     def __str__(self):
         return f'{self.product_id} @ {self.viewed_at:%Y-%m-%d %H:%M}'
+
+
+class SearchQueryLog(models.Model):
+    """Запрос из поисковой строки на сайте. Хранится 7 дней."""
+
+    query = models.CharField('Запрос', max_length=200)
+    query_norm = models.CharField('Запрос (нормализованный)', max_length=200, db_index=True)
+    created_at = models.DateTimeField('Когда', auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Статистика по поиску'
+        verbose_name_plural = 'Статистика по поиску'
+        indexes = [
+            models.Index(fields=['query_norm', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.query} @ {self.created_at:%Y-%m-%d %H:%M}'

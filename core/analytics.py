@@ -78,3 +78,44 @@ def record_product_view(request, product) -> None:
         ProductPageView.objects.create(product_id=product.pk, visitor_key=key)
     except Exception:
         logger.exception('Не удалось записать просмотр product_id=%s', getattr(product, 'pk', None))
+
+
+SEARCH_STATS_DAYS = 7
+SEARCH_QUERY_MAX_LEN = 200
+
+
+def normalize_search_query(raw: str) -> str:
+    text = ' '.join((raw or '').split())
+    return text.casefold()[:SEARCH_QUERY_MAX_LEN]
+
+
+def prune_old_search_queries() -> int:
+    """Удаляет только записи старше 7 дней."""
+    from core.models import SearchQueryLog
+
+    cutoff = timezone.now() - timedelta(days=SEARCH_STATS_DAYS)
+    deleted, _ = SearchQueryLog.objects.filter(created_at__lt=cutoff).delete()
+    return deleted
+
+
+def record_search_query(request, raw: str) -> None:
+    """Пишет поисковый запрос с витрины. Ошибки не ломают поиск."""
+    try:
+        query = ' '.join((raw or '').split())[:SEARCH_QUERY_MAX_LEN]
+        if not query:
+            return
+        if _is_bot(request):
+            return
+        user = getattr(request, 'user', None)
+        if user is not None and user.is_authenticated and (user.is_staff or user.is_superuser):
+            return
+
+        from core.models import SearchQueryLog
+
+        prune_old_search_queries()
+        SearchQueryLog.objects.create(
+            query=query,
+            query_norm=normalize_search_query(query),
+        )
+    except Exception:
+        logger.exception('Не удалось записать поисковый запрос')
