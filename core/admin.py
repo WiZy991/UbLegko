@@ -15,6 +15,7 @@ from .models import City, ProductPageView, SearchQueryLog, SiteSettings
 STATS_FILTER_SESSION_KEY = 'admin_productpageview_stats_filter'
 
 STATS_PERIODS = (
+    ('today', 'Сегодня', 1),
     ('week', 'Неделя', 7),
     ('month', 'Месяц', 30),
     ('quarter', 'Квартал', 90),
