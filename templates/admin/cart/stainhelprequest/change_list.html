@@ -3,8 +3,8 @@
 
 {% block extrahead %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=11">
-  <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=7"></script>
+  <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=12">
+  <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=8"></script>
 {% endblock %}
 
 {% block content_title %}
@@ -12,6 +12,25 @@
 {% endblock %}
 
 {% block result_list %}
+  <div
+    class="stain-help-auto-toggle"
+    data-stain-help-auto-url="{{ stain_help_auto_modal_url }}"
+  >
+    <label class="stain-help-auto-toggle__label">
+      <input
+        type="checkbox"
+        class="stain-help-auto-toggle__input"
+        {% if stain_help_auto_modal %}checked{% endif %}
+        {% if not can_toggle_stain_help_auto_modal %}disabled{% endif %}
+      >
+      <span>Активировать автоматически модальное окно</span>
+    </label>
+    <p class="stain-help-auto-toggle__hint">
+      Если включено, посетитель один раз за визит увидит форму «Что-то не отмывается» при входе на сайт.
+      После закрытия и при переходе по страницам окно само больше не открывается — только по нажатию на слоган.
+    </p>
+    <p class="stain-help-auto-toggle__status" hidden></p>
+  </div>
   <p class="inbox-expandable-hint">
     <strong>▼</strong> — полный текст запроса. Статус — кнопками сразу.
   </p>

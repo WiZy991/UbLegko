@@ -2234,6 +2234,7 @@
       document.body.style.overflow = "hidden";
       const first = form.querySelector("[name='problem']");
       if (first) first.focus();
+      markAutoShown();
     }
 
     function closeModal() {
@@ -2242,7 +2243,31 @@
       if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
     }
 
+    const AUTO_SHOWN_KEY = "ublegko_stain_help_auto_shown";
+
+    function markAutoShown() {
+      document.cookie = AUTO_SHOWN_KEY + "=1; path=/; SameSite=Lax";
+    }
+
+    function wasAutoShown() {
+      return new RegExp("(?:^|; )" + AUTO_SHOWN_KEY + "=1(?:;|$)").test(document.cookie);
+    }
+
+    function shouldAutoOpen() {
+      if (modal.getAttribute("data-stain-help-auto") !== "1") return false;
+      if (wasAutoShown()) return false;
+      const ua = navigator.userAgent || "";
+      if (/bot|crawl|spider|slurp|yandex|google/i.test(ua)) return false;
+      return true;
+    }
+
     applyPrefill();
+
+    if (shouldAutoOpen()) {
+      window.setTimeout(() => {
+        if (modal.hidden && shouldAutoOpen()) openModal();
+      }, 800);
+    }
 
     document.querySelectorAll("[data-stain-help-open]").forEach((btn) => {
       btn.addEventListener("click", (event) => {

@@ -75,6 +75,15 @@ class SiteSettings(models.Model):
         blank=True,
         default='https://max.ru/join/5n4w4WgqNIhX-fh4J5fjF5-NeJ_q728An7crUD3gF08',
     )
+    stain_help_auto_modal = models.BooleanField(
+        'Активировать автоматически модальное окно',
+        default=False,
+        help_text=(
+            'Если включено, посетитель один раз за визит увидит форму '
+            '«Что-то не отмывается» сразу при входе на сайт. '
+            'Дальше окно открывается только по нажатию на слоган.'
+        ),
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

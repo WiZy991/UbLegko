@@ -173,4 +173,73 @@
     if (!status) return;
     saveStatus(group, status);
   });
+
+  function bindAutoModalToggle() {
+    var box = document.querySelector('.stain-help-auto-toggle');
+    if (!box) return;
+    var input = box.querySelector('.stain-help-auto-toggle__input');
+    var statusEl = box.querySelector('.stain-help-auto-toggle__status');
+    var url = box.getAttribute('data-stain-help-auto-url');
+    if (!input || !url || input.disabled) return;
+
+    input.addEventListener('change', function () {
+      var enabled = input.checked;
+      box.classList.add('is-saving');
+      input.disabled = true;
+      if (statusEl) {
+        statusEl.hidden = true;
+        statusEl.textContent = '';
+        statusEl.classList.remove('is-ok', 'is-error');
+      }
+
+      fetch(url, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken'),
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({ enabled: enabled }),
+      })
+        .then(function (response) {
+          return response.json().then(function (data) {
+            return { ok: response.ok && data && data.ok, data: data || {} };
+          });
+        })
+        .then(function (result) {
+          if (!result.ok) {
+            input.checked = !enabled;
+            if (statusEl) {
+              statusEl.textContent = (result.data && result.data.error) || 'Не удалось сохранить';
+              statusEl.classList.add('is-error');
+              statusEl.hidden = false;
+            }
+            return;
+          }
+          input.checked = Boolean(result.data.enabled);
+          if (statusEl) {
+            statusEl.textContent = input.checked
+              ? 'Автопоказ включён'
+              : 'Автопоказ выключен';
+            statusEl.classList.add('is-ok');
+            statusEl.hidden = false;
+          }
+        })
+        .catch(function () {
+          input.checked = !enabled;
+          if (statusEl) {
+            statusEl.textContent = 'Не удалось сохранить';
+            statusEl.classList.add('is-error');
+            statusEl.hidden = false;
+          }
+        })
+        .finally(function () {
+          box.classList.remove('is-saving');
+          input.disabled = false;
+        });
+    });
+  }
+
+  bindAutoModalToggle();
 })();

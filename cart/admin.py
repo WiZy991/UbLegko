@@ -16,6 +16,8 @@ from django.utils.html import escape, format_html, mark_safe
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 
+from core.models import SiteSettings
+
 from .models import Favorite, Order, OrderItem, StainHelpRequest
 
 
@@ -489,12 +491,54 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         urls = super().get_urls()
         custom = [
             path(
+                'auto-modal/',
+                self.admin_site.admin_view(self.auto_modal_view),
+                name='cart_stainhelprequest_auto_modal',
+            ),
+            path(
                 '<path:object_id>/quick-status/',
                 self.admin_site.admin_view(self.quick_status_view),
                 name='cart_stainhelprequest_quick_status',
             ),
         ]
         return custom + urls
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['stain_help_auto_modal'] = bool(
+            SiteSettings.load().stain_help_auto_modal
+        )
+        extra_context['stain_help_auto_modal_url'] = reverse(
+            'admin:cart_stainhelprequest_auto_modal'
+        )
+        extra_context['can_toggle_stain_help_auto_modal'] = self.has_change_permission(
+            request
+        )
+        return super().changelist_view(request, extra_context)
+
+    def auto_modal_view(self, request):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self.has_change_permission(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        raw = payload.get('enabled')
+        if isinstance(raw, str):
+            enabled = raw.strip().lower() in {'1', 'true', 'on', 'yes'}
+        else:
+            enabled = bool(raw)
+
+        site = SiteSettings.load()
+        if site.stain_help_auto_modal != enabled:
+            site.stain_help_auto_modal = enabled
+            site.save(update_fields=['stain_help_auto_modal'])
+
+        return JsonResponse({'ok': True, 'enabled': site.stain_help_auto_modal})
 
     def quick_status_view(self, request, object_id):
         if request.method != 'POST':
@@ -647,7 +691,6 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         from django.template.loader import render_to_string
 
         from core.mail import send_shop_email
-        from core.models import SiteSettings
 
         site = SiteSettings.load()
         ok = 0

@@ -1,5 +1,56 @@
 /* Заявки / Запросы: статус, раскрытие, компактная таблица */
 
+.stain-help-auto-toggle {
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  background: #fff !important;
+  border: 1px solid #d6e4ea !important;
+  border-radius: 6px;
+}
+
+.stain-help-auto-toggle__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 600;
+  color: #111;
+  cursor: pointer;
+  user-select: none;
+}
+
+.stain-help-auto-toggle__input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.stain-help-auto-toggle__hint {
+  margin: 8px 0 0;
+  color: #555 !important;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.stain-help-auto-toggle__status {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.stain-help-auto-toggle__status.is-ok {
+  color: #0a7;
+}
+
+.stain-help-auto-toggle__status.is-error {
+  color: #c0392b;
+}
+
+.stain-help-auto-toggle.is-saving {
+  opacity: 0.75;
+}
+
 .inbox-expandable-hint {
   margin: 0 0 12px;
   padding: 10px 12px;
