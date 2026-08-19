@@ -1,21 +1,83 @@
 {% extends "admin/base_site.html" %}
 {% load i18n %}
 
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    .product-stats__periods {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 14px;
+    }
+    .product-stats__period {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border: 1px solid #c5d9e2;
+      border-radius: 999px;
+      background: #fff;
+      color: #123;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none !important;
+      line-height: 1.2;
+    }
+    .product-stats__period:hover {
+      background: #e8f6fb;
+      border-color: #00acd7;
+      color: #123;
+    }
+    .product-stats__period.is-active {
+      background: #00acd7;
+      border-color: #00acd7;
+      color: #fff;
+    }
+    .product-stats__filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+    .product-stats__filters label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .product-stats__reset {
+      margin-left: 4px;
+      color: #667;
+      font-size: 13px;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
 <div class="product-stats">
   <h1 style="margin-bottom: 16px;">Статистика просмотров карточек</h1>
 
-  <form method="get" class="product-stats__filters" style="display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin-bottom:20px;">
+  <div class="product-stats__periods" role="group" aria-label="Период">
+    {% for item in period_choices %}
+      <a
+        class="product-stats__period{% if period == item.key %} is-active{% endif %}"
+        href="?period={{ item.key }}&amp;date_from={{ item.date_from }}&amp;date_to={{ item.date_to }}"
+      >{{ item.label }}</a>
+    {% endfor %}
+  </div>
+
+  <form method="get" class="product-stats__filters">
     <div>
-      <label for="id_date_from" style="display:block; font-weight:600; margin-bottom:4px;">С даты</label>
-      <input id="id_date_from" type="date" name="date_from" value="{{ date_from }}" required>
+      <label for="id_date_from">С даты</label>
+      <input id="id_date_from" type="date" name="date_from" value="{{ date_from }}" required onchange="this.form.submit()">
     </div>
     <div>
-      <label for="id_date_to" style="display:block; font-weight:600; margin-bottom:4px;">По дату</label>
-      <input id="id_date_to" type="date" name="date_to" value="{{ date_to }}" required>
+      <label for="id_date_to">По дату</label>
+      <input id="id_date_to" type="date" name="date_to" value="{{ date_to }}" required onchange="this.form.submit()">
     </div>
     <div>
       <button type="submit" class="default" style="margin:0;">Показать</button>
+      <a class="product-stats__reset" href="?reset=1">Сбросить</a>
     </div>
   </form>
 
@@ -45,7 +107,12 @@
         {% for row in rows %}
         <tr class="{% cycle 'row1' 'row2' %}">
           <td>
-            {% if row.product__slug %}
+            {% if row.product_id %}
+              <a href="{% url 'admin:catalog_product_change' row.product_id %}">{{ row.product__name }}</a>
+              {% if row.product__slug %}
+                <a href="/product/{{ row.product__slug }}/" target="_blank" rel="noopener" title="Открыть на сайте">↗</a>
+              {% endif %}
+            {% elif row.product__slug %}
               <a href="/product/{{ row.product__slug }}/" target="_blank" rel="noopener">{{ row.product__name }}</a>
             {% else %}
               {{ row.product__name }}

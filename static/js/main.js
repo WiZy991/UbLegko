@@ -2246,11 +2246,20 @@
     const AUTO_SHOWN_KEY = "ublegko_stain_help_auto_shown";
 
     function markAutoShown() {
-      document.cookie = AUTO_SHOWN_KEY + "=1; path=/; SameSite=Lax";
+      try {
+        sessionStorage.setItem(AUTO_SHOWN_KEY, "1");
+      } catch (err) {
+        /* ignore quota / private mode */
+      }
+      document.cookie = AUTO_SHOWN_KEY + "=; path=/; max-age=0; SameSite=Lax";
     }
 
     function wasAutoShown() {
-      return new RegExp("(?:^|; )" + AUTO_SHOWN_KEY + "=1(?:;|$)").test(document.cookie);
+      try {
+        return sessionStorage.getItem(AUTO_SHOWN_KEY) === "1";
+      } catch (err) {
+        return false;
+      }
     }
 
     function shouldAutoOpen() {

@@ -1,13 +1,61 @@
 from datetime import datetime, time, timedelta
+from urllib.parse import urlencode
 
 from django.contrib import admin
 from django.db.models import Count
 from django.db.models.functions import TruncDate
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from .models import City, ProductPageView, SearchQueryLog, SiteSettings
+
+
+STATS_FILTER_SESSION_KEY = 'admin_productpageview_stats_filter'
+
+STATS_PERIODS = (
+    ('week', 'Неделя', 7),
+    ('month', 'Месяц', 30),
+    ('quarter', 'Квартал', 90),
+    ('halfyear', 'Полгода', 182),
+    ('year', 'Год', 365),
+)
+STATS_PERIOD_DAYS = {key: days for key, _label, days in STATS_PERIODS}
+
+
+def _stats_period_range(today, key):
+    days = STATS_PERIOD_DAYS.get(key)
+    if not days:
+        return None
+    return today - timedelta(days=days - 1), today
+
+
+def _stats_period_choices(today):
+    items = []
+    for key, label, _days in STATS_PERIODS:
+        start, end = _stats_period_range(today, key)
+        items.append({
+            'key': key,
+            'label': label,
+            'date_from': start.isoformat(),
+            'date_to': end.isoformat(),
+        })
+    return items
+
+
+def _stats_matching_period(today, date_from, date_to):
+    for key, _label, _days in STATS_PERIODS:
+        start, end = _stats_period_range(today, key)
+        if start == date_from and end == date_to:
+            return key
+    return ''
+
+
+def _stats_filter_redirect(params):
+    url = reverse('admin:core_productpageview_changelist')
+    query = urlencode({k: v for k, v in params.items() if v})
+    return redirect(f'{url}?{query}' if query else url)
 
 
 @admin.register(City)
@@ -53,19 +101,46 @@ class ProductPageViewAdmin(admin.ModelAdmin):
 
     def changelist_view(self, request, extra_context=None):
         today = timezone.localdate()
-        default_from = today - timedelta(days=29)
+        changelist_url = reverse('admin:core_productpageview_changelist')
 
+        if (request.GET.get('reset') or '').strip():
+            request.session.pop(STATS_FILTER_SESSION_KEY, None)
+            return redirect(changelist_url)
+
+        raw_period = (request.GET.get('period') or '').strip()
         raw_from = (request.GET.get('date_from') or '').strip()
         raw_to = (request.GET.get('date_to') or '').strip()
+        has_query = bool(raw_period or raw_from or raw_to)
 
-        date_from = parse_date(raw_from) if raw_from else default_from
-        date_to = parse_date(raw_to) if raw_to else today
-        if date_from is None:
-            date_from = default_from
-        if date_to is None:
-            date_to = today
+        if not has_query:
+            saved = request.session.get(STATS_FILTER_SESSION_KEY) or {}
+            if saved.get('date_from') and saved.get('date_to'):
+                return _stats_filter_redirect({
+                    'period': saved.get('period') or '',
+                    'date_from': saved['date_from'],
+                    'date_to': saved['date_to'],
+                })
+
+        date_from = None
+        date_to = None
+        if raw_period in STATS_PERIOD_DAYS:
+            date_from, date_to = _stats_period_range(today, raw_period)
+        else:
+            date_from = parse_date(raw_from) if raw_from else None
+            date_to = parse_date(raw_to) if raw_to else None
+
+        if date_from is None or date_to is None:
+            date_from, date_to = _stats_period_range(today, 'month')
+
         if date_from > date_to:
             date_from, date_to = date_to, date_from
+
+        period = _stats_matching_period(today, date_from, date_to)
+        request.session[STATS_FILTER_SESSION_KEY] = {
+            'period': period,
+            'date_from': date_from.isoformat(),
+            'date_to': date_to.isoformat(),
+        }
 
         tz = timezone.get_current_timezone()
         start = timezone.make_aware(datetime.combine(date_from, time.min), tz)
@@ -107,6 +182,8 @@ class ProductPageViewAdmin(admin.ModelAdmin):
             'cl': None,
             'date_from': date_from.isoformat(),
             'date_to': date_to.isoformat(),
+            'period': period,
+            'period_choices': _stats_period_choices(today),
             'total_views': total_views,
             'total_visitors': total_visitors,
             'rows': rows,
