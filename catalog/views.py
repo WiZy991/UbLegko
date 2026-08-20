@@ -290,6 +290,8 @@ class SearchView(CatalogMixin, ListView):
 
     def get(self, request, *args, **kwargs):
         q = (request.GET.get('q') or '').strip()
+        if not q:
+            return redirect('catalog:home')
         page = (request.GET.get('page') or '').strip()
         if q and page in {'', '1'}:
             record_search_query(request, q)

@@ -1872,17 +1872,25 @@
     async function goToCatalog() {
       hide();
       input.value = "";
+      const catalogRoot = document.querySelector("[data-catalog-root]");
       const onSearchPage = /\/search\/?$/.test(window.location.pathname);
-      const hadQuery = Boolean(new URLSearchParams(window.location.search).get("q"));
-      if (onSearchPage || hadQuery) {
-        if (document.querySelector("[data-catalog-root]")) {
-          await loadCatalog(homeUrl, true);
-        } else {
-          window.location.href = homeUrl;
-          return;
-        }
+      const params = new URLSearchParams(window.location.search);
+      const hadSearchQuery = Boolean(params.get("q"));
+      const homePath = new URL(homeUrl, window.location.origin).pathname.replace(/\/$/, "");
+      const currentPath = window.location.pathname.replace(/\/$/, "");
+      const onHomeClean = currentPath === homePath && !params.toString();
+
+      if (onHomeClean && !onSearchPage && !hadSearchQuery) {
+        if (document.activeElement === input) renderHistory();
+        return;
       }
-      // После крестика focus не срабатывает повторно — открываем историю сразу.
+
+      if (catalogRoot) {
+        await loadCatalog(homeUrl, true);
+      } else {
+        window.location.href = homeUrl;
+        return;
+      }
       if (document.activeElement === input) renderHistory();
     }
 
@@ -1897,6 +1905,11 @@
 
     form.addEventListener("submit", (event) => {
       const q = input.value.trim();
+      if (!q) {
+        event.preventDefault();
+        goToCatalog();
+        return;
+      }
       if (matchesStainHelpQuery(q)) {
         event.preventDefault();
         pushHistory(q);
@@ -1908,7 +1921,10 @@
     });
 
     input.addEventListener("search", () => {
-      if (!input.value.trim()) goToCatalog();
+      if (!input.value.trim()) {
+        hide();
+        renderHistory();
+      }
     });
 
     input.addEventListener("input", () => {
