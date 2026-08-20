@@ -33,6 +33,13 @@ html {
 
 html.catalog-return-pending {
   visibility: hidden !important;
+  scroll-behavior: auto !important;
+}
+
+html.catalog-return-pending .catalog-sheet {
+  height: 0 !important;
+  overflow: hidden !important;
+  transition: none !important;
 }
 
 html.catalog-return-ready {
