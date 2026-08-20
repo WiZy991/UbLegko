@@ -1009,6 +1009,7 @@
   const CATALOG_RETURN_URL_KEY = "ublegko_catalog_return_url";
   const CATALOG_RETURN_SCROLL_KEY = "ublegko_catalog_scroll_y";
   const CATALOG_RETURN_PENDING_KEY = "ublegko_catalog_return_pending";
+  const CATALOG_LEFT_FOR_PRODUCT_KEY = "ublegko_catalog_left_for_product";
 
   function catalogPagePath(pathname) {
     if (!pathname) return false;
@@ -1066,20 +1067,17 @@
   function markCatalogReturnPending() {
     try {
       sessionStorage.setItem(CATALOG_RETURN_PENDING_KEY, "1");
+      sessionStorage.setItem(CATALOG_LEFT_FOR_PRODUCT_KEY, "1");
     } catch (_err) {
       /* ignore */
     }
   }
 
-  function canUseCatalogHistoryBack() {
-    if (window.history.length <= 1) return false;
+  function markCatalogLeftForProduct() {
     try {
-      const ref = document.referrer || "";
-      if (!ref) return false;
-      const refUrl = new URL(ref, window.location.origin);
-      return refUrl.origin === window.location.origin && catalogPagePath(refUrl.pathname);
+      sessionStorage.setItem(CATALOG_LEFT_FOR_PRODUCT_KEY, "1");
     } catch (_err) {
-      return false;
+      /* ignore */
     }
   }
 
@@ -1091,58 +1089,68 @@
 
     back.addEventListener("click", (event) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      if (canUseCatalogHistoryBack()) {
-        event.preventDefault();
-        history.back();
-        return;
-      }
+      event.preventDefault();
       markCatalogReturnPending();
+      window.location.assign(saved || back.getAttribute("href") || "/");
     });
   }
 
-  function finalizeCatalogReturnLanding() {
+  function isCatalogReturnLanding() {
     if (!document.querySelector("[data-catalog-root]")) return false;
-
-    let returning = false;
+    if (window.__ublegkoCatalogScrollRestored) return true;
     try {
-      if (sessionStorage.getItem(CATALOG_RETURN_PENDING_KEY) === "1") {
-        sessionStorage.removeItem(CATALOG_RETURN_PENDING_KEY);
-        returning = true;
-      }
+      if (sessionStorage.getItem(CATALOG_LEFT_FOR_PRODUCT_KEY) === "1") return true;
+      if (sessionStorage.getItem(CATALOG_RETURN_PENDING_KEY) === "1") return true;
+      const ref = document.referrer || "";
+      return Boolean(ref && new URL(ref, window.location.origin).pathname.includes("/product/"));
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  function finalizeCatalogReturnLanding() {
+    if (!isCatalogReturnLanding()) return false;
+
+    try {
+      sessionStorage.removeItem(CATALOG_LEFT_FOR_PRODUCT_KEY);
+      sessionStorage.removeItem(CATALOG_RETURN_PENDING_KEY);
     } catch (_err) {
       /* ignore */
     }
 
-    if (!returning) {
-      try {
-        const ref = document.referrer || "";
-        returning = Boolean(
-          ref && new URL(ref, window.location.origin).pathname.includes("/product/")
-        );
-      } catch (_err) {
-        returning = false;
-      }
-    }
-
-    if (!returning) return false;
-
     if (location.hash) {
       history.replaceState(null, "", `${location.pathname}${location.search}`);
-    }
-
-    const scrollY = getSavedCatalogScrollY();
-    if (scrollY > 0) {
-      scrollCatalogInstant(scrollY);
-      document.documentElement.classList.add("catalog-return-ready");
-      document.documentElement.classList.remove("catalog-return-pending");
     }
 
     if (typeof syncCatalogSheetToScroll === "function") {
       syncCatalogSheetToScroll({ animate: false });
     }
 
+    document.documentElement.classList.remove("catalog-return-pending");
+    document.documentElement.classList.add("catalog-return-ready");
+
     return true;
   }
+
+  window.addEventListener("pageshow", (event) => {
+    if (!document.querySelector("[data-catalog-root]")) return;
+    let left = false;
+    try {
+      left = sessionStorage.getItem(CATALOG_LEFT_FOR_PRODUCT_KEY) === "1";
+      if (left) sessionStorage.removeItem(CATALOG_LEFT_FOR_PRODUCT_KEY);
+    } catch (_err) {
+      left = false;
+    }
+    if (!left && !event.persisted) return;
+
+    const scrollY = getSavedCatalogScrollY();
+    if (scrollY > 0 && Math.abs(window.scrollY - scrollY) > 80) {
+      scrollCatalogInstant(scrollY);
+    }
+    if (typeof syncCatalogSheetToScroll === "function") {
+      syncCatalogSheetToScroll({ animate: false });
+    }
+  });
 
   let catalogScrollSaveTimer = 0;
   window.addEventListener(
@@ -1165,6 +1173,7 @@
       const href = link.getAttribute("href") || "";
       if (!href.includes("/product/")) return;
       saveCatalogReturnState();
+      markCatalogLeftForProduct();
     },
     true
   );

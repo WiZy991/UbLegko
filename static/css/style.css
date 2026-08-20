@@ -31,12 +31,12 @@ html {
   overflow-y: scroll;
 }
 
-html.catalog-return-pending body {
-  visibility: hidden;
+html.catalog-return-pending {
+  visibility: hidden !important;
 }
 
-html.catalog-return-ready body {
-  visibility: visible;
+html.catalog-return-ready {
+  visibility: visible !important;
 }
 
 body {

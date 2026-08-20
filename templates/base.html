@@ -27,7 +27,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260820catalogreturn">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260820catalogreturn4">
   <link rel="stylesheet" href="{% static 'css/pill_nav_topbar.css' %}?v=12">
   {% block extra_css %}{% endblock %}
   {% block json_ld %}
@@ -47,27 +47,94 @@
   <!-- /Yandex.Metrika counter -->
   <script>
     (function () {
+      var LEFT_KEY = "ublegko_catalog_left_for_product";
+      var PENDING_KEY = "ublegko_catalog_return_pending";
+      var URL_KEY = "ublegko_catalog_return_url";
+      var SCROLL_KEY = "ublegko_catalog_scroll_y";
+
+      function catalogPath(path) {
+        return path === "/" || path.indexOf("/category/") === 0 || path.indexOf("/search") === 0;
+      }
+
       try {
         if ("scrollRestoration" in history) history.scrollRestoration = "manual";
-        if (sessionStorage.getItem("ublegko_catalog_return_pending") !== "1") return;
+
         var path = location.pathname;
-        if (!(path === "/" || path.indexOf("/category/") === 0 || path.indexOf("/search") === 0)) return;
-        var y = parseInt(sessionStorage.getItem("ublegko_catalog_scroll_y") || "0", 10);
+        if (!catalogPath(path)) return;
+
+        var left = sessionStorage.getItem(LEFT_KEY) === "1";
+        var pending = sessionStorage.getItem(PENDING_KEY) === "1";
+        var fromProduct = false;
+        try {
+          var ref = document.referrer;
+          if (ref) {
+            fromProduct = new URL(ref, location.origin).pathname.indexOf("/product/") !== -1;
+          }
+        } catch (e1) {}
+
+        if (!left && !pending && !fromProduct) return;
+
+        var savedUrl = sessionStorage.getItem(URL_KEY) || "";
+        var currentUrl = path + location.search;
+        if (pending && savedUrl && savedUrl !== currentUrl) {
+          sessionStorage.removeItem(PENDING_KEY);
+          location.replace(savedUrl);
+          return;
+        }
+
+        sessionStorage.removeItem(LEFT_KEY);
+        sessionStorage.removeItem(PENDING_KEY);
+
+        var y = parseInt(sessionStorage.getItem(SCROLL_KEY) || "0", 10);
         if (!(y > 0)) return;
+
         document.documentElement.classList.add("catalog-return-pending");
-        var restore = function () {
+        document.documentElement.style.visibility = "hidden";
+        window.__ublegkoCatalogScrollRestored = false;
+
+        function reveal() {
+          document.documentElement.classList.remove("catalog-return-pending");
+          document.documentElement.classList.add("catalog-return-ready");
+          document.documentElement.style.visibility = "";
+          document.documentElement.style.scrollBehavior = "";
+          window.__ublegkoCatalogScrollRestored = true;
+        }
+
+        function applyScroll() {
           document.documentElement.style.scrollBehavior = "auto";
           window.scrollTo(0, y);
-          document.documentElement.classList.add("catalog-return-ready");
-          document.documentElement.classList.remove("catalog-return-pending");
-          document.documentElement.style.scrollBehavior = "";
-        };
+        }
+
+        function restore() {
+          applyScroll();
+          requestAnimationFrame(function () {
+            applyScroll();
+            requestAnimationFrame(function () {
+              applyScroll();
+              reveal();
+            });
+          });
+        }
+
         if (document.readyState === "loading") {
           document.addEventListener("DOMContentLoaded", restore, { once: true });
         } else {
           restore();
         }
-      } catch (e) {}
+
+        window.addEventListener(
+          "load",
+          function () {
+            if (Math.abs(window.scrollY - y) > 80) {
+              document.documentElement.style.visibility = "hidden";
+              document.documentElement.classList.add("catalog-return-pending");
+              applyScroll();
+              reveal();
+            }
+          },
+          { once: true }
+        );
+      } catch (e2) {}
     })();
   </script>
 </head>
@@ -525,7 +592,7 @@
     </div>
   </div>
 
-  <script src="{% static 'js/main.js' %}?v=20260820catalogreturn3"></script>
+  <script src="{% static 'js/main.js' %}?v=20260820catalogreturn4"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
   <script src="{% static 'js/pill_nav_topbar.js' %}?v=10" defer></script>
   {% block extra_js %}{% endblock %}
