@@ -167,7 +167,7 @@ class ProductPageViewAdmin(admin.ModelAdmin):
         )
 
         daily = list(
-            base_qs.annotate(day=TruncDate('viewed_at'))
+            base_qs.annotate(day=TruncDate('viewed_at', tzinfo=tz))
             .values('day')
             .annotate(
                 visitors=Count('visitor_key', distinct=True),
@@ -185,6 +185,7 @@ class ProductPageViewAdmin(admin.ModelAdmin):
             'date_to': date_to.isoformat(),
             'period': period,
             'period_choices': _stats_period_choices(today),
+            'stats_timezone_label': 'Владивосток (UTC+10)',
             'total_views': total_views,
             'total_visitors': total_visitors,
             'rows': rows,

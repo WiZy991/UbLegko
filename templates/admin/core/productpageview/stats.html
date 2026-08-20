@@ -55,7 +55,8 @@
 
 {% block content %}
 <div class="product-stats">
-  <h1 style="margin-bottom: 16px;">Статистика просмотров карточек</h1>
+  <h1 style="margin-bottom: 8px;">Статистика просмотров карточек</h1>
+  <p style="margin: 0 0 16px; color:#667;">Даты и периоды — по {{ stats_timezone_label }}.</p>
 
   <div class="product-stats__periods" role="group" aria-label="Период">
     {% for item in period_choices %}

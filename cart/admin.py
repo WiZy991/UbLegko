@@ -21,6 +21,12 @@ from core.models import SiteSettings
 from .models import Favorite, Order, OrderItem, StainHelpRequest
 
 
+def format_local_datetime(value):
+    if not value:
+        return '—'
+    return timezone.localtime(value).strftime('%d.%m.%Y %H:%M')
+
+
 def inbox_status_buttons(url, current, kind, done_label):
     """Две кнопки статуса с мгновенным сохранением."""
     new_active = ' is-active' if current == 'new' else ''
@@ -383,7 +389,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.display(description='Создана', ordering='created_at')
     def created_col(self, obj):
-        return obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—'
+        return format_local_datetime(obj.created_at)
 
     @admin.display(description='Сумма')
     def total_display(self, obj):
@@ -579,7 +585,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.display(description='Создано', ordering='created_at')
     def created_col(self, obj):
-        return obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—'
+        return format_local_datetime(obj.created_at)
 
     @admin.display(description='Связь', ordering='contact_method')
     def contact_col(self, obj):
