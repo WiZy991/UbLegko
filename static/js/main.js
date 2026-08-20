@@ -1006,6 +1006,139 @@
   let categorySpyScrollHandler = null;
   let categorySpyLockUntil = 0;
 
+  const CATALOG_RETURN_URL_KEY = "ublegko_catalog_return_url";
+  const CATALOG_RETURN_SCROLL_KEY = "ublegko_catalog_scroll_y";
+  const CATALOG_RETURN_PENDING_KEY = "ublegko_catalog_return_pending";
+
+  function catalogPagePath(pathname) {
+    if (!pathname) return false;
+    if (pathname === "/") return true;
+    if (pathname.startsWith("/category/")) return true;
+    if (pathname.startsWith("/search")) return true;
+    return false;
+  }
+
+  function currentCatalogUrl() {
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
+  function saveCatalogReturnState() {
+    if (!document.querySelector("[data-catalog-root]")) return;
+    if (!catalogPagePath(window.location.pathname)) return;
+    try {
+      sessionStorage.setItem(CATALOG_RETURN_URL_KEY, currentCatalogUrl());
+      sessionStorage.setItem(CATALOG_RETURN_SCROLL_KEY, String(Math.round(window.scrollY)));
+    } catch (_err) {
+      /* private mode / quota */
+    }
+  }
+
+  function getCatalogReturnUrl() {
+    try {
+      const saved = sessionStorage.getItem(CATALOG_RETURN_URL_KEY);
+      if (!saved) return null;
+      const parsed = new URL(saved, window.location.origin);
+      if (!catalogPagePath(parsed.pathname)) return null;
+      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    } catch (_err) {
+      return null;
+    }
+  }
+
+  function markCatalogReturnPending() {
+    try {
+      sessionStorage.setItem(CATALOG_RETURN_PENDING_KEY, "1");
+    } catch (_err) {
+      /* ignore */
+    }
+  }
+
+  function initCatalogReturnLink() {
+    const back = document.querySelector("[data-catalog-return]");
+    if (!back) return;
+    const saved = getCatalogReturnUrl();
+    if (saved) back.setAttribute("href", saved);
+    back.addEventListener("click", markCatalogReturnPending);
+  }
+
+  function restoreCatalogReturnScroll() {
+    if (!document.querySelector("[data-catalog-root]")) return;
+
+    const current = currentCatalogUrl();
+    const savedUrl = getCatalogReturnUrl();
+    if (!savedUrl || savedUrl !== current) return;
+
+    let pending = false;
+    try {
+      pending = sessionStorage.getItem(CATALOG_RETURN_PENDING_KEY) === "1";
+      sessionStorage.removeItem(CATALOG_RETURN_PENDING_KEY);
+    } catch (_err) {
+      /* ignore */
+    }
+
+    if (!pending) {
+      let fromProduct = false;
+      try {
+        const ref = document.referrer || "";
+        fromProduct = Boolean(ref && new URL(ref, window.location.origin).pathname.includes("/product/"));
+      } catch (_err) {
+        fromProduct = false;
+      }
+      if (!fromProduct) return;
+    }
+
+    const hash = window.location.hash;
+    if (hash && hash.startsWith("#category-")) return;
+
+    let scrollY = 0;
+    try {
+      scrollY = parseInt(sessionStorage.getItem(CATALOG_RETURN_SCROLL_KEY) || "0", 10);
+    } catch (_err) {
+      scrollY = 0;
+    }
+    if (!Number.isFinite(scrollY) || scrollY <= 0) return;
+
+    const restore = () => {
+      window.scrollTo({ top: scrollY, behavior: "auto" });
+      if (typeof syncCatalogSheetToScroll === "function") {
+        syncCatalogSheetToScroll({ animate: false });
+      }
+    };
+
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        restore();
+        window.setTimeout(restore, 120);
+      })
+    );
+  }
+
+  let catalogScrollSaveTimer = 0;
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!document.querySelector("[data-catalog-root]")) return;
+      window.clearTimeout(catalogScrollSaveTimer);
+      catalogScrollSaveTimer = window.setTimeout(saveCatalogReturnState, 150);
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      const link = event.target.closest("a[href]");
+      if (!link || event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (!document.querySelector("[data-catalog-root]")) return;
+      const href = link.getAttribute("href") || "";
+      if (!href.includes("/product/")) return;
+      saveCatalogReturnState();
+      markCatalogReturnPending();
+    },
+    true
+  );
+
   function getActiveCatalogCategoryId() {
     // Считаем по геометрии: класс .is-active мог остаться от открытой шторки
     // (там линия активации уезжала вниз и подсвечивалась нижняя категория).
@@ -1344,6 +1477,7 @@
         const homeLink = document.querySelector("[data-scroll-spy-home]");
         if (homeLink) homeLink.classList.remove("is-active");
       }
+      saveCatalogReturnState();
     } catch (err) {
       if (err && err.name === "AbortError") return;
       window.location.href = url;
@@ -2005,6 +2139,9 @@
   document.querySelectorAll("select.form-input").forEach(enhanceSelect);
 
   initCategoryScrollSpy();
+  saveCatalogReturnState();
+  initCatalogReturnLink();
+  restoreCatalogReturnScroll();
   initProductGallery();
 
   function initProductGallery() {
