@@ -31,6 +31,14 @@ html {
   overflow-y: scroll;
 }
 
+html.catalog-return-pending body {
+  visibility: hidden;
+}
+
+html.catalog-return-ready body {
+  visibility: visible;
+}
+
 body {
   margin: 0;
   min-width: 320px;

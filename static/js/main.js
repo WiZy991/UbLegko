@@ -1019,7 +1019,7 @@
   }
 
   function currentCatalogUrl() {
-    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    return `${window.location.pathname}${window.location.search}`;
   }
 
   function saveCatalogReturnState() {
@@ -1039,10 +1039,28 @@
       if (!saved) return null;
       const parsed = new URL(saved, window.location.origin);
       if (!catalogPagePath(parsed.pathname)) return null;
-      return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      return `${parsed.pathname}${parsed.search}`;
     } catch (_err) {
       return null;
     }
+  }
+
+  function getSavedCatalogScrollY() {
+    try {
+      const scrollY = parseInt(sessionStorage.getItem(CATALOG_RETURN_SCROLL_KEY) || "0", 10);
+      return Number.isFinite(scrollY) && scrollY > 0 ? scrollY : 0;
+    } catch (_err) {
+      return 0;
+    }
+  }
+
+  function scrollCatalogInstant(scrollY) {
+    if (!Number.isFinite(scrollY) || scrollY <= 0) return;
+    const root = document.documentElement;
+    const prev = root.style.scrollBehavior;
+    root.style.scrollBehavior = "auto";
+    window.scrollTo(0, scrollY);
+    root.style.scrollBehavior = prev;
   }
 
   function markCatalogReturnPending() {
@@ -1053,64 +1071,77 @@
     }
   }
 
+  function canUseCatalogHistoryBack() {
+    if (window.history.length <= 1) return false;
+    try {
+      const ref = document.referrer || "";
+      if (!ref) return false;
+      const refUrl = new URL(ref, window.location.origin);
+      return refUrl.origin === window.location.origin && catalogPagePath(refUrl.pathname);
+    } catch (_err) {
+      return false;
+    }
+  }
+
   function initCatalogReturnLink() {
     const back = document.querySelector("[data-catalog-return]");
     if (!back) return;
     const saved = getCatalogReturnUrl();
     if (saved) back.setAttribute("href", saved);
-    back.addEventListener("click", markCatalogReturnPending);
+
+    back.addEventListener("click", (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      if (canUseCatalogHistoryBack()) {
+        event.preventDefault();
+        history.back();
+        return;
+      }
+      markCatalogReturnPending();
+    });
   }
 
-  function restoreCatalogReturnScroll() {
-    if (!document.querySelector("[data-catalog-root]")) return;
+  function finalizeCatalogReturnLanding() {
+    if (!document.querySelector("[data-catalog-root]")) return false;
 
-    const current = currentCatalogUrl();
-    const savedUrl = getCatalogReturnUrl();
-    if (!savedUrl || savedUrl !== current) return;
-
-    let pending = false;
+    let returning = false;
     try {
-      pending = sessionStorage.getItem(CATALOG_RETURN_PENDING_KEY) === "1";
-      sessionStorage.removeItem(CATALOG_RETURN_PENDING_KEY);
+      if (sessionStorage.getItem(CATALOG_RETURN_PENDING_KEY) === "1") {
+        sessionStorage.removeItem(CATALOG_RETURN_PENDING_KEY);
+        returning = true;
+      }
     } catch (_err) {
       /* ignore */
     }
 
-    if (!pending) {
-      let fromProduct = false;
+    if (!returning) {
       try {
         const ref = document.referrer || "";
-        fromProduct = Boolean(ref && new URL(ref, window.location.origin).pathname.includes("/product/"));
+        returning = Boolean(
+          ref && new URL(ref, window.location.origin).pathname.includes("/product/")
+        );
       } catch (_err) {
-        fromProduct = false;
+        returning = false;
       }
-      if (!fromProduct) return;
     }
 
-    const hash = window.location.hash;
-    if (hash && hash.startsWith("#category-")) return;
+    if (!returning) return false;
 
-    let scrollY = 0;
-    try {
-      scrollY = parseInt(sessionStorage.getItem(CATALOG_RETURN_SCROLL_KEY) || "0", 10);
-    } catch (_err) {
-      scrollY = 0;
+    if (location.hash) {
+      history.replaceState(null, "", `${location.pathname}${location.search}`);
     }
-    if (!Number.isFinite(scrollY) || scrollY <= 0) return;
 
-    const restore = () => {
-      window.scrollTo({ top: scrollY, behavior: "auto" });
-      if (typeof syncCatalogSheetToScroll === "function") {
-        syncCatalogSheetToScroll({ animate: false });
-      }
-    };
+    const scrollY = getSavedCatalogScrollY();
+    if (scrollY > 0) {
+      scrollCatalogInstant(scrollY);
+      document.documentElement.classList.add("catalog-return-ready");
+      document.documentElement.classList.remove("catalog-return-pending");
+    }
 
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        restore();
-        window.setTimeout(restore, 120);
-      })
-    );
+    if (typeof syncCatalogSheetToScroll === "function") {
+      syncCatalogSheetToScroll({ animate: false });
+    }
+
+    return true;
   }
 
   let catalogScrollSaveTimer = 0;
@@ -1134,7 +1165,6 @@
       const href = link.getAttribute("href") || "";
       if (!href.includes("/product/")) return;
       saveCatalogReturnState();
-      markCatalogReturnPending();
     },
     true
   );
@@ -2138,10 +2168,13 @@
 
   document.querySelectorAll("select.form-input").forEach(enhanceSelect);
 
-  initCategoryScrollSpy();
+  const catalogReturnLanding = finalizeCatalogReturnLanding();
+  initCategoryScrollSpy({ skipHashScroll: catalogReturnLanding });
+  if (catalogReturnLanding && categorySpyScrollHandler) {
+    categorySpyScrollHandler();
+  }
   saveCatalogReturnState();
   initCatalogReturnLink();
-  restoreCatalogReturnScroll();
   initProductGallery();
 
   function initProductGallery() {
