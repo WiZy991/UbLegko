@@ -224,6 +224,7 @@ class Product(models.Model):
             description=self.description,
             sku=self.sku,
             country=self.country,
+            category_name=self.category.name if self.category_id else '',
         )
 
         old_image_name = ''

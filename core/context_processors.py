@@ -15,6 +15,9 @@ def get_selected_city(request):
     return City.objects.filter(is_active=True).order_by('sort_order', 'name').first()
 
 
+from catalog.seo_keywords import GEO_REGION, GEO_REGION_SHORT, meta_keywords_string
+
+
 def site_settings(request):
     try:
         settings_obj = SiteSettings.load()
@@ -57,10 +60,18 @@ def seo(request):
             email='pro-brite_uss@mail.ru',
         )
 
+    city_label = (getattr(settings_obj, 'city', None) or 'г. Уссурийск').strip()
+    city_name = city_label.replace('г.', '').strip()
+
     return {
         'site_url': site_origin(request),
         'canonical_url': absolute_url(request, request.path),
         'default_og_image': absolute_url(request, '/static/img/og-image.jpg'),
         'org_json_ld': dumps_ld(organization_localbusiness_ld(settings_obj, request)),
         'meta_robots': '',
+        'meta_keywords': meta_keywords_string(),
+        'geo_region': 'RU-PRI',
+        'geo_placename': f'{city_name}, {GEO_REGION}',
+        'geo_region_label': GEO_REGION,
+        'geo_region_short': GEO_REGION_SHORT,
     }

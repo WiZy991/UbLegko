@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{{ site_settings.brand_name }}{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}{{ site_settings.slogan|default:site_settings.tagline|default:site_settings.brand_name }}{% endblock %}">
+  {% if meta_keywords %}<meta name="keywords" content="{{ meta_keywords }}">{% endif %}
+  <meta name="geo.region" content="{{ geo_region }}">
+  <meta name="geo.placename" content="{{ geo_placename }}">
+  <meta name="geo.regionname" content="{{ geo_region_label }}">
   {% block meta_robots_tag %}{% if meta_robots %}<meta name="robots" content="{{ meta_robots }}">{% endif %}{% endblock %}
   <link rel="canonical" href="{% block canonical %}{{ canonical_url }}{% endblock %}">
   <link rel="icon" href="/favicon.ico?v=5" sizes="any">

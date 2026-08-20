@@ -30,6 +30,14 @@ class SearchUtilsTests(SimpleTestCase):
         )
         self.assertEqual(text, 'пятновыводитель pro для ковров')
 
+    def test_build_product_search_text_includes_seo_phrases(self):
+        text = build_product_search_text(
+            name='Средство для пола',
+            category_name='Общая уборка',
+        )
+        self.assertIn('чем отмыть жир', text)
+        self.assertIn('приморский край', text)
+
     def test_query_variants_layout(self):
         variants = query_variants('vfkm')
         self.assertTrue(any('мал' in v for v in variants))

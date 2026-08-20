@@ -40,10 +40,16 @@ def build_product_search_text(
     sku: str = '',
     country: str = '',
     short_description: str = '',  # совместимость со старыми вызовами
+    category_name: str = '',
 ) -> str:
     """Нормализованный текст для поиска без учёта регистра (SQLite + кириллица)."""
+    from catalog.seo_keywords import product_seo_search_extras
+
     parts = (name, description, sku, country, short_description)
     base = ' '.join(p.strip() for p in parts if p and p.strip()).casefold()
+    seo_extra = product_seo_search_extras(category_name).strip()
+    if seo_extra:
+        base = f'{base} {seo_extra}'.strip() if base else seo_extra
     if not base:
         return ''
     # Дубли без пробелов вокруг «-» и без дефисов: sr-100 / sr100
