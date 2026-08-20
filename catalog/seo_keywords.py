@@ -224,6 +224,33 @@ SEO_INTENT_GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Группы для модалки «Что-то не отмывается» (без «купить»)
+STAIN_HELP_INTENT_KEYS = (
+    'chem_otmyt',
+    'kak_otmyt',
+    'chem_smyt',
+    'kak_smyt',
+    'chem_ustranit',
+    'kak_ustranit',
+    'chem_otstrat',
+    'kak_otstrat',
+    'chem_vivesti',
+    'kak_vivesti',
+)
+
+STAIN_HELP_QUERY_PREFIXES = (
+    'чем отмыть',
+    'как отмыть',
+    'чем смыть',
+    'как смыть',
+    'чем устранить',
+    'как устранить',
+    'чем отстирать',
+    'как отстирать',
+    'чем вывести',
+    'как вывести',
+)
+
 # Привязка категорий к релевантным группам запросов
 CATEGORY_INTENT_MAP: dict[str, tuple[str, ...]] = {
     'Общая уборка': ('chem_otmyt', 'kak_otmyt', 'chem_smyt', 'kak_smyt', 'kupit'),
@@ -237,6 +264,31 @@ CATEGORY_INTENT_MAP: dict[str, tuple[str, ...]] = {
     'Для машины': ('chem_otmyt', 'chem_smyt', 'kupit'),
     'Сопутствующие товары': ('kupit',),
 }
+
+
+def _normalize_search_query(q: str) -> str:
+    return ' '.join((q or '').strip().casefold().replace('ё', 'е').split())
+
+
+def matches_stain_help_query(q: str) -> bool:
+    """Запрос «чем/как отмыть» и т.п. — показать модалку «не отмывается»."""
+    normalized = _normalize_search_query(q)
+    if not normalized:
+        return False
+    for prefix in STAIN_HELP_QUERY_PREFIXES:
+        norm_prefix = prefix.replace('ё', 'е')
+        if normalized.startswith(norm_prefix):
+            return True
+    for key in STAIN_HELP_INTENT_KEYS:
+        for phrase in SEO_INTENT_GROUPS.get(key, ()):
+            norm_phrase = _normalize_search_query(phrase)
+            if normalized == norm_phrase:
+                return True
+            if len(normalized) >= 8 and (
+                normalized in norm_phrase or norm_phrase in normalized
+            ):
+                return True
+    return False
 
 
 def all_seo_phrases() -> list[str]:

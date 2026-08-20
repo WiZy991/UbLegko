@@ -16,6 +16,35 @@
 
   let suppressMenuToggleClick = false;
 
+  function normalizeStainHelpQuery(q) {
+    return String(q || "")
+      .trim()
+      .toLowerCase()
+      .replace(/ё/g, "е")
+      .replace(/\s+/g, " ");
+  }
+
+  function matchesStainHelpQuery(q) {
+    const normalized = normalizeStainHelpQuery(q);
+    if (!normalized) return false;
+    const prefixes = window.ublegkoStainHelpPrefixes || [];
+    for (let i = 0; i < prefixes.length; i++) {
+      const prefix = normalizeStainHelpQuery(prefixes[i]);
+      if (prefix && normalized.startsWith(prefix)) return true;
+    }
+    return false;
+  }
+
+  function requestStainHelpModal(query, source) {
+    const q = String(query || "").trim();
+    if (!q || !matchesStainHelpQuery(q)) return;
+    document.dispatchEvent(
+      new CustomEvent("ublegko:stain-help-open", {
+        detail: { query: q, source: source || "unknown" },
+      })
+    );
+  }
+
   // Клик/тап по полоске не открывает шторку — только жест «потянуть»
   document.addEventListener("click", (event) => {
     const toggle = event.target.closest("[data-menu-toggle], #menu-toggle");
@@ -1708,6 +1737,7 @@
     const HISTORY_KEY = "ublegko_search_history";
     const HISTORY_LIMIT = 5;
     let timer = null;
+    let stainModalTimer = null;
     let activeIndex = -1;
     let items = [];
     let lastQuery = "";
@@ -1768,7 +1798,11 @@
           const q = btn.getAttribute("data-history-q") || "";
           input.value = q;
           hide();
-          form.requestSubmit();
+          if (matchesStainHelpQuery(q)) {
+            requestStainHelpModal(q, "history");
+          } else {
+            form.requestSubmit();
+          }
         });
       });
     }
@@ -1861,8 +1895,16 @@
       fetchSuggest(q);
     }
 
-    form.addEventListener("submit", () => {
-      pushHistory(input.value);
+    form.addEventListener("submit", (event) => {
+      const q = input.value.trim();
+      if (matchesStainHelpQuery(q)) {
+        event.preventDefault();
+        pushHistory(q);
+        hide();
+        requestStainHelpModal(q, "submit");
+        return;
+      }
+      pushHistory(q);
     });
 
     input.addEventListener("search", () => {
@@ -1872,11 +1914,20 @@
     input.addEventListener("input", () => {
       const q = input.value.trim();
       clearTimeout(timer);
+      clearTimeout(stainModalTimer);
       if (!q) {
         renderHistory();
         return;
       }
       timer = setTimeout(() => fetchSuggest(q), 180);
+      if (matchesStainHelpQuery(q)) {
+        stainModalTimer = setTimeout(() => {
+          const current = input.value.trim();
+          if (current !== q || !matchesStainHelpQuery(current)) return;
+          hide();
+          requestStainHelpModal(current, "typing");
+        }, 650);
+      }
     });
 
     // click — даже если поле уже в фокусе (после поиска/крестика)
@@ -2401,15 +2452,20 @@
       if (input) input.classList.toggle("is-invalid", Boolean(message));
     }
 
-    function openModal() {
+    function openModal(options) {
+      const opts = options || {};
       lastFocus = document.activeElement;
       clearErrors();
       applyPrefill();
+      if (opts.prefillProblem) {
+        const problemInput = form.querySelector("[name='problem']");
+        if (problemInput) problemInput.value = opts.prefillProblem;
+      }
       modal.hidden = false;
       document.body.style.overflow = "hidden";
       const first = form.querySelector("[name='problem']");
       if (first) first.focus();
-      markAutoShown();
+      if (!opts.fromSearch) markAutoShown();
     }
 
     function closeModal() {
@@ -2419,6 +2475,24 @@
     }
 
     const AUTO_SHOWN_KEY = "ublegko_stain_help_auto_shown";
+    const SEARCH_SHOWN_KEY = "ublegko_stain_help_search_shown";
+    const TYPING_BLOCK_KEY = "ublegko_stain_help_typing_block";
+
+    function isTypingModalBlocked() {
+      try {
+        return sessionStorage.getItem(TYPING_BLOCK_KEY) === "1";
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function blockTypingModal() {
+      try {
+        sessionStorage.setItem(TYPING_BLOCK_KEY, "1");
+      } catch (err) {
+        /* ignore */
+      }
+    }
 
     function markAutoShown() {
       try {
@@ -2437,6 +2511,30 @@
       }
     }
 
+    function wasSearchModalShown(query) {
+      try {
+        const seen = JSON.parse(sessionStorage.getItem(SEARCH_SHOWN_KEY) || "[]");
+        if (!Array.isArray(seen)) return false;
+        const key = String(query || "").trim().toLowerCase();
+        return seen.includes(key);
+      } catch (err) {
+        return false;
+      }
+    }
+
+    function markSearchModalShown(query) {
+      const key = String(query || "").trim().toLowerCase();
+      if (!key) return;
+      try {
+        const seen = JSON.parse(sessionStorage.getItem(SEARCH_SHOWN_KEY) || "[]");
+        const list = Array.isArray(seen) ? seen : [];
+        if (!list.includes(key)) list.push(key);
+        sessionStorage.setItem(SEARCH_SHOWN_KEY, JSON.stringify(list.slice(-20)));
+      } catch (err) {
+        /* ignore */
+      }
+    }
+
     function shouldAutoOpen() {
       if (modal.getAttribute("data-stain-help-auto") !== "1") return false;
       if (wasAutoShown()) return false;
@@ -2447,7 +2545,29 @@
 
     applyPrefill();
 
-    if (shouldAutoOpen()) {
+    const searchQuery = (document.body.getAttribute("data-stain-help-search-query") || "").trim();
+
+    document.addEventListener("ublegko:stain-help-open", (event) => {
+      const query = String((event.detail && event.detail.query) || "").trim();
+      const source = (event.detail && event.detail.source) || "";
+      if (!query) return;
+      if (source === "typing" && isTypingModalBlocked()) return;
+      if (wasSearchModalShown(query)) return;
+      if (modal.hidden) {
+        openModal({ prefillProblem: query, fromSearch: true });
+        markSearchModalShown(query);
+        if (source === "typing") blockTypingModal();
+      }
+    });
+
+    if (searchQuery && !wasSearchModalShown(searchQuery)) {
+      window.setTimeout(() => {
+        if (modal.hidden) {
+          openModal({ prefillProblem: searchQuery, fromSearch: true });
+          markSearchModalShown(searchQuery);
+        }
+      }, 900);
+    } else if (shouldAutoOpen()) {
       window.setTimeout(() => {
         if (modal.hidden && shouldAutoOpen()) openModal();
       }, 800);

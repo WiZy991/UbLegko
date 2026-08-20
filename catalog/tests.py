@@ -9,6 +9,7 @@ from catalog.search_utils import (
     stem_variants,
     text_search_q,
 )
+from catalog.seo_keywords import matches_stain_help_query
 
 
 class SearchUtilsTests(SimpleTestCase):
@@ -16,6 +17,13 @@ class SearchUtilsTests(SimpleTestCase):
         stems = stem_variants('пятновыводитель')
         self.assertIn('пятновыводитель', stems)
         self.assertIn('пятновыводител', stems)
+
+    def test_matches_stain_help_query_prefixes(self):
+        self.assertTrue(matches_stain_help_query('чем отмыть жир'))
+        self.assertTrue(matches_stain_help_query('как смыть накипь'))
+        self.assertTrue(matches_stain_help_query('чем отстирать кровь'))
+        self.assertFalse(matches_stain_help_query('моющие средства купить'))
+        self.assertFalse(matches_stain_help_query('Amol'))
 
     def test_text_search_q_matches_description_stem(self):
         q_obj = text_search_q('пятновыводитель')

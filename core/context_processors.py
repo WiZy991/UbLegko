@@ -1,3 +1,13 @@
+import json
+
+from catalog.seo_keywords import (
+    GEO_REGION,
+    GEO_REGION_SHORT,
+    STAIN_HELP_QUERY_PREFIXES,
+    matches_stain_help_query,
+    meta_keywords_string,
+)
+
 from .models import City, SiteSettings
 
 SESSION_CITY_KEY = 'selected_city_id'
@@ -13,9 +23,6 @@ def get_selected_city(request):
     if city:
         return city
     return City.objects.filter(is_active=True).order_by('sort_order', 'name').first()
-
-
-from catalog.seo_keywords import GEO_REGION, GEO_REGION_SHORT, meta_keywords_string
 
 
 def site_settings(request):
@@ -46,6 +53,19 @@ def site_settings(request):
     }
 
 
+def _stain_help_search_query(request) -> str:
+    path = (request.path or '').rstrip('/')
+    if not path.endswith('/search'):
+        return ''
+    page = (request.GET.get('page') or '1').strip()
+    if page not in {'', '1'}:
+        return ''
+    q = (request.GET.get('q') or '').strip()
+    if matches_stain_help_query(q):
+        return q
+    return ''
+
+
 def seo(request):
     """Canonical без query-string; SITE_URL для абсолютных ссылок."""
     from catalog.seo import absolute_url, dumps_ld, organization_localbusiness_ld, site_origin
@@ -74,4 +94,9 @@ def seo(request):
         'geo_placename': f'{city_name}, {GEO_REGION}',
         'geo_region_label': GEO_REGION,
         'geo_region_short': GEO_REGION_SHORT,
+        'stain_help_search_query': _stain_help_search_query(request),
+        'stain_help_prefixes_json': json.dumps(
+            list(STAIN_HELP_QUERY_PREFIXES),
+            ensure_ascii=False,
+        ),
     }
