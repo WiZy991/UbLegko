@@ -224,10 +224,15 @@ class SearchQueryLogAdmin(admin.ModelAdmin):
         cutoff = timezone.now() - timedelta(days=SEARCH_STATS_DAYS)
         qs = SearchQueryLog.objects.filter(created_at__gte=cutoff)
 
+        sort = (request.GET.get('sort') or 'date').strip()
+        if sort not in {'date', 'hits'}:
+            sort = 'date'
+        order_by = ('-last_at', '-hits') if sort == 'date' else ('-hits', '-last_at')
+
         grouped = list(
             qs.values('query_norm')
             .annotate(hits=Count('id'), last_at=Max('created_at'))
-            .order_by('-hits', '-last_at')
+            .order_by(*order_by)
         )
         latest_label = {}
         for item in qs.order_by('query_norm', '-created_at').values('query_norm', 'query'):
@@ -254,6 +259,11 @@ class SearchQueryLogAdmin(admin.ModelAdmin):
             'total_hits': total_hits,
             'total_queries': total_queries,
             'keep_days': SEARCH_STATS_DAYS,
+            'sort': sort,
+            'sort_choices': [
+                {'key': 'date', 'label': 'По дате (новые сверху)'},
+                {'key': 'hits', 'label': 'По количеству (частые сверху)'},
+            ],
         }
         if extra_context:
             context.update(extra_context)
