@@ -263,7 +263,7 @@
           {% for review in reviews %}
             <li class="review-card{% if user_review and review.id == user_review.id %} is-own{% endif %}">
               <div class="review-card__head">
-                <span class="review-card__author">{{ review.user.get_username }}</span>
+                <span class="review-card__author">{% firstof review.user.get_full_name review.user.first_name review.user.username %}</span>
                 <span class="review-card__stars" aria-label="Оценка {{ review.rating }} из 5">
                   {% for i in "12345" %}
                     <span class="review-card__star{% if forloop.counter <= review.rating %} is-on{% endif %}">★</span>
