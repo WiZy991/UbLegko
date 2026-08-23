@@ -1905,6 +1905,11 @@ select {
   text-decoration: line-through;
 }
 
+.price--struck {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
 .product-card__meta--price .badge-promo-img {
   align-self: center;
 }

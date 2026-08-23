@@ -72,7 +72,7 @@
 
     <div class="product-card__meta product-card__meta--price">
       <div class="price-block">
-        <span class="price">{{ product.price|floatformat:0 }} руб</span>
+        <span class="price{% if product.price_struck %} price--struck{% endif %}">{{ product.price|floatformat:0 }} руб</span>
         <span class="price-old">{% if product.old_price %}{{ product.old_price|floatformat:0 }} руб{% endif %}</span>
       </div>
       {% if product.unit %}

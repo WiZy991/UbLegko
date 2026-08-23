@@ -350,6 +350,11 @@ class Product(models.Model):
         return self.status == self.Status.IN_STOCK
 
     @property
+    def price_struck(self):
+        """Цена зачёркнута при статусах «В пути» и «Нет в наличии»."""
+        return self.status in (self.Status.IN_TRANSIT, self.Status.OUT_OF_STOCK)
+
+    @property
     def status_modifier(self):
         return {
             self.Status.IN_STOCK: 'in-stock',
