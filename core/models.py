@@ -103,6 +103,23 @@ class SiteSettings(models.Model):
         return obj
 
 
+class SiteVisit(models.Model):
+    """Заход на сайт (любая страница витрины). Каждая запись — один заход."""
+
+    path = models.CharField('Страница', max_length=300, blank=True)
+    visited_at = models.DateTimeField('Когда', auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Заход на сайт'
+        verbose_name_plural = 'Заходы на сайт'
+        indexes = [
+            models.Index(fields=['visited_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.path or "/"} @ {self.visited_at:%Y-%m-%d %H:%M}'
+
+
 class ProductPageView(models.Model):
     """Просмотр карточки товара (для статистики в админке)."""
 

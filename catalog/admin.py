@@ -1264,8 +1264,16 @@ class ProductRecommendationAdmin(admin.ModelAdmin):
 
 @admin.register(ProductReview)
 class ProductReviewAdmin(admin.ModelAdmin):
-    list_display = ('product', 'user', 'rating', 'created_at')
+    list_display = ('product', 'user', 'rating', 'short_comment', 'created_at')
     list_filter = ('rating', 'created_at')
-    search_fields = ('product__name', 'user__username', 'comment')
+    search_fields = ('product__name', 'user__username', 'user__first_name', 'comment')
     autocomplete_fields = ['product', 'user']
     readonly_fields = ('created_at', 'updated_at')
+    fields = ('product', 'user', 'rating', 'comment', 'created_at', 'updated_at')
+
+    @admin.display(description='Комментарий')
+    def short_comment(self, obj):
+        text = (obj.comment or '').strip().replace('\n', ' ')
+        if not text:
+            return '—'
+        return text if len(text) <= 80 else f'{text[:77]}…'

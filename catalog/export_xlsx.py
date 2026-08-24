@@ -203,6 +203,13 @@ def _write_category_banner(ws, row_idx: int, title: str, *, thin: Border) -> Non
     ws.row_dimensions[row_idx].height = CATEGORY_ROW_HEIGHT
 
 
+def _price_or_status(product: Product):
+    """В прайсе: цена только для «В наличии», иначе — текст статуса."""
+    if product.status == Product.Status.IN_STOCK:
+        return float(product.price) if product.price is not None else ''
+    return product.get_status_display()
+
+
 def _write_product_row(
     ws,
     row_idx: int,
@@ -256,7 +263,7 @@ def _write_product_row(
         product.sku or '',
         name,
         description,
-        float(product.price) if product.price is not None else '',
+        _price_or_status(product),
         '',
         float(product.rating) if product.rating is not None else '',
         product.country or '',
@@ -286,7 +293,7 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
         'Артикул',
         'Название',
         'Описание',
-        'Цена',
+        'Цена / статус',
         'Акция',
         'Рейтинг',
         'Страна',

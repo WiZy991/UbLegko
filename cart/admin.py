@@ -460,6 +460,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     change_list_template = 'admin/cart/stainhelprequest/change_list.html'
     list_display = (
         'expand_toggle',
+        'id',
         'created_col',
         'full_name',
         'phone',
@@ -649,7 +650,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         wb = Workbook()
         ws = wb.active
         ws.title = 'Лист запросов'
-        headers = ('Имя', 'Телефон', 'Способ связи', 'Содержание запроса')
+        headers = ('№', 'Имя', 'Телефон', 'Способ связи', 'Содержание запроса')
         ws.append(headers)
         for cell in ws[1]:
             cell.font = Font(bold=True)
@@ -657,6 +658,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
         for obj in requests_list:
             row = (
+                obj.pk,
                 (obj.full_name or '').strip(),
                 (obj.phone or '').strip(),
                 (obj.contact_method or '').strip(),
@@ -666,12 +668,13 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             for cell in ws[ws.max_row]:
                 cell.alignment = Alignment(vertical='top', wrap_text=True)
 
-        ws.column_dimensions['A'].width = 24
-        ws.column_dimensions['B'].width = 18
-        ws.column_dimensions['C'].width = 22
-        ws.column_dimensions['D'].width = 50
+        ws.column_dimensions['A'].width = 8
+        ws.column_dimensions['B'].width = 24
+        ws.column_dimensions['C'].width = 18
+        ws.column_dimensions['D'].width = 22
+        ws.column_dimensions['E'].width = 50
         ws.freeze_panes = 'A2'
-        ws.auto_filter.ref = f'A1:D{ws.max_row}'
+        ws.auto_filter.ref = f'A1:E{ws.max_row}'
 
         buffer = io.BytesIO()
         wb.save(buffer)

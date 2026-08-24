@@ -55,8 +55,11 @@
 
 {% block content %}
 <div class="product-stats">
-  <h1 style="margin-bottom: 8px;">Статистика просмотров карточек</h1>
-  <p style="margin: 0 0 16px; color:#667;">Даты и периоды — по {{ stats_timezone_label }}.</p>
+  <h1 style="margin-bottom: 8px;">Статистика сайта</h1>
+  <p style="margin: 0 0 16px; color:#667;">
+    Даты и периоды — по {{ stats_timezone_label }}.
+    Заход — каждое открытие страницы витрины (главная, каталог, корзина и т.д.), без объединения по IP или сессии.
+  </p>
 
   <div class="product-stats__periods" role="group" aria-label="Период">
     {% for item in period_choices %}
@@ -84,12 +87,12 @@
 
   <div style="display:flex; flex-wrap:wrap; gap:16px; margin-bottom:20px;">
     <div style="min-width:160px; padding:14px 16px; border:1px solid #d9e2ea; border-radius:10px; background:#fff;">
-      <div style="font-size:12px; color:#667; text-transform:uppercase; letter-spacing:.04em;">Людей</div>
-      <div style="font-size:1.8rem; font-weight:700; line-height:1.2;">{{ total_visitors }}</div>
+      <div style="font-size:12px; color:#667; text-transform:uppercase; letter-spacing:.04em;">Заходов на сайт</div>
+      <div style="font-size:1.8rem; font-weight:700; line-height:1.2;">{{ total_site_visits }}</div>
     </div>
     <div style="min-width:160px; padding:14px 16px; border:1px solid #d9e2ea; border-radius:10px; background:#fff;">
-      <div style="font-size:12px; color:#667; text-transform:uppercase; letter-spacing:.04em;">Просмотров</div>
-      <div style="font-size:1.8rem; font-weight:700; line-height:1.2;">{{ total_views }}</div>
+      <div style="font-size:12px; color:#667; text-transform:uppercase; letter-spacing:.04em;">Просмотров карточек</div>
+      <div style="font-size:1.8rem; font-weight:700; line-height:1.2;">{{ total_product_views }}</div>
     </div>
   </div>
 
@@ -100,7 +103,6 @@
         <tr>
           <th>Товар</th>
           <th>Артикул</th>
-          <th>Людей</th>
           <th>Просмотров</th>
         </tr>
       </thead>
@@ -120,7 +122,6 @@
             {% endif %}
           </td>
           <td>{{ row.product__sku|default:"—" }}</td>
-          <td><strong>{{ row.visitors }}</strong></td>
           <td>{{ row.views }}</td>
         </tr>
         {% endfor %}
@@ -140,16 +141,16 @@
       <thead>
         <tr>
           <th>Дата</th>
-          <th>Людей</th>
-          <th>Просмотров</th>
+          <th>Заходов</th>
+          <th>Просмотров карточек</th>
         </tr>
       </thead>
       <tbody>
         {% for day in daily %}
         <tr class="{% cycle 'row1' 'row2' %}">
           <td>{{ day.day|date:"d.m.Y" }}</td>
-          <td>{{ day.visitors }}</td>
-          <td>{{ day.views }}</td>
+          <td>{{ day.visits|default:0 }}</td>
+          <td>{{ day.views|default:0 }}</td>
         </tr>
         {% endfor %}
       </tbody>

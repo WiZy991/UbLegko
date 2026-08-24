@@ -9,7 +9,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from .models import City, ProductPageView, SearchQueryLog, SiteSettings
+from .models import City, ProductPageView, SearchQueryLog, SiteSettings, SiteVisit
 
 
 STATS_FILTER_SESSION_KEY = 'admin_productpageview_stats_filter'
@@ -148,9 +148,10 @@ class ProductPageViewAdmin(admin.ModelAdmin):
         end = timezone.make_aware(datetime.combine(date_to, time.max), tz)
 
         base_qs = ProductPageView.objects.filter(viewed_at__gte=start, viewed_at__lte=end)
+        site_qs = SiteVisit.objects.filter(visited_at__gte=start, visited_at__lte=end)
 
-        total_views = base_qs.count()
-        total_visitors = base_qs.values('visitor_key').distinct().count()
+        total_site_visits = site_qs.count()
+        total_product_views = base_qs.count()
 
         rows = list(
             base_qs.values(
@@ -159,26 +160,31 @@ class ProductPageViewAdmin(admin.ModelAdmin):
                 'product__sku',
                 'product__slug',
             )
-            .annotate(
-                visitors=Count('visitor_key', distinct=True),
-                views=Count('id'),
-            )
-            .order_by('-visitors', '-views', 'product__name')
+            .annotate(views=Count('id'))
+            .order_by('-views', 'product__name')
         )
 
-        daily = list(
-            base_qs.annotate(day=TruncDate('viewed_at', tzinfo=tz))
+        daily_site = list(
+            site_qs.annotate(day=TruncDate('visited_at', tzinfo=tz))
             .values('day')
-            .annotate(
-                visitors=Count('visitor_key', distinct=True),
-                views=Count('id'),
-            )
+            .annotate(visits=Count('id'))
             .order_by('day')
         )
+        daily_products = list(
+            base_qs.annotate(day=TruncDate('viewed_at', tzinfo=tz))
+            .values('day')
+            .annotate(views=Count('id'))
+            .order_by('day')
+        )
+        daily_map = {row['day']: row for row in daily_site}
+        for row in daily_products:
+            bucket = daily_map.setdefault(row['day'], {'day': row['day'], 'visits': 0, 'views': 0})
+            bucket['views'] = row['views']
+        daily = sorted(daily_map.values(), key=lambda item: item['day'])
 
         context = {
             **self.admin_site.each_context(request),
-            'title': 'Статистика просмотров',
+            'title': 'Статистика сайта',
             'opts': self.model._meta,
             'cl': None,
             'date_from': date_from.isoformat(),
@@ -186,8 +192,8 @@ class ProductPageViewAdmin(admin.ModelAdmin):
             'period': period,
             'period_choices': _stats_period_choices(today),
             'stats_timezone_label': 'Владивосток (UTC+10)',
-            'total_views': total_views,
-            'total_visitors': total_visitors,
+            'total_site_visits': total_site_visits,
+            'total_product_views': total_product_views,
             'rows': rows,
             'daily': daily,
             'has_rows': bool(rows),

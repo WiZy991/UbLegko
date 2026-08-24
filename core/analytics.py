@@ -1,4 +1,4 @@
-"""Учёт просмотров карточек товаров."""
+"""Учёт заходов на сайт и просмотров карточек товаров."""
 
 from __future__ import annotations
 
@@ -9,9 +9,6 @@ from datetime import timedelta
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
-
-# Не писать повторный просмотр того же товара тем же человеком чаще чем раз в N минут
-DEDUP_MINUTES = 30
 
 _BOT_MARKERS = (
     'bot',
@@ -33,6 +30,48 @@ def _is_bot(request) -> bool:
     if not ua:
         return True
     return any(marker in ua for marker in _BOT_MARKERS)
+
+
+def _is_staff_user(request) -> bool:
+    user = getattr(request, 'user', None)
+    return bool(
+        user is not None
+        and user.is_authenticated
+        and (user.is_staff or user.is_superuser)
+    )
+
+
+def should_track_site_visit(request) -> bool:
+    if request.method != 'GET':
+        return False
+    path = (request.path or '/').split('?', 1)[0]
+    if path.startswith('/admin/'):
+        return False
+    if path.startswith('/static/') or path.startswith('/media/'):
+        return False
+    if path in {'/favicon.ico', '/robots.txt'}:
+        return False
+    if (request.headers.get('X-Requested-With') or '').lower() == 'xmlhttprequest':
+        return False
+    if _is_bot(request):
+        return False
+    if _is_staff_user(request):
+        return False
+    return True
+
+
+def record_site_visit(request) -> None:
+    """Каждый заход на витрину — отдельная запись (без объединения по IP/сессии)."""
+    try:
+        if not should_track_site_visit(request):
+            return
+
+        from core.models import SiteVisit
+
+        path = (request.path or '/')[:300]
+        SiteVisit.objects.create(path=path)
+    except Exception:
+        logger.exception('Не удалось записать заход на сайт')
 
 
 def visitor_key_for_request(request) -> str:
@@ -59,22 +98,12 @@ def record_product_view(request, product) -> None:
             return
         if _is_bot(request):
             return
-        user = getattr(request, 'user', None)
-        if user is not None and user.is_authenticated and (user.is_staff or user.is_superuser):
+        if _is_staff_user(request):
             return
 
         from core.models import ProductPageView
 
         key = visitor_key_for_request(request)
-        since = timezone.now() - timedelta(minutes=DEDUP_MINUTES)
-        exists = ProductPageView.objects.filter(
-            product_id=product.pk,
-            visitor_key=key,
-            viewed_at__gte=since,
-        ).exists()
-        if exists:
-            return
-
         ProductPageView.objects.create(product_id=product.pk, visitor_key=key)
     except Exception:
         logger.exception('Не удалось записать просмотр product_id=%s', getattr(product, 'pk', None))
@@ -106,8 +135,7 @@ def record_search_query(request, raw: str) -> None:
             return
         if _is_bot(request):
             return
-        user = getattr(request, 'user', None)
-        if user is not None and user.is_authenticated and (user.is_staff or user.is_superuser):
+        if _is_staff_user(request):
             return
 
         from core.models import SearchQueryLog
