@@ -2699,14 +2699,24 @@
           phoneInput.value = formatPhoneMask(savedPhone);
         }
         if (statusEl) {
-          statusEl.textContent = data.message || "Спасибо! Мы получили обращение.";
+          const successMessage =
+            data.message ||
+            (data.request_id
+              ? `Спасибо! Запрос №${data.request_id} принят.`
+              : "Спасибо! Мы получили обращение.");
+          statusEl.textContent = successMessage;
           statusEl.classList.add("is-success");
           statusEl.hidden = false;
         }
         if (typeof showToast === "function") {
-          showToast(data.message || "Обращение отправлено");
+          showToast(
+            data.message ||
+              (data.request_id
+                ? `Запрос №${data.request_id} принят`
+                : "Обращение отправлено")
+          );
         }
-        window.setTimeout(closeModal, 1600);
+        window.setTimeout(closeModal, 2800);
       } catch (_err) {
         if (statusEl) {
           statusEl.textContent = "Сеть недоступна. Попробуйте позже или позвоните.";

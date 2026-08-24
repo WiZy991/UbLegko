@@ -102,6 +102,10 @@ def stain_help_submit(request):
 
     return JsonResponse({
         'ok': True,
-        'message': 'Спасибо! Мы получили обращение и скоро свяжемся.',
+        'request_id': request_obj.pk,
+        'message': (
+            f'Спасибо! Запрос №{request_obj.pk} принят. '
+            'Мы скоро свяжемся с вами.'
+        ),
         'email_sent': email_sent,
     })

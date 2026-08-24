@@ -460,7 +460,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     change_list_template = 'admin/cart/stainhelprequest/change_list.html'
     list_display = (
         'expand_toggle',
-        'id',
+        'request_number',
         'created_col',
         'full_name',
         'phone',
@@ -584,6 +584,10 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     def get_row_status(self, obj):
         return 'processed' if obj.is_processed else 'new'
 
+    @admin.display(description='№', ordering='pk')
+    def request_number(self, obj):
+        return obj.pk
+
     @admin.display(description='Создано', ordering='created_at')
     def created_col(self, obj):
         return format_local_datetime(obj.created_at)
@@ -616,6 +620,9 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         return mark_safe(
             '<div class="inbox-row-detail__inner">'
             '<div class="inbox-row-detail__grid">'
+            f'<div class="inbox-row-detail__block">'
+            f'<span class="inbox-row-detail__label">№</span>'
+            f'<div class="inbox-row-detail__value">{obj.pk}</div></div>'
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Имя</span>'
             f'<div class="inbox-row-detail__value">{escape(name)}</div></div>'
