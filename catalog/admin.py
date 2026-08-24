@@ -1264,7 +1264,7 @@ class ProductRecommendationAdmin(admin.ModelAdmin):
 
 @admin.register(ProductReview)
 class ProductReviewAdmin(admin.ModelAdmin):
-    list_display = ('product', 'user', 'rating', 'short_comment', 'created_at')
+    list_display = ('product', 'user', 'rating', 'comment_col', 'created_at')
     list_filter = ('rating', 'created_at')
     search_fields = ('product__name', 'user__username', 'user__first_name', 'comment')
     autocomplete_fields = ['product', 'user']
@@ -1272,8 +1272,8 @@ class ProductReviewAdmin(admin.ModelAdmin):
     fields = ('product', 'user', 'rating', 'comment', 'created_at', 'updated_at')
 
     @admin.display(description='Комментарий')
-    def short_comment(self, obj):
-        text = (obj.comment or '').strip().replace('\n', ' ')
+    def comment_col(self, obj):
+        text = (obj.comment or '').strip()
         if not text:
             return '—'
-        return text if len(text) <= 80 else f'{text[:77]}…'
+        return mark_safe(f'<span style="white-space:pre-wrap;">{escape(text)}</span>')
