@@ -31,7 +31,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260823pricestruck">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20260824requestsuccess">
   <link rel="stylesheet" href="{% static 'css/pill_nav_topbar.css' %}?v=12">
   {% block extra_css %}{% endblock %}
   {% block json_ld %}
@@ -535,6 +535,7 @@
       aria-labelledby="stain-help-title"
     >
       <button type="button" class="stain-help-modal__close" data-stain-help-close aria-label="Закрыть">×</button>
+      <div class="stain-help-modal__form-wrap" data-stain-help-form-wrap>
       <h2 class="stain-help-modal__title" id="stain-help-title">{{ site_settings.slogan }}</h2>
       <p class="stain-help-modal__lead">Напишите, что не отмывается — подскажем, чем лучше справиться.</p>
       <form
@@ -605,11 +606,23 @@
         <p class="stain-help-form__status" data-stain-help-status hidden></p>
         <button class="btn btn-primary stain-help-form__submit" type="submit" data-privacy-submit disabled>Отправить</button>
       </form>
+      </div>
+      <div class="stain-help-success" data-stain-help-success hidden>
+        <h2 class="stain-help-success__title" data-stain-help-success-title>Запрос принят</h2>
+        <p class="stain-help-success__lead" data-stain-help-success-lead>Мы скоро свяжемся с вами.</p>
+        <p class="stain-help-success__warning" data-stain-help-success-warning hidden>
+          Запрос сохранён, но письмо на почту магазина сейчас не ушло. Менеджер всё равно увидит его в админке.
+        </p>
+        <div class="stain-help-success__actions">
+          <a class="btn btn-primary" href="{% url 'catalog:home' %}">Вернуться в каталог</a>
+          <button type="button" class="btn" data-stain-help-success-close>Закрыть</button>
+        </div>
+      </div>
     </div>
   </div>
 
   <script>window.ublegkoStainHelpPrefixes={{ stain_help_prefixes_json|safe }};</script>
-  <script src="{% static 'js/main.js' %}?v=20260824requestno"></script>
+  <script src="{% static 'js/main.js' %}?v=20260824requestsuccess"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
   <script src="{% static 'js/pill_nav_topbar.js' %}?v=10" defer></script>
   {% block extra_js %}{% endblock %}

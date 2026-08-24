@@ -2422,7 +2422,35 @@
     const consentCheckbox = form.querySelector("[data-privacy-consent]");
     const nameInput = form.querySelector("[name='full_name']");
     const phoneInput = form.querySelector("[name='phone']");
+    const formWrap = modal.querySelector("[data-stain-help-form-wrap]");
+    const successPanel = modal.querySelector("[data-stain-help-success]");
+    const successTitle = modal.querySelector("[data-stain-help-success-title]");
+    const successLead = modal.querySelector("[data-stain-help-success-lead]");
+    const successWarning = modal.querySelector("[data-stain-help-success-warning]");
     let lastFocus = null;
+
+    function showFormView() {
+      if (formWrap) formWrap.hidden = false;
+      if (successPanel) successPanel.hidden = true;
+      if (successWarning) successWarning.hidden = true;
+    }
+
+    function showSuccessView(requestId, message, emailSent) {
+      if (formWrap) formWrap.hidden = true;
+      if (successPanel) successPanel.hidden = false;
+      if (successTitle) {
+        successTitle.textContent = requestId
+          ? `Запрос №${requestId} принят`
+          : "Запрос принят";
+      }
+      if (successLead) {
+        successLead.textContent =
+          message || "Спасибо! Мы скоро свяжемся с вами.";
+      }
+      if (successWarning) {
+        successWarning.hidden = emailSent !== false;
+      }
+    }
 
     function syncConsentSubmit() {
       if (!submitBtn) return;
@@ -2471,6 +2499,7 @@
     function openModal(options) {
       const opts = options || {};
       lastFocus = document.activeElement;
+      showFormView();
       clearErrors();
       applyPrefill();
       if (opts.prefillProblem) {
@@ -2487,6 +2516,7 @@
     function closeModal() {
       modal.hidden = true;
       document.body.style.overflow = "";
+      showFormView();
       if (lastFocus && typeof lastFocus.focus === "function") lastFocus.focus();
     }
 
@@ -2588,6 +2618,13 @@
         if (modal.hidden && shouldAutoOpen()) openModal();
       }, 800);
     }
+
+    document.querySelectorAll("[data-stain-help-success-close]").forEach((btn) => {
+      btn.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeModal();
+      });
+    });
 
     document.querySelectorAll("[data-stain-help-open]").forEach((btn) => {
       btn.addEventListener("click", (event) => {
@@ -2698,25 +2735,19 @@
         if (phoneInput && !phoneInput.value && savedPhone) {
           phoneInput.value = formatPhoneMask(savedPhone);
         }
-        if (statusEl) {
-          const successMessage =
-            data.message ||
-            (data.request_id
-              ? `Спасибо! Запрос №${data.request_id} принят.`
-              : "Спасибо! Мы получили обращение.");
-          statusEl.textContent = successMessage;
-          statusEl.classList.add("is-success");
-          statusEl.hidden = false;
-        }
+        const successMessage =
+          data.message ||
+          (data.request_id
+            ? `Спасибо! Запрос №${data.request_id} принят. Мы скоро свяжемся с вами.`
+            : "Спасибо! Мы получили обращение.");
+        showSuccessView(data.request_id, successMessage, data.email_sent);
         if (typeof showToast === "function") {
           showToast(
-            data.message ||
-              (data.request_id
-                ? `Запрос №${data.request_id} принят`
-                : "Обращение отправлено")
+            data.request_id
+              ? `Запрос №${data.request_id} принят`
+              : "Обращение отправлено"
           );
         }
-        window.setTimeout(closeModal, 2800);
       } catch (_err) {
         if (statusEl) {
           statusEl.textContent = "Сеть недоступна. Попробуйте позже или позвоните.";
