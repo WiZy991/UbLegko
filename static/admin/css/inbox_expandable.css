@@ -337,9 +337,7 @@
   #result_list th.column-delivery_col,
   #result_list td.field-delivery_col,
   #result_list th.column-created_col,
-  #result_list td.field-created_col,
-  #result_list th.column-id,
-  #result_list td.field-id {
+  #result_list td.field-created_col {
     display: none !important;
   }
 
@@ -374,6 +372,17 @@
   .inbox-row-expand {
     width: 40px;
     height: 40px;
+  }
+
+  #result_list th.column-id,
+  #result_list td.field-id {
+    min-width: 36px !important;
+    width: 1% !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    padding-left: 4px !important;
+    padding-right: 6px !important;
   }
 
   /* Имя можно чуть обрезать, телефон — целиком */
