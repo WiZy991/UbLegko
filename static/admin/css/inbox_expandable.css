@@ -215,6 +215,14 @@
   margin: 4px 0;
 }
 
+.inbox-row-detail__items li.inbox-row-detail__total {
+  margin-top: 8px;
+  list-style: none;
+  margin-left: -18px;
+  padding-top: 6px;
+  border-top: 1px solid #d9e2ea;
+}
+
 /* Две кнопки статуса в один ряд */
 #result_list th.column-status_control,
 #result_list td.field-status_control {

@@ -402,6 +402,9 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
                 f'<li>{escape(item.product_name)} × {item.quantity} — '
                 f'{item.line_total:.0f} руб</li>'
                 for item in items
+            ) + (
+                f'<li class="inbox-row-detail__total"><strong>Итого: '
+                f'{obj.total:.0f} руб</strong></li>'
             ) + '</ul>'
         else:
             items_html = '<span class="inbox-row-detail__value">Нет позиций</span>'
@@ -410,7 +413,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         feedback = (obj.site_feedback or '').strip() or '—'
         address = (obj.address or '').strip() or '—'
         address_name = (obj.address_name or '').strip() or '—'
-        city = (obj.city or '').strip() or '—'
+        created = format_local_datetime(obj.created_at)
         email = (obj.email or '').strip() or '—'
         delivery = obj.get_delivery_method_display() if obj.delivery_method else '—'
         email_sent = 'Да' if obj.email_sent else 'Нет'
@@ -422,8 +425,8 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             f'<span class="inbox-row-detail__label">Email</span>'
             f'<div class="inbox-row-detail__value">{escape(email)}</div></div>'
             f'<div class="inbox-row-detail__block">'
-            f'<span class="inbox-row-detail__label">Город</span>'
-            f'<div class="inbox-row-detail__value">{escape(city)}</div></div>'
+            f'<span class="inbox-row-detail__label">Когда создана</span>'
+            f'<div class="inbox-row-detail__value">{escape(created)}</div></div>'
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Доставка</span>'
             f'<div class="inbox-row-detail__value">{escape(str(delivery))}</div></div>'
