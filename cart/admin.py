@@ -131,7 +131,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     change_list_template = 'admin/cart/order/change_list.html'
     list_display = (
         'expand_toggle',
-        'id',
+        'order_number',
         'full_name',
         'phone',
         'delivery_col',
@@ -395,6 +395,10 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     def get_row_status(self, obj):
         return obj.status if obj.status in ('new', 'processed') else 'new'
+
+    @admin.display(description='№', ordering='pk')
+    def order_number(self, obj):
+        return obj.pk
 
     @admin.display(description='Получение', ordering='delivery_method')
     def delivery_col(self, obj):
