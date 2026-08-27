@@ -134,7 +134,6 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         'id',
         'full_name',
         'phone',
-        'city_col',
         'delivery_col',
         'email',
         'email_sent_col',
@@ -396,10 +395,6 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     def get_row_status(self, obj):
         return obj.status if obj.status in ('new', 'processed') else 'new'
-
-    @admin.display(description='Адрес', ordering='city')
-    def city_col(self, obj):
-        return obj.city
 
     @admin.display(description='Получение', ordering='delivery_method')
     def delivery_col(self, obj):
