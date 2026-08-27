@@ -170,7 +170,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.action(description='Сформировать лист доставки')
     def export_delivery_sheet(self, request, queryset):
-        orders = list(queryset.order_by('created_at', 'id'))
+        orders = list(queryset.order_by('-created_at', '-id'))
         if not orders:
             self.message_user(request, 'Не выбрано ни одной заявки', level=messages.WARNING)
             return None
@@ -178,7 +178,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         wb = Workbook()
         ws = wb.active
         ws.title = 'Лист доставки'
-        headers = ('Имя', 'Телефон', 'Адрес доставки', 'Комментарий')
+        headers = ('№', 'Дата создания', 'Имя', 'Телефон', 'Адрес доставки', 'Комментарий')
         ws.append(headers)
         for cell in ws[1]:
             cell.font = Font(bold=True)
@@ -188,6 +188,8 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             address = self._delivery_address_for_sheet(order)
             comment = (order.comment or '').strip()
             row = (
+                order.pk,
+                format_local_datetime(order.created_at),
                 (order.full_name or '').strip(),
                 (order.phone or '').strip(),
                 address,
@@ -197,12 +199,14 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             for cell in ws[ws.max_row]:
                 cell.alignment = Alignment(vertical='top', wrap_text=True)
 
-        ws.column_dimensions['A'].width = 24
+        ws.column_dimensions['A'].width = 8
         ws.column_dimensions['B'].width = 18
-        ws.column_dimensions['C'].width = 42
-        ws.column_dimensions['D'].width = 40
+        ws.column_dimensions['C'].width = 24
+        ws.column_dimensions['D'].width = 18
+        ws.column_dimensions['E'].width = 42
+        ws.column_dimensions['F'].width = 40
         ws.freeze_panes = 'A2'
-        ws.auto_filter.ref = f'A1:D{ws.max_row}'
+        ws.auto_filter.ref = f'A1:F{ws.max_row}'
 
         return self._xlsx_response(
             wb,
@@ -213,7 +217,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     @admin.action(description='Сформировать лист заявок')
     def export_orders_sheet(self, request, queryset):
         orders = list(
-            queryset.order_by('created_at', 'id').prefetch_related('items')
+            queryset.order_by('-created_at', '-id').prefetch_related('items')
         )
         if not orders:
             self.message_user(request, 'Не выбрано ни одной заявки', level=messages.WARNING)
@@ -223,6 +227,8 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         ws = wb.active
         ws.title = 'Лист заявок'
         headers = (
+            '№',
+            'Дата создания',
             'Имя',
             'Телефон',
             'Адрес',
@@ -242,6 +248,8 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             ) or '—'
             quantities = '\n'.join(str(item.quantity) for item in items) or '0'
             row = (
+                order.pk,
+                format_local_datetime(order.created_at),
                 (order.full_name or '').strip(),
                 (order.phone or '').strip(),
                 self._delivery_address_for_sheet(order),
@@ -253,14 +261,16 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             for cell in ws[ws.max_row]:
                 cell.alignment = Alignment(vertical='top', wrap_text=True)
 
-        ws.column_dimensions['A'].width = 24
+        ws.column_dimensions['A'].width = 8
         ws.column_dimensions['B'].width = 18
-        ws.column_dimensions['C'].width = 42
-        ws.column_dimensions['D'].width = 40
-        ws.column_dimensions['E'].width = 14
-        ws.column_dimensions['F'].width = 14
+        ws.column_dimensions['C'].width = 24
+        ws.column_dimensions['D'].width = 18
+        ws.column_dimensions['E'].width = 42
+        ws.column_dimensions['F'].width = 40
+        ws.column_dimensions['G'].width = 14
+        ws.column_dimensions['H'].width = 14
         ws.freeze_panes = 'A2'
-        ws.auto_filter.ref = f'A1:F{ws.max_row}'
+        ws.auto_filter.ref = f'A1:H{ws.max_row}'
 
         return self._xlsx_response(
             wb,
@@ -287,18 +297,40 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @staticmethod
     def _delivery_address_for_sheet(order):
+        """Адрес для Excel без дублей (город часто = начало адреса)."""
         if order.delivery_method == 'pickup' and not (order.address or '').strip():
             return 'Самовывоз'
-        parts = []
-        if (order.city or '').strip():
-            parts.append(order.city.strip())
-        if (order.address or '').strip():
-            parts.append(order.address.strip())
-        address = ', '.join(parts)
+
+        address = (order.address or '').strip()
+        city = (order.city or '').strip()
         name = (order.address_name or '').strip()
-        if name and address:
-            return f'{name}: {address}'
-        return name or address or '—'
+
+        # Если адрес заполнен — берём его. Город часто вырезан из адреса и дублирует.
+        if address:
+            result = address
+            if city:
+                address_cf = address.casefold()
+                city_cf = city.casefold()
+                already = (
+                    address_cf == city_cf
+                    or address_cf.startswith(f'{city_cf},')
+                    or address_cf.startswith(f'{city_cf} ')
+                    or city_cf in address_cf
+                )
+                if not already:
+                    result = f'{city}, {address}'
+        else:
+            result = city
+
+        if name and result:
+            name_cf = name.casefold()
+            result_cf = result.casefold()
+            if name_cf == result_cf or result_cf.startswith(f'{name_cf}:'):
+                return result
+            if name_cf in result_cf:
+                return result
+            return f'{name}: {result}'
+        return name or result or '—'
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('items')
@@ -653,7 +685,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.action(description='Сформировать лист запросов')
     def export_requests_sheet(self, request, queryset):
-        requests_list = list(queryset.order_by('created_at', 'id'))
+        requests_list = list(queryset.order_by('-created_at', '-id'))
         if not requests_list:
             self.message_user(request, 'Не выбрано ни одного запроса', level=messages.WARNING)
             return None
@@ -661,7 +693,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         wb = Workbook()
         ws = wb.active
         ws.title = 'Лист запросов'
-        headers = ('№', 'Имя', 'Телефон', 'Способ связи', 'Содержание запроса')
+        headers = ('№', 'Дата создания', 'Имя', 'Телефон', 'Способ связи', 'Содержание запроса')
         ws.append(headers)
         for cell in ws[1]:
             cell.font = Font(bold=True)
@@ -670,6 +702,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         for obj in requests_list:
             row = (
                 obj.pk,
+                format_local_datetime(obj.created_at),
                 (obj.full_name or '').strip(),
                 (obj.phone or '').strip(),
                 (obj.contact_method or '').strip(),
@@ -680,12 +713,13 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
                 cell.alignment = Alignment(vertical='top', wrap_text=True)
 
         ws.column_dimensions['A'].width = 8
-        ws.column_dimensions['B'].width = 24
-        ws.column_dimensions['C'].width = 18
-        ws.column_dimensions['D'].width = 22
-        ws.column_dimensions['E'].width = 50
+        ws.column_dimensions['B'].width = 18
+        ws.column_dimensions['C'].width = 24
+        ws.column_dimensions['D'].width = 18
+        ws.column_dimensions['E'].width = 22
+        ws.column_dimensions['F'].width = 50
         ws.freeze_panes = 'A2'
-        ws.auto_filter.ref = f'A1:E{ws.max_row}'
+        ws.auto_filter.ref = f'A1:F{ws.max_row}'
 
         buffer = io.BytesIO()
         wb.save(buffer)
