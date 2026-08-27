@@ -133,7 +133,6 @@
 /* Длинный текст — одна строка + многоточие */
 #result_list tbody tr.inbox-row > td.field-short_problem,
 #result_list tbody tr.inbox-row > td.field-address_col,
-#result_list tbody tr.inbox-row > td.field-email,
 #result_list tbody tr.inbox-row > td.field-contact_col,
 #result_list tbody tr.inbox-row > td.field-address_name_col,
 #result_list tbody tr.inbox-row > td.field-full_name {
@@ -143,15 +142,31 @@
   text-overflow: ellipsis;
 }
 
+/* Email — ширина по содержимому, без пустого зазора справа */
+#result_list th.column-email,
+#result_list td.field-email {
+  width: 1% !important;
+  max-width: none !important;
+  white-space: nowrap !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  padding-right: 10px !important;
+}
+
 #result_list .field-id,
 #result_list .field-email_sent_col,
 #result_list .field-total_display,
 #result_list .field-created_col,
 #result_list .field-phone,
-#result_list .field-city,
 #result_list .field-delivery_col {
   white-space: nowrap;
   width: 1%;
+}
+
+/* Адрес доставки забирает свободное место — не email */
+#result_list th.column-address_col,
+#result_list td.field-address_col {
+  width: auto;
 }
 
 #result_list .field-created_col {
