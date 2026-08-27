@@ -620,12 +620,13 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         name = (obj.full_name or '').strip() or '—'
         email_sent = 'Да' if obj.email_sent else 'Нет'
         user = str(obj.user) if obj.user_id else '—'
+        created = format_local_datetime(obj.created_at)
         return mark_safe(
             '<div class="inbox-row-detail__inner">'
             '<div class="inbox-row-detail__grid">'
             f'<div class="inbox-row-detail__block">'
-            f'<span class="inbox-row-detail__label">№</span>'
-            f'<div class="inbox-row-detail__value">{obj.pk}</div></div>'
+            f'<span class="inbox-row-detail__label">Создано</span>'
+            f'<div class="inbox-row-detail__value">{escape(created)}</div></div>'
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Имя</span>'
             f'<div class="inbox-row-detail__value">{escape(name)}</div></div>'
