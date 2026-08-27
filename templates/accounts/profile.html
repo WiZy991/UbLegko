@@ -103,7 +103,7 @@
     <h2 style="margin-top:0;">Мои заявки</h2>
     {% for order in orders %}
       <div style="padding:12px 0;border-bottom:1px solid var(--line);">
-        <strong>Заявка №{{ order.pk }}</strong>
+        <strong>Заявка №{{ order.number }}</strong>
         <div style="color:var(--text-muted);font-size:0.9rem;">
           {{ order.created_at|date:"d.m.Y H:i" }} · {{ order.get_status_display }} · {{ order.total|floatformat:0 }} руб
         </div>

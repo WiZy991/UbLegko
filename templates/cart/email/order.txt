@@ -1,4 +1,4 @@
-Новая заявка №{{ order.pk }} с сайта {{ site.brand_name }}
+Новая заявка №{{ order.number }} с сайта {{ site.brand_name }}
 
 Клиент: {{ order.full_name }}
 Телефон: {{ order.phone }}

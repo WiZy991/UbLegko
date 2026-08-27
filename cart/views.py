@@ -204,11 +204,11 @@ def checkout(request):
                 order.save(update_fields=['email_sent'])
             cart.clear()
             if email_ok:
-                messages.success(request, f'Заявка №{order.pk} отправлена. Мы свяжемся с вами.')
+                messages.success(request, f'Заявка №{order.number} отправлена. Мы свяжемся с вами.')
             else:
                 messages.warning(
                     request,
-                    f'Заявка №{order.pk} сохранена, но письмо на почту магазина не ушло. '
+                    f'Заявка №{order.number} сохранена, но письмо на почту магазина не ушло. '
                     'Мы всё равно обработаем заявку — проверьте заявки в админке.',
                 )
             return redirect('cart:order_success', order_id=order.pk)
@@ -245,14 +245,14 @@ def _send_order_email(order):
         or order
     )
 
-    subject = f'Заявка №{order.pk} с сайта {site.brand_name}'
+    subject = f'Заявка №{order.number} с сайта {site.brand_name}'
     body = render_to_string('cart/email/order.txt', {'order': order, 'site': site})
     client_email = (order.email or '').strip()
     return send_shop_email(
         subject=subject,
         body=body,
         reply_to=[client_email] if client_email else None,
-        log_label=f'Заявка №{order.pk}',
+        log_label=f'Заявка №{order.number}',
     )
 
 

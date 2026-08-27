@@ -1,5 +1,6 @@
 from django.conf import settings
-from django.db import models
+from django.db import models, transaction
+from django.utils import timezone
 
 from catalog.models import Product
 
@@ -27,6 +28,39 @@ class Favorite(models.Model):
 
     def __str__(self):
         return f'{self.user} — {self.product}'
+
+
+class OrderYearCounter(models.Model):
+    """Счётчик номеров новых заявок по календарным годам (Asia/Vladivostok)."""
+
+    year = models.PositiveSmallIntegerField('Год', primary_key=True)
+    last_number = models.PositiveIntegerField('Последний №', default=0)
+
+    class Meta:
+        verbose_name = 'Счётчик заявок'
+        verbose_name_plural = 'Счётчики заявок'
+
+    def __str__(self):
+        return f'{self.year}: {self.last_number}'
+
+
+def _vladivostok_year(dt=None):
+    if dt is None:
+        dt = timezone.now()
+    return timezone.localtime(dt).year
+
+
+def assign_order_number(order):
+    year = _vladivostok_year()
+    with transaction.atomic():
+        counter, _ = OrderYearCounter.objects.select_for_update().get_or_create(
+            year=year,
+            defaults={'last_number': 0},
+        )
+        counter.last_number += 1
+        counter.save(update_fields=['last_number'])
+        order.number = counter.last_number
+        order.number_year = year
 
 
 class Order(models.Model):
@@ -66,15 +100,28 @@ class Order(models.Model):
         default=Status.NEW,
     )
     email_sent = models.BooleanField('Письмо отправлено', default=False)
+    number = models.PositiveIntegerField('№', editable=False)
+    number_year = models.PositiveSmallIntegerField('Год №', editable=False)
     created_at = models.DateTimeField('Создана', auto_now_add=True)
 
     class Meta:
         verbose_name = 'Заявка'
         verbose_name_plural = 'Заявки'
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['number_year', 'number'],
+                name='cart_order_unique_number_per_year',
+            ),
+        ]
+
+    def save(self, *args, **kwargs):
+        if self._state.adding and not self.number:
+            assign_order_number(self)
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'Заявка #{self.pk} — {self.full_name}'
+        return f'Заявка №{self.number} ({self.number_year}) — {self.full_name}'
 
     @property
     def total(self):

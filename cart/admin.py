@@ -187,7 +187,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             address = self._delivery_address_for_sheet(order)
             comment = (order.comment or '').strip()
             row = (
-                order.pk,
+                order.number,
                 format_local_datetime(order.created_at),
                 (order.full_name or '').strip(),
                 (order.phone or '').strip(),
@@ -248,7 +248,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             ) or '—'
             quantities = '\n'.join(str(item.quantity) for item in items) or '0'
             row = (
-                order.pk,
+                order.number,
                 format_local_datetime(order.created_at),
                 (order.full_name or '').strip(),
                 (order.phone or '').strip(),
@@ -396,9 +396,9 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     def get_row_status(self, obj):
         return obj.status if obj.status in ('new', 'processed') else 'new'
 
-    @admin.display(description='№', ordering='pk')
+    @admin.display(description='№', ordering='number')
     def order_number(self, obj):
-        return obj.pk
+        return obj.number
 
     @admin.display(description='Получение', ordering='delivery_method')
     def delivery_col(self, obj):

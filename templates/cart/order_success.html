@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="content-card auth-wrap" style="text-align:center;">
-  <h1>Заявка №{{ order.pk }} принята</h1>
+  <h1>Заявка №{{ order.number }} принята</h1>
   <p>Способ получения: {{ order.get_delivery_method_display }}</p>
   <p>Сумма заказа: {{ order.total|floatformat:0 }} руб</p>
   <p>Мы свяжемся с вами по телефону {{ order.phone }}.</p>
