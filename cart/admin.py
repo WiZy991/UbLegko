@@ -232,6 +232,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             'Имя',
             'Телефон',
             'Адрес',
+            'Комментарий к заявке',
             'Товары',
             'Количество',
             'Общая сумма',
@@ -253,6 +254,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
                 (order.full_name or '').strip(),
                 (order.phone or '').strip(),
                 self._delivery_address_for_sheet(order),
+                (order.comment or '').strip(),
                 products,
                 quantities,
                 f'{order.total:.0f} руб',
@@ -266,11 +268,12 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         ws.column_dimensions['C'].width = 24
         ws.column_dimensions['D'].width = 18
         ws.column_dimensions['E'].width = 42
-        ws.column_dimensions['F'].width = 40
-        ws.column_dimensions['G'].width = 14
+        ws.column_dimensions['F'].width = 36
+        ws.column_dimensions['G'].width = 40
         ws.column_dimensions['H'].width = 14
+        ws.column_dimensions['I'].width = 14
         ws.freeze_panes = 'A2'
-        ws.auto_filter.ref = f'A1:H{ws.max_row}'
+        ws.auto_filter.ref = f'A1:I{ws.max_row}'
 
         return self._xlsx_response(
             wb,
