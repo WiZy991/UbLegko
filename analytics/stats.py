@@ -118,17 +118,12 @@ def resolve_stats_period(request, *, default='today'):
 
 def _chart_granularity(date_from: date, date_to: date) -> str:
     span = (date_to - date_from).days + 1
-    if span <= 1:
-        return 'hour'
+    # Сегодня, неделя, месяц, квартал — по часам (день + час на подписи)
     if span <= 92:
+        return 'hour'
+    if span <= 182:
         return 'day'
     return 'month'
-
-
-def _aware_day_bounds(day: date, tz):
-    start = timezone.make_aware(datetime.combine(day, time.min), tz)
-    end = timezone.make_aware(datetime.combine(day, time.max), tz)
-    return start, end
 
 
 def _bucket_key_from_dt(value, granularity: str, tz):
@@ -142,10 +137,13 @@ def _bucket_key_from_dt(value, granularity: str, tz):
     return (local.year, local.month)
 
 
-def _format_chart_label(bucket_key, granularity: str) -> str:
+def _format_chart_label(bucket_key, granularity: str, *, multiday_hourly: bool = False) -> str:
     year, month = bucket_key[0], bucket_key[1]
     if granularity == 'hour':
-        return f'{bucket_key[3]:02d}:00'
+        hour = bucket_key[3]
+        if multiday_hourly:
+            return f'{bucket_key[2]:02d}.{month:02d} {hour:02d}:00'
+        return f'{hour:02d}:00'
     if granularity == 'day':
         return f'{bucket_key[2]:02d}.{month:02d}'
     return f'{_MONTH_LABELS[month - 1]} {year}'
@@ -153,10 +151,12 @@ def _format_chart_label(bucket_key, granularity: str) -> str:
 
 def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str, tz):
     if granularity == 'hour':
-        day_start, _ = _aware_day_bounds(date_from, tz)
-        for hour in range(24):
-            local = timezone.localtime(day_start + timedelta(hours=hour), tz)
+        cursor = timezone.make_aware(datetime.combine(date_from, time.min), tz)
+        end = timezone.make_aware(datetime.combine(date_to, time.max), tz)
+        while cursor <= end:
+            local = timezone.localtime(cursor, tz)
             yield (local.year, local.month, local.day, local.hour)
+            cursor += timedelta(hours=1)
         return
 
     if granularity == 'day':
@@ -178,6 +178,7 @@ def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str, tz
 
 def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
     granularity = _chart_granularity(date_from, date_to)
+    multiday_hourly = granularity == 'hour' and (date_to - date_from).days >= 1
 
     visits_map = {}
     for visited_at in site_qs.values_list('visited_at', flat=True):
@@ -195,7 +196,7 @@ def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
     visits = []
     views = []
     for bucket_key in _iter_chart_bucket_keys(date_from, date_to, granularity, tz):
-        labels.append(_format_chart_label(bucket_key, granularity))
+        labels.append(_format_chart_label(bucket_key, granularity, multiday_hourly=multiday_hourly))
         visits.append(visits_map.get(bucket_key, 0))
         views.append(views_map.get(bucket_key, 0))
 
@@ -204,6 +205,7 @@ def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
         'visits': visits,
         'views': views,
         'granularity': granularity,
+        'multiday_hourly': multiday_hourly,
     }
 
 

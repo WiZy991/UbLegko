@@ -382,8 +382,8 @@
           backgroundColor: 'rgba(78, 121, 255, 0.12)',
           fill: true,
           tension: 0.35,
-          pointRadius: chartData.labels.length > 31 ? 0 : 3,
-          pointHoverRadius: 4,
+          pointRadius: chartData.labels.length > 48 ? 0 : 3,
+          pointHoverRadius: chartData.labels.length > 48 ? 3 : 4,
           borderWidth: 2,
         },
         {
@@ -393,8 +393,8 @@
           backgroundColor: 'rgba(255, 159, 64, 0.10)',
           fill: true,
           tension: 0.35,
-          pointRadius: chartData.labels.length > 31 ? 0 : 3,
-          pointHoverRadius: 4,
+          pointRadius: chartData.labels.length > 48 ? 0 : 3,
+          pointHoverRadius: chartData.labels.length > 48 ? 3 : 4,
           borderWidth: 2,
         },
       ],
@@ -418,7 +418,10 @@
             color: textColor,
             maxRotation: 0,
             autoSkip: true,
-            maxTicksLimit: chartData.granularity === 'hour' ? 12 : 15,
+            maxTicksLimit: chartData.granularity === 'hour'
+              ? (chartData.multiday_hourly ? 18 : 12)
+              : 15,
+            maxRotation: chartData.multiday_hourly ? 45 : 0,
           },
         },
         y: {
