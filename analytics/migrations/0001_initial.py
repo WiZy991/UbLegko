@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core', '0013_rename_core_produc_viewed__7a1e2a_idx_core_produc_viewed__859b08_idx_and_more'),
+        ('core', '0012_sitevisit_ip_device'),
     ]
 
     operations = [
