@@ -155,6 +155,11 @@
       font-size: 13px;
       font-weight: 600;
       color: #667;
+      text-align: right;
+      line-height: 1.4;
+    }
+    .product-stats__fold > summary {
+      flex-wrap: wrap;
     }
     .product-stats__fold-body {
       border-top: 1px solid #e8edf2;
@@ -178,11 +183,10 @@
       color: #123;
       letter-spacing: 0.02em;
     }
-    .product-stats__visitor-geo {
-      margin-top: 3px;
-      font-size: 12px;
-      color: #445;
-      line-height: 1.35;
+    .product-stats__visit-geo {
+      font-size: 13px;
+      color: #334;
+      white-space: nowrap;
     }
     .product-stats__visitor-device {
       margin-top: 4px;
@@ -277,7 +281,7 @@
     <summary>
       <span>Заходы</span>
       <span class="product-stats__fold-meta">
-        {{ total_site_visits }} заходов{% if visits_truncated %}, показаны последние 500{% endif %}
+        {{ total_site_visits }} заходов{% if device_summary %} · {% for item in device_summary %}{{ item.label }} — {{ item.count }}{% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}{% if visits_truncated %}; показаны последние 500{% endif %}
       </span>
     </summary>
     <div class="product-stats__fold-body">
@@ -287,7 +291,9 @@
           <thead>
             <tr>
               <th>Время</th>
-              <th>IP, гео и устройство</th>
+              <th>IP</th>
+              <th>Страна, город</th>
+              <th>Устройство</th>
               <th>Страница входа</th>
             </tr>
           </thead>
@@ -295,14 +301,10 @@
             {% for visit in visit_rows %}
             <tr class="{% cycle 'visits_row1' 'visits_row2' %}">
               <td class="product-stats__visit-time">{{ visit.visited_at|date:"d.m.Y H:i" }}</td>
-              <td class="product-stats__visitor">
-                <div class="product-stats__visitor-ip">{{ visit.ip_address|default:"—" }}</div>
-                {% if visit.geo_label %}
-                <div class="product-stats__visitor-geo">{{ visit.geo_label }}</div>
-                {% endif %}
-                <div class="product-stats__visitor-device{% if visit.device_kind == 'desktop' %} is-desktop{% endif %}">
-                  {{ visit.device|default:"—" }}
-                </div>
+              <td class="product-stats__visitor-ip">{{ visit.ip_address|default:"—" }}</td>
+              <td class="product-stats__visit-geo">{{ visit.geo_place|default:"—" }}</td>
+              <td class="product-stats__visitor-device{% if visit.device_kind == 'desktop' %} is-desktop{% endif %}">
+                {{ visit.device|default:"—" }}
               </td>
               <td class="product-stats__visit-path">{{ visit.path|default:"/" }}</td>
             </tr>

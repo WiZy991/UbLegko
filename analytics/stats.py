@@ -71,6 +71,34 @@ def stats_matching_period(today, date_from, date_to):
     return ''
 
 
+def _device_platform_label(device: str) -> str:
+    text = (device or '').strip()
+    if not text:
+        return 'Неизвестно'
+    if ' · ' in text:
+        return text.split(' · ', 1)[1].strip()
+    return text
+
+
+def _device_summary(site_qs) -> list[dict]:
+    counts: dict[str, int] = {}
+    for device in site_qs.values_list('device', flat=True):
+        label = _device_platform_label(device or '')
+        counts[label] = counts.get(label, 0) + 1
+    return [
+        {'label': label, 'count': count}
+        for label, count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+    ]
+
+
+def _geo_place_label(row: dict) -> str:
+    country = (row.get('geo_country') or '').strip()
+    city = (row.get('geo_city') or '').strip()
+    if country and city:
+        return f'{country}, {city}'
+    return country or city or ''
+
+
 def _geo_label(row: dict) -> str:
     parts = [
         row.get('geo_country') or '',
@@ -236,6 +264,7 @@ def _fetch_visit_rows(site_qs):
             **row,
             'device_kind': _device_kind(row.get('device') or ''),
             'geo_label': _geo_label(row),
+            'geo_place': _geo_place_label(row),
         }
         for row in rows
     ]
@@ -268,6 +297,7 @@ def build_site_stats_context(request, *, default_period='today'):
     chart = build_chart_data(date_from, date_to, site_qs, product_qs, tz)
     visit_rows = _fetch_visit_rows(site_qs)
     total_site_visits = site_qs.count()
+    device_summary = _device_summary(site_qs)
 
     return {
         'date_from': date_from.isoformat(),
@@ -284,4 +314,5 @@ def build_site_stats_context(request, *, default_period='today'):
         'visit_rows': visit_rows,
         'has_visits': bool(visit_rows),
         'visits_truncated': total_site_visits > len(visit_rows),
+        'device_summary': device_summary,
     }, None
