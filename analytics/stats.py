@@ -71,12 +71,28 @@ def stats_matching_period(today, date_from, date_to):
     return ''
 
 
-def resolve_stats_period(request, *, default='month'):
+def _geo_label(row: dict) -> str:
+    parts = [
+        row.get('geo_country') or '',
+        row.get('geo_region') or '',
+        row.get('geo_city') or '',
+    ]
+    parts = [part.strip() for part in parts if part and part.strip()]
+    return ', '.join(parts)
+
+
+def resolve_stats_period(request, *, default='today'):
     today = timezone.localdate()
     changelist_url = reverse('admin:analytics_sitestatistics_changelist')
 
     if (request.GET.get('reset') or '').strip():
-        return None, redirect(changelist_url)
+        start, end = stats_period_range(today, 'today')
+        query = urlencode({
+            'period': 'today',
+            'date_from': start.isoformat(),
+            'date_to': end.isoformat(),
+        })
+        return None, redirect(f'{changelist_url}?{query}')
 
     raw_period = (request.GET.get('period') or '').strip()
     raw_from = (request.GET.get('date_from') or '').strip()
@@ -192,7 +208,15 @@ def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
 
 
 def _fetch_visit_rows(site_qs):
-    fields = ('visited_at', 'path', 'ip_address', 'device')
+    fields = (
+        'visited_at',
+        'path',
+        'ip_address',
+        'device',
+        'geo_country',
+        'geo_region',
+        'geo_city',
+    )
     try:
         rows = list(site_qs.order_by('-visited_at').values(*fields)[:500])
     except DatabaseError:
@@ -201,17 +225,21 @@ def _fetch_visit_rows(site_qs):
         for row in rows:
             row['ip_address'] = None
             row['device'] = ''
+            row['geo_country'] = ''
+            row['geo_region'] = ''
+            row['geo_city'] = ''
 
     return [
         {
             **row,
             'device_kind': _device_kind(row.get('device') or ''),
+            'geo_label': _geo_label(row),
         }
         for row in rows
     ]
 
 
-def build_site_stats_context(request, *, default_period='month'):
+def build_site_stats_context(request, *, default_period='today'):
     resolved, redirect_response = resolve_stats_period(request, default=default_period)
     if redirect_response is not None:
         return None, redirect_response

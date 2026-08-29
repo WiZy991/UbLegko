@@ -108,6 +108,9 @@ class SiteVisit(models.Model):
 
     visitor_key = models.CharField('Посетитель', max_length=64, db_index=True)
     ip_address = models.GenericIPAddressField('IP', null=True, blank=True)
+    geo_country = models.CharField('Страна', max_length=80, blank=True)
+    geo_region = models.CharField('Регион', max_length=120, blank=True)
+    geo_city = models.CharField('Город', max_length=120, blank=True)
     device = models.CharField('Устройство', max_length=120, blank=True)
     path = models.CharField('Страница', max_length=300, blank=True)
     visited_at = models.DateTimeField('Когда', auto_now_add=True, db_index=True)

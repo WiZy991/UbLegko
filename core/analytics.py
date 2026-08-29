@@ -8,6 +8,8 @@ from datetime import datetime, time, timedelta
 
 from django.utils import timezone
 
+from core.geoip import lookup_ip_geo
+
 logger = logging.getLogger(__name__)
 
 _BOT_MARKERS = (
@@ -138,11 +140,14 @@ def record_site_visit(request) -> None:
             return
 
         path = (request.path or '/')[:300]
+        ip = client_ip_for_request(request)
+        geo = lookup_ip_geo(ip)
         SiteVisit.objects.create(
             path=path,
             visitor_key=key,
-            ip_address=client_ip_for_request(request) or None,
+            ip_address=ip,
             device=device_label_for_request(request),
+            **geo,
         )
     except Exception:
         logger.exception('Не удалось записать заход на сайт')

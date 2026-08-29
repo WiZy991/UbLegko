@@ -117,13 +117,14 @@
       position: relative;
       height: 300px;
     }
-    .product-stats__products {
+    .product-stats__fold {
+      margin-bottom: 24px;
       border: 1px solid #d9e2ea;
       border-radius: 12px;
       background: #fff;
       overflow: hidden;
     }
-    .product-stats__products > summary {
+    .product-stats__fold > summary {
       list-style: none;
       cursor: pointer;
       display: flex;
@@ -135,58 +136,33 @@
       font-weight: 700;
       user-select: none;
     }
-    .product-stats__products > summary::-webkit-details-marker {
+    .product-stats__fold > summary::-webkit-details-marker {
       display: none;
     }
-    .product-stats__products > summary::after {
+    .product-stats__fold > summary::after {
       content: "▸";
       color: #667;
       font-size: 1.1rem;
       transition: transform .15s ease;
     }
-    .product-stats__products[open] > summary::after {
+    .product-stats__fold[open] > summary::after {
       transform: rotate(90deg);
     }
-    .product-stats__products > summary:hover {
+    .product-stats__fold > summary:hover {
       background: #f8fafc;
     }
-    .product-stats__products-meta {
+    .product-stats__fold-meta {
       font-size: 13px;
       font-weight: 600;
       color: #667;
     }
-    .product-stats__products-body {
+    .product-stats__fold-body {
       border-top: 1px solid #e8edf2;
       padding: 0 0 4px;
     }
     .product-stats__empty {
       padding: 16px;
       margin: 0;
-      color: #667;
-    }
-    .product-stats__visits {
-      margin-bottom: 24px;
-      border: 1px solid #d9e2ea;
-      border-radius: 12px;
-      background: #fff;
-      overflow: hidden;
-    }
-    .product-stats__visits-head {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      padding: 14px 16px;
-      border-bottom: 1px solid #e8edf2;
-    }
-    .product-stats__visits-title {
-      margin: 0;
-      font-size: 1.05rem;
-      font-weight: 700;
-    }
-    .product-stats__visits-note {
-      font-size: 13px;
       color: #667;
     }
     .product-stats__visits-table th {
@@ -201,6 +177,12 @@
       font-weight: 700;
       color: #123;
       letter-spacing: 0.02em;
+    }
+    .product-stats__visitor-geo {
+      margin-top: 3px;
+      font-size: 12px;
+      color: #445;
+      line-height: 1.35;
     }
     .product-stats__visitor-device {
       margin-top: 4px;
@@ -291,50 +273,55 @@
     </div>
   </div>
 
-  <section class="product-stats__visits" aria-label="Заходы на сайт">
-    <div class="product-stats__visits-head">
-      <h2 class="product-stats__visits-title">Заходы</h2>
-      {% if visits_truncated %}
-      <span class="product-stats__visits-note">Показаны последние 500 заходов</span>
+  <details class="product-stats__fold">
+    <summary>
+      <span>Заходы</span>
+      <span class="product-stats__fold-meta">
+        {{ total_site_visits }} заходов{% if visits_truncated %}, показаны последние 500{% endif %}
+      </span>
+    </summary>
+    <div class="product-stats__fold-body">
+      {% if has_visits %}
+      <div class="results product-stats__visits-table" style="overflow-x:auto;">
+        <table style="width:100%;">
+          <thead>
+            <tr>
+              <th>Время</th>
+              <th>IP, гео и устройство</th>
+              <th>Страница входа</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for visit in visit_rows %}
+            <tr class="{% cycle 'visits_row1' 'visits_row2' %}">
+              <td class="product-stats__visit-time">{{ visit.visited_at|date:"d.m.Y H:i" }}</td>
+              <td class="product-stats__visitor">
+                <div class="product-stats__visitor-ip">{{ visit.ip_address|default:"—" }}</div>
+                {% if visit.geo_label %}
+                <div class="product-stats__visitor-geo">{{ visit.geo_label }}</div>
+                {% endif %}
+                <div class="product-stats__visitor-device{% if visit.device_kind == 'desktop' %} is-desktop{% endif %}">
+                  {{ visit.device|default:"—" }}
+                </div>
+              </td>
+              <td class="product-stats__visit-path">{{ visit.path|default:"/" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="product-stats__empty">За этот период заходов нет.</p>
       {% endif %}
     </div>
-    {% if has_visits %}
-    <div class="results product-stats__visits-table" style="overflow-x:auto;">
-      <table style="width:100%;">
-        <thead>
-          <tr>
-            <th>Время</th>
-            <th>IP и устройство</th>
-            <th>Страница входа</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for visit in visit_rows %}
-          <tr class="{% cycle 'row1' 'row2' %}">
-            <td class="product-stats__visit-time">{{ visit.visited_at|date:"d.m.Y H:i" }}</td>
-            <td class="product-stats__visitor">
-              <div class="product-stats__visitor-ip">{{ visit.ip_address|default:"—" }}</div>
-              <div class="product-stats__visitor-device{% if visit.device_kind == 'desktop' %} is-desktop{% endif %}">
-                {{ visit.device|default:"—" }}
-              </div>
-            </td>
-            <td class="product-stats__visit-path">{{ visit.path|default:"/" }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p class="product-stats__empty">За этот период заходов нет.</p>
-    {% endif %}
-  </section>
+  </details>
 
-  <details class="product-stats__products">
+  <details class="product-stats__fold">
     <summary>
       <span>Товары</span>
-      <span class="product-stats__products-meta">{{ total_product_views }} просмотров{% if has_rows %}, {{ rows|length }} позиций{% endif %}</span>
+      <span class="product-stats__fold-meta">{{ total_product_views }} просмотров{% if has_rows %}, {{ rows|length }} позиций{% endif %}</span>
     </summary>
-    <div class="product-stats__products-body">
+    <div class="product-stats__fold-body">
       {% if has_rows %}
       <div class="results" style="overflow-x:auto;">
         <table id="result_list" style="width:100%;">
@@ -347,7 +334,7 @@
           </thead>
           <tbody>
             {% for row in rows %}
-            <tr class="{% cycle 'row1' 'row2' %}">
+            <tr class="{% cycle 'products_row1' 'products_row2' %}">
               <td>
                 {% if row.product_id %}
                   <a href="{% url 'admin:catalog_product_change' row.product_id %}">{{ row.product__name }}</a>
