@@ -104,8 +104,11 @@ class SiteSettings(models.Model):
 
 
 class SiteVisit(models.Model):
-    """Заход на сайт (любая страница витрины). Каждая запись — один заход."""
+    """Один заход посетителя на витрину в календарный день (Asia/Vladivostok)."""
 
+    visitor_key = models.CharField('Посетитель', max_length=64, db_index=True)
+    ip_address = models.GenericIPAddressField('IP', null=True, blank=True)
+    device = models.CharField('Устройство', max_length=120, blank=True)
     path = models.CharField('Страница', max_length=300, blank=True)
     visited_at = models.DateTimeField('Когда', auto_now_add=True, db_index=True)
 
@@ -114,6 +117,7 @@ class SiteVisit(models.Model):
         verbose_name_plural = 'Заходы на сайт'
         indexes = [
             models.Index(fields=['visited_at']),
+            models.Index(fields=['visitor_key', 'visited_at']),
         ]
 
     def __str__(self):

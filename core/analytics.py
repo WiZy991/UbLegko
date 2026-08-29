@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from django.utils import timezone
 
@@ -60,16 +60,90 @@ def should_track_site_visit(request) -> bool:
     return True
 
 
+def client_ip_for_request(request) -> str:
+    xff = request.META.get('HTTP_X_FORWARDED_FOR')
+    if xff:
+        return xff.split(',')[0].strip()[:45]
+    xri = request.META.get('HTTP_X_REAL_IP')
+    if xri:
+        return xri.strip()[:45]
+    return (request.META.get('REMOTE_ADDR') or '')[:45]
+
+
+def device_label_for_user_agent(ua: str) -> str:
+    ua_lower = (ua or '').lower()
+    if not ua_lower:
+        return 'Неизвестно'
+
+    if 'iphone' in ua_lower:
+        platform = 'iPhone'
+    elif 'ipad' in ua_lower:
+        platform = 'iPad'
+    elif 'android' in ua_lower:
+        platform = 'Android'
+    elif 'mobile' in ua_lower:
+        platform = 'Телефон'
+    elif 'windows' in ua_lower:
+        platform = 'Windows'
+    elif 'mac os' in ua_lower or 'macintosh' in ua_lower:
+        platform = 'macOS'
+    elif 'linux' in ua_lower:
+        platform = 'Linux'
+    else:
+        platform = 'Компьютер'
+
+    if 'yabrowser' in ua_lower:
+        browser = 'Яндекс'
+    elif 'edg/' in ua_lower or 'edge/' in ua_lower:
+        browser = 'Edge'
+    elif 'opr/' in ua_lower or 'opera' in ua_lower:
+        browser = 'Opera'
+    elif 'firefox' in ua_lower:
+        browser = 'Firefox'
+    elif 'samsungbrowser' in ua_lower:
+        browser = 'Samsung Internet'
+    elif 'chrome' in ua_lower and 'chromium' not in ua_lower:
+        browser = 'Chrome'
+    elif 'safari' in ua_lower and 'chrome' not in ua_lower:
+        browser = 'Safari'
+    else:
+        browser = 'Браузер'
+
+    return f'{browser} · {platform}'
+
+
+def device_label_for_request(request) -> str:
+    return device_label_for_user_agent(request.META.get('HTTP_USER_AGENT') or '')
+
+
 def record_site_visit(request) -> None:
-    """Каждый заход на витрину — отдельная запись (без объединения по IP/сессии)."""
+    """Один заход на витрину в календарный день на посетителя (сессия / пользователь)."""
     try:
         if not should_track_site_visit(request):
             return
 
         from core.models import SiteVisit
 
+        key = visitor_key_for_request(request)
+        today = timezone.localdate()
+        tz = timezone.get_current_timezone()
+        day_start = timezone.make_aware(datetime.combine(today, time.min), tz)
+        day_end = timezone.make_aware(datetime.combine(today, time.max), tz)
+
+        if SiteVisit.objects.filter(
+            visitor_key=key,
+            visited_at__gte=day_start,
+            visited_at__lte=day_end,
+        ).exists():
+            return
+
         path = (request.path or '/')[:300]
-        SiteVisit.objects.create(path=path)
+        SiteVisit.objects.create(
+            path=path,
+            visitor_key=key,
+            ip_address=client_ip_for_request(request) or None,
+            device=device_label_for_request(request),
+        )
     except Exception:
         logger.exception('Не удалось записать заход на сайт')
 

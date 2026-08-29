@@ -2,7 +2,7 @@ from core.analytics import record_site_visit
 
 
 class SiteVisitMiddleware:
-    """Считает каждый заход на витрину сайта."""
+    """Считает уникальные заходы на витрину (один посетитель — один раз в день)."""
 
     def __init__(self, get_response):
         self.get_response = get_response

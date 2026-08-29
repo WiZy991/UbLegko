@@ -1,0 +1,450 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <style>
+    .product-stats__periods {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 14px;
+    }
+    .product-stats__period {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border: 1px solid #c5d9e2;
+      border-radius: 999px;
+      background: #fff;
+      color: #123;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none !important;
+      line-height: 1.2;
+    }
+    .product-stats__period:hover {
+      background: #e8f6fb;
+      border-color: #00acd7;
+      color: #123;
+    }
+    .product-stats__period.is-active {
+      background: #00acd7;
+      border-color: #00acd7;
+      color: #fff;
+    }
+    .product-stats__filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 20px;
+    }
+    .product-stats__filters label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .product-stats__reset {
+      margin-left: 4px;
+      color: #667;
+      font-size: 13px;
+    }
+    .product-stats__cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .product-stats__card {
+      min-width: 160px;
+      padding: 14px 16px;
+      border: 1px solid #d9e2ea;
+      border-radius: 10px;
+      background: #fff;
+    }
+    .product-stats__card-label {
+      font-size: 12px;
+      color: #667;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .product-stats__card-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .product-stats__chart-wrap {
+      margin-bottom: 24px;
+      padding: 16px 16px 8px;
+      border: 1px solid #d9e2ea;
+      border-radius: 12px;
+      background: #fff;
+    }
+    .product-stats__chart-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .product-stats__chart-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .product-stats__chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      font-size: 13px;
+      color: #445;
+    }
+    .product-stats__legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .product-stats__legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .product-stats__chart-canvas {
+      position: relative;
+      height: 300px;
+    }
+    .product-stats__products {
+      border: 1px solid #d9e2ea;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .product-stats__products > summary {
+      list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      user-select: none;
+    }
+    .product-stats__products > summary::-webkit-details-marker {
+      display: none;
+    }
+    .product-stats__products > summary::after {
+      content: "▸";
+      color: #667;
+      font-size: 1.1rem;
+      transition: transform .15s ease;
+    }
+    .product-stats__products[open] > summary::after {
+      transform: rotate(90deg);
+    }
+    .product-stats__products > summary:hover {
+      background: #f8fafc;
+    }
+    .product-stats__products-meta {
+      font-size: 13px;
+      font-weight: 600;
+      color: #667;
+    }
+    .product-stats__products-body {
+      border-top: 1px solid #e8edf2;
+      padding: 0 0 4px;
+    }
+    .product-stats__empty {
+      padding: 16px;
+      margin: 0;
+      color: #667;
+    }
+    .product-stats__visits {
+      margin-bottom: 24px;
+      border: 1px solid #d9e2ea;
+      border-radius: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    .product-stats__visits-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 14px 16px;
+      border-bottom: 1px solid #e8edf2;
+    }
+    .product-stats__visits-title {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .product-stats__visits-note {
+      font-size: 13px;
+      color: #667;
+    }
+    .product-stats__visits-table th {
+      white-space: nowrap;
+    }
+    .product-stats__visitor {
+      min-width: 200px;
+    }
+    .product-stats__visitor-ip {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: #123;
+      letter-spacing: 0.02em;
+    }
+    .product-stats__visitor-device {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #556;
+      line-height: 1.35;
+    }
+    .product-stats__visitor-device::before {
+      content: "📱";
+      margin-right: 4px;
+      font-size: 11px;
+    }
+    .product-stats__visitor-device.is-desktop::before {
+      content: "💻";
+    }
+    .product-stats__visit-time {
+      white-space: nowrap;
+      font-size: 13px;
+      color: #334;
+    }
+    .product-stats__visit-path {
+      font-size: 13px;
+      color: #445;
+      word-break: break-all;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="product-stats">
+  <h1 style="margin-bottom: 8px;">Статистика по сайту</h1>
+  <p style="margin: 0 0 16px; color:#667;">
+    Даты и периоды — по {{ stats_timezone_label }}.
+    Заход — один уникальный посетитель в календарный день (не каждая страница).
+  </p>
+
+  <div class="product-stats__periods" role="group" aria-label="Период">
+    {% for item in period_choices %}
+      <a
+        class="product-stats__period{% if period == item.key %} is-active{% endif %}"
+        href="?period={{ item.key }}&amp;date_from={{ item.date_from }}&amp;date_to={{ item.date_to }}"
+      >{{ item.label }}</a>
+    {% endfor %}
+  </div>
+
+  <form method="get" class="product-stats__filters">
+    <div>
+      <label for="id_date_from">С даты</label>
+      <input id="id_date_from" type="date" name="date_from" value="{{ date_from }}" required onchange="this.form.submit()">
+    </div>
+    <div>
+      <label for="id_date_to">По дату</label>
+      <input id="id_date_to" type="date" name="date_to" value="{{ date_to }}" required onchange="this.form.submit()">
+    </div>
+    <div>
+      <button type="submit" class="default" style="margin:0;">Показать</button>
+      <a class="product-stats__reset" href="?reset=1">Сбросить</a>
+    </div>
+  </form>
+
+  <div class="product-stats__cards">
+    <div class="product-stats__card">
+      <div class="product-stats__card-label">Заходов на сайт</div>
+      <div class="product-stats__card-value">{{ total_site_visits }}</div>
+    </div>
+    <div class="product-stats__card">
+      <div class="product-stats__card-label">Просмотров карточек</div>
+      <div class="product-stats__card-value">{{ total_product_views }}</div>
+    </div>
+  </div>
+
+  <div class="product-stats__chart-wrap">
+    <div class="product-stats__chart-head">
+      <h2 class="product-stats__chart-title">Динамика</h2>
+      <div class="product-stats__chart-legend" aria-hidden="true">
+        <span class="product-stats__legend-item">
+          <span class="product-stats__legend-dot" style="background:#4e79ff;"></span>
+          Заходы
+        </span>
+        <span class="product-stats__legend-item">
+          <span class="product-stats__legend-dot" style="background:#ff9f40;"></span>
+          Просмотры карточек
+        </span>
+      </div>
+    </div>
+    <div class="product-stats__chart-canvas">
+      <canvas id="site-stats-chart" aria-label="График статистики сайта"></canvas>
+    </div>
+  </div>
+
+  <section class="product-stats__visits" aria-label="Заходы на сайт">
+    <div class="product-stats__visits-head">
+      <h2 class="product-stats__visits-title">Заходы</h2>
+      {% if visits_truncated %}
+      <span class="product-stats__visits-note">Показаны последние 500 заходов</span>
+      {% endif %}
+    </div>
+    {% if has_visits %}
+    <div class="results product-stats__visits-table" style="overflow-x:auto;">
+      <table style="width:100%;">
+        <thead>
+          <tr>
+            <th>Время</th>
+            <th>IP и устройство</th>
+            <th>Страница входа</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for visit in visit_rows %}
+          <tr class="{% cycle 'row1' 'row2' %}">
+            <td class="product-stats__visit-time">{{ visit.visited_at|date:"d.m.Y H:i" }}</td>
+            <td class="product-stats__visitor">
+              <div class="product-stats__visitor-ip">{{ visit.ip_address|default:"—" }}</div>
+              <div class="product-stats__visitor-device{% if visit.device_kind == 'desktop' %} is-desktop{% endif %}">
+                {{ visit.device|default:"—" }}
+              </div>
+            </td>
+            <td class="product-stats__visit-path">{{ visit.path|default:"/" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="product-stats__empty">За этот период заходов нет.</p>
+    {% endif %}
+  </section>
+
+  <details class="product-stats__products">
+    <summary>
+      <span>Товары</span>
+      <span class="product-stats__products-meta">{{ total_product_views }} просмотров{% if has_rows %}, {{ rows|length }} позиций{% endif %}</span>
+    </summary>
+    <div class="product-stats__products-body">
+      {% if has_rows %}
+      <div class="results" style="overflow-x:auto;">
+        <table id="result_list" style="width:100%;">
+          <thead>
+            <tr>
+              <th>Товар</th>
+              <th>Артикул</th>
+              <th>Просмотров</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr class="{% cycle 'row1' 'row2' %}">
+              <td>
+                {% if row.product_id %}
+                  <a href="{% url 'admin:catalog_product_change' row.product_id %}">{{ row.product__name }}</a>
+                  {% if row.product__slug %}
+                    <a href="/product/{{ row.product__slug }}/" target="_blank" rel="noopener" title="Открыть на сайте">↗</a>
+                  {% endif %}
+                {% elif row.product__slug %}
+                  <a href="/product/{{ row.product__slug }}/" target="_blank" rel="noopener">{{ row.product__name }}</a>
+                {% else %}
+                  {{ row.product__name }}
+                {% endif %}
+              </td>
+              <td>{{ row.product__sku|default:"—" }}</td>
+              <td>{{ row.views }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="product-stats__empty">За этот период просмотров карточек нет.</p>
+      {% endif %}
+    </div>
+  </details>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+  var chartData = {{ chart_data_json|safe }};
+  var canvas = document.getElementById('site-stats-chart');
+  if (!canvas || !window.Chart || !chartData) return;
+
+  var gridColor = 'rgba(100, 120, 140, 0.15)';
+  var textColor = '#556677';
+
+  new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: [
+        {
+          label: 'Заходы',
+          data: chartData.visits,
+          borderColor: '#4e79ff',
+          backgroundColor: 'rgba(78, 121, 255, 0.12)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: chartData.labels.length > 31 ? 0 : 3,
+          pointHoverRadius: 4,
+          borderWidth: 2,
+        },
+        {
+          label: 'Просмотры карточек',
+          data: chartData.views,
+          borderColor: '#ff9f40',
+          backgroundColor: 'rgba(255, 159, 64, 0.10)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: chartData.labels.length > 31 ? 0 : 3,
+          pointHoverRadius: 4,
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(20, 30, 40, 0.92)',
+          padding: 10,
+          cornerRadius: 8,
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: gridColor },
+          ticks: {
+            color: textColor,
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: chartData.granularity === 'hour' ? 12 : 15,
+          },
+        },
+        y: {
+          beginAtZero: true,
+          grid: { color: gridColor },
+          ticks: {
+            color: textColor,
+            precision: 0,
+          },
+        },
+      },
+    },
+  });
+  });
+</script>
+{% endblock %}
