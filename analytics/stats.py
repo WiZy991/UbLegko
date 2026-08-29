@@ -146,9 +146,9 @@ def resolve_stats_period(request, *, default='today'):
 
 def _chart_granularity(date_from: date, date_to: date) -> str:
     span = (date_to - date_from).days + 1
-    # Сегодня, неделя, месяц, квартал — по часам (день + час на подписи)
+    # День, неделя, месяц, квартал — сводка по часам суток (00–23)
     if span <= 92:
-        return 'hour'
+        return 'hour_of_day'
     if span <= 182:
         return 'day'
     return 'month'
@@ -158,6 +158,8 @@ def _bucket_key_from_dt(value, granularity: str, tz):
     if value is None:
         return None
     local = timezone.localtime(value, tz)
+    if granularity == 'hour_of_day':
+        return local.hour
     if granularity == 'hour':
         return (local.year, local.month, local.day, local.hour)
     if granularity == 'day':
@@ -165,19 +167,23 @@ def _bucket_key_from_dt(value, granularity: str, tz):
     return (local.year, local.month)
 
 
-def _format_chart_label(bucket_key, granularity: str, *, multiday_hourly: bool = False) -> str:
+def _format_chart_label(bucket_key, granularity: str) -> str:
+    if granularity == 'hour_of_day':
+        return f'{bucket_key:02d}:00'
     year, month = bucket_key[0], bucket_key[1]
     if granularity == 'hour':
-        hour = bucket_key[3]
-        if multiday_hourly:
-            return f'{bucket_key[2]:02d}.{month:02d} {hour:02d}:00'
-        return f'{hour:02d}:00'
+        return f'{bucket_key[3]:02d}:00'
     if granularity == 'day':
         return f'{bucket_key[2]:02d}.{month:02d}'
     return f'{_MONTH_LABELS[month - 1]} {year}'
 
 
 def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str, tz):
+    if granularity == 'hour_of_day':
+        for hour in range(24):
+            yield hour
+        return
+
     if granularity == 'hour':
         cursor = timezone.make_aware(datetime.combine(date_from, time.min), tz)
         end = timezone.make_aware(datetime.combine(date_to, time.max), tz)
@@ -206,7 +212,6 @@ def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str, tz
 
 def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
     granularity = _chart_granularity(date_from, date_to)
-    multiday_hourly = granularity == 'hour' and (date_to - date_from).days >= 1
 
     visits_map = {}
     for visited_at in site_qs.values_list('visited_at', flat=True):
@@ -224,7 +229,7 @@ def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
     visits = []
     views = []
     for bucket_key in _iter_chart_bucket_keys(date_from, date_to, granularity, tz):
-        labels.append(_format_chart_label(bucket_key, granularity, multiday_hourly=multiday_hourly))
+        labels.append(_format_chart_label(bucket_key, granularity))
         visits.append(visits_map.get(bucket_key, 0))
         views.append(views_map.get(bucket_key, 0))
 
@@ -233,8 +238,20 @@ def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
         'visits': visits,
         'views': views,
         'granularity': granularity,
-        'multiday_hourly': multiday_hourly,
     }
+
+
+_CHART_TITLES = {
+    'hour_of_day': 'Активность по часам',
+    'day': 'Динамика по дням',
+    'month': 'Динамика по месяцам',
+}
+
+_CHART_NOTES = {
+    'hour_of_day': 'Часы суток по Владивостоку. Значения суммированы за выбранный период.',
+    'day': '',
+    'month': '',
+}
 
 
 def _fetch_visit_rows(site_qs):
@@ -298,6 +315,7 @@ def build_site_stats_context(request, *, default_period='today'):
     visit_rows = _fetch_visit_rows(site_qs)
     total_site_visits = site_qs.count()
     device_summary = _device_summary(site_qs)
+    chart_granularity = chart['granularity']
 
     return {
         'date_from': date_from.isoformat(),
@@ -310,7 +328,9 @@ def build_site_stats_context(request, *, default_period='today'):
         'rows': rows,
         'has_rows': bool(rows),
         'chart_data_json': json.dumps(chart, ensure_ascii=False),
-        'chart_granularity': chart['granularity'],
+        'chart_granularity': chart_granularity,
+        'chart_title': _CHART_TITLES.get(chart_granularity, 'Динамика'),
+        'chart_note': _CHART_NOTES.get(chart_granularity, ''),
         'visit_rows': visit_rows,
         'has_visits': bool(visit_rows),
         'visits_truncated': total_site_visits > len(visit_rows),

@@ -117,6 +117,11 @@
       position: relative;
       height: 300px;
     }
+    .product-stats__chart-note {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: #667;
+    }
     .product-stats__fold {
       margin-bottom: 24px;
       border: 1px solid #d9e2ea;
@@ -260,7 +265,7 @@
 
   <div class="product-stats__chart-wrap">
     <div class="product-stats__chart-head">
-      <h2 class="product-stats__chart-title">Динамика</h2>
+      <h2 class="product-stats__chart-title">{{ chart_title }}</h2>
       <div class="product-stats__chart-legend" aria-hidden="true">
         <span class="product-stats__legend-item">
           <span class="product-stats__legend-dot" style="background:#4e79ff;"></span>
@@ -272,6 +277,9 @@
         </span>
       </div>
     </div>
+    {% if chart_note %}
+    <p class="product-stats__chart-note">{{ chart_note }}</p>
+    {% endif %}
     <div class="product-stats__chart-canvas">
       <canvas id="site-stats-chart" aria-label="График статистики сайта"></canvas>
     </div>
@@ -384,8 +392,8 @@
           backgroundColor: 'rgba(78, 121, 255, 0.12)',
           fill: true,
           tension: 0.35,
-          pointRadius: chartData.labels.length > 48 ? 0 : 3,
-          pointHoverRadius: chartData.labels.length > 48 ? 3 : 4,
+          pointRadius: chartData.granularity === 'hour_of_day' ? 2 : (chartData.labels.length > 48 ? 0 : 3),
+          pointHoverRadius: chartData.granularity === 'hour_of_day' ? 4 : (chartData.labels.length > 48 ? 3 : 4),
           borderWidth: 2,
         },
         {
@@ -395,8 +403,8 @@
           backgroundColor: 'rgba(255, 159, 64, 0.10)',
           fill: true,
           tension: 0.35,
-          pointRadius: chartData.labels.length > 48 ? 0 : 3,
-          pointHoverRadius: chartData.labels.length > 48 ? 3 : 4,
+          pointRadius: chartData.granularity === 'hour_of_day' ? 2 : (chartData.labels.length > 48 ? 0 : 3),
+          pointHoverRadius: chartData.granularity === 'hour_of_day' ? 4 : (chartData.labels.length > 48 ? 3 : 4),
           borderWidth: 2,
         },
       ],
@@ -420,10 +428,8 @@
             color: textColor,
             maxRotation: 0,
             autoSkip: true,
-            maxTicksLimit: chartData.granularity === 'hour'
-              ? (chartData.multiday_hourly ? 18 : 12)
-              : 15,
-            maxRotation: chartData.multiday_hourly ? 45 : 0,
+            maxTicksLimit: chartData.granularity === 'hour_of_day' ? 24 : 15,
+            maxRotation: 0,
           },
         },
         y: {
