@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import date, datetime, time, timedelta
 from urllib.parse import urlencode
 
+from django.db import DatabaseError
 from django.db.models import Count
-from django.db.models.functions import TruncDate, TruncHour, TruncMonth
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -15,7 +16,7 @@ from django.utils.dateparse import parse_date
 
 from core.models import ProductPageView, SiteVisit
 
-STATS_FILTER_SESSION_KEY = 'admin_site_statistics_filter'
+logger = logging.getLogger(__name__)
 
 STATS_PERIODS = (
     ('today', 'Сегодня', 1),
@@ -70,33 +71,16 @@ def stats_matching_period(today, date_from, date_to):
     return ''
 
 
-def stats_filter_redirect(params):
-    url = reverse('admin:analytics_sitestatistics_changelist')
-    query = urlencode({k: v for k, v in params.items() if v})
-    return redirect(f'{url}?{query}' if query else url)
-
-
 def resolve_stats_period(request, *, default='month'):
     today = timezone.localdate()
     changelist_url = reverse('admin:analytics_sitestatistics_changelist')
 
     if (request.GET.get('reset') or '').strip():
-        request.session.pop(STATS_FILTER_SESSION_KEY, None)
         return None, redirect(changelist_url)
 
     raw_period = (request.GET.get('period') or '').strip()
     raw_from = (request.GET.get('date_from') or '').strip()
     raw_to = (request.GET.get('date_to') or '').strip()
-    has_query = bool(raw_period or raw_from or raw_to)
-
-    if not has_query:
-        saved = request.session.get(STATS_FILTER_SESSION_KEY) or {}
-        if saved.get('date_from') and saved.get('date_to'):
-            return None, stats_filter_redirect({
-                'period': saved.get('period') or '',
-                'date_from': saved['date_from'],
-                'date_to': saved['date_to'],
-            })
 
     date_from = None
     date_to = None
@@ -113,11 +97,6 @@ def resolve_stats_period(request, *, default='month'):
         date_from, date_to = date_to, date_from
 
     period = stats_matching_period(today, date_from, date_to)
-    request.session[STATS_FILTER_SESSION_KEY] = {
-        'period': period,
-        'date_from': date_from.isoformat(),
-        'date_to': date_to.isoformat(),
-    }
     return (date_from, date_to, period, today), None
 
 
@@ -136,41 +115,10 @@ def _aware_day_bounds(day: date, tz):
     return start, end
 
 
-def _format_chart_label(bucket, granularity: str) -> str:
-    local = timezone.localtime(bucket)
-    if granularity == 'hour':
-        return local.strftime('%H:%M')
-    if granularity == 'day':
-        return local.strftime('%d.%m')
-    return f'{_MONTH_LABELS[local.month - 1]} {local.year}'
-
-
-def _iter_chart_buckets(date_from: date, date_to: date, granularity: str, tz):
-    if granularity == 'hour':
-        day_start, _ = _aware_day_bounds(date_from, tz)
-        for hour in range(24):
-            yield day_start + timedelta(hours=hour)
-        return
-
-    if granularity == 'day':
-        cursor = date_from
-        while cursor <= date_to:
-            yield timezone.make_aware(datetime.combine(cursor, time.min), tz)
-            cursor += timedelta(days=1)
-        return
-
-    cursor = date(date_from.year, date_from.month, 1)
-    end_marker = date(date_to.year, date_to.month, 1)
-    while cursor <= end_marker:
-        yield timezone.make_aware(datetime.combine(cursor, time.min), tz)
-        if cursor.month == 12:
-            cursor = date(cursor.year + 1, 1, 1)
-        else:
-            cursor = date(cursor.year, cursor.month + 1, 1)
-
-
-def _bucket_key(bucket, granularity: str):
-    local = timezone.localtime(bucket)
+def _bucket_key_from_dt(value, granularity: str, tz):
+    if value is None:
+        return None
+    local = timezone.localtime(value, tz)
     if granularity == 'hour':
         return (local.year, local.month, local.day, local.hour)
     if granularity == 'day':
@@ -178,36 +126,62 @@ def _bucket_key(bucket, granularity: str):
     return (local.year, local.month)
 
 
+def _format_chart_label(bucket_key, granularity: str) -> str:
+    year, month = bucket_key[0], bucket_key[1]
+    if granularity == 'hour':
+        return f'{bucket_key[3]:02d}:00'
+    if granularity == 'day':
+        return f'{bucket_key[2]:02d}.{month:02d}'
+    return f'{_MONTH_LABELS[month - 1]} {year}'
+
+
+def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str, tz):
+    if granularity == 'hour':
+        day_start, _ = _aware_day_bounds(date_from, tz)
+        for hour in range(24):
+            local = timezone.localtime(day_start + timedelta(hours=hour), tz)
+            yield (local.year, local.month, local.day, local.hour)
+        return
+
+    if granularity == 'day':
+        cursor = date_from
+        while cursor <= date_to:
+            yield (cursor.year, cursor.month, cursor.day)
+            cursor += timedelta(days=1)
+        return
+
+    cursor = date(date_from.year, date_from.month, 1)
+    end_marker = date(date_to.year, date_to.month, 1)
+    while cursor <= end_marker:
+        yield (cursor.year, cursor.month)
+        if cursor.month == 12:
+            cursor = date(cursor.year + 1, 1, 1)
+        else:
+            cursor = date(cursor.year, cursor.month + 1, 1)
+
+
 def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
     granularity = _chart_granularity(date_from, date_to)
-    trunc_map = {
-        'hour': TruncHour,
-        'day': TruncDate,
-        'month': TruncMonth,
-    }
-    trunc = trunc_map[granularity]
 
-    visits_map = {
-        _bucket_key(row['bucket'], granularity): row['visits']
-        for row in site_qs.annotate(bucket=trunc('visited_at', tzinfo=tz))
-        .values('bucket')
-        .annotate(visits=Count('id'))
-    }
-    views_map = {
-        _bucket_key(row['bucket'], granularity): row['views']
-        for row in product_qs.annotate(bucket=trunc('viewed_at', tzinfo=tz))
-        .values('bucket')
-        .annotate(views=Count('id'))
-    }
+    visits_map = {}
+    for visited_at in site_qs.values_list('visited_at', flat=True):
+        key = _bucket_key_from_dt(visited_at, granularity, tz)
+        if key is not None:
+            visits_map[key] = visits_map.get(key, 0) + 1
+
+    views_map = {}
+    for viewed_at in product_qs.values_list('viewed_at', flat=True):
+        key = _bucket_key_from_dt(viewed_at, granularity, tz)
+        if key is not None:
+            views_map[key] = views_map.get(key, 0) + 1
 
     labels = []
     visits = []
     views = []
-    for bucket in _iter_chart_buckets(date_from, date_to, granularity, tz):
-        key = _bucket_key(bucket, granularity)
-        labels.append(_format_chart_label(bucket, granularity))
-        visits.append(visits_map.get(key, 0))
-        views.append(views_map.get(key, 0))
+    for bucket_key in _iter_chart_bucket_keys(date_from, date_to, granularity, tz):
+        labels.append(_format_chart_label(bucket_key, granularity))
+        visits.append(visits_map.get(bucket_key, 0))
+        views.append(views_map.get(bucket_key, 0))
 
     return {
         'labels': labels,
@@ -215,6 +189,26 @@ def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
         'views': views,
         'granularity': granularity,
     }
+
+
+def _fetch_visit_rows(site_qs):
+    fields = ('visited_at', 'path', 'ip_address', 'device')
+    try:
+        rows = list(site_qs.order_by('-visited_at').values(*fields)[:500])
+    except DatabaseError:
+        logger.exception('Не удалось загрузить заходы с IP/устройством')
+        rows = list(site_qs.order_by('-visited_at').values('visited_at', 'path')[:500])
+        for row in rows:
+            row['ip_address'] = None
+            row['device'] = ''
+
+    return [
+        {
+            **row,
+            'device_kind': _device_kind(row.get('device') or ''),
+        }
+        for row in rows
+    ]
 
 
 def build_site_stats_context(request, *, default_period='month'):
@@ -242,19 +236,8 @@ def build_site_stats_context(request, *, default_period='month'):
     )
 
     chart = build_chart_data(date_from, date_to, site_qs, product_qs, tz)
-
-    visit_rows = [
-        {
-            **row,
-            'device_kind': _device_kind(row.get('device') or ''),
-        }
-        for row in site_qs.order_by('-visited_at').values(
-            'visited_at',
-            'ip_address',
-            'device',
-            'path',
-        )[:500]
-    ]
+    visit_rows = _fetch_visit_rows(site_qs)
+    total_site_visits = site_qs.count()
 
     return {
         'date_from': date_from.isoformat(),
@@ -262,7 +245,7 @@ def build_site_stats_context(request, *, default_period='month'):
         'period': period,
         'period_choices': stats_period_choices(today),
         'stats_timezone_label': 'Владивосток (UTC+10)',
-        'total_site_visits': site_qs.count(),
+        'total_site_visits': total_site_visits,
         'total_product_views': product_qs.count(),
         'rows': rows,
         'has_rows': bool(rows),
@@ -270,5 +253,5 @@ def build_site_stats_context(request, *, default_period='month'):
         'chart_granularity': chart['granularity'],
         'visit_rows': visit_rows,
         'has_visits': bool(visit_rows),
-        'visits_truncated': site_qs.count() > len(visit_rows),
+        'visits_truncated': total_site_visits > len(visit_rows),
     }, None
