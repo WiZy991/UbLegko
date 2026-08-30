@@ -217,6 +217,16 @@
       color: #445;
       word-break: break-all;
     }
+    .product-stats__visit-hits {
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-size: 13px;
+      color: #445;
+    }
+    .product-stats__visit-hits.is-high {
+      color: #c0392b;
+      font-weight: 600;
+    }
   </style>
 {% endblock %}
 
@@ -225,7 +235,7 @@
   <h1 style="margin-bottom: 8px;">Статистика по сайту</h1>
   <p style="margin: 0 0 16px; color:#667;">
     Даты и периоды — по {{ stats_timezone_label }}.
-    Заход — один уникальный посетитель в календарный день (не каждая страница).
+    Заход — один IP в течение 5 минут (фриз-тайм). Столбец «Хитов» — сколько запросов было за эти 5 минут.
   </p>
 
   <div class="product-stats__periods" role="group" aria-label="Период">
@@ -302,6 +312,7 @@
               <th>IP</th>
               <th>Страна, город</th>
               <th>Устройство</th>
+              <th title="Запросов за 5 минут с этого IP">Хитов</th>
               <th>Страница входа</th>
             </tr>
           </thead>
@@ -314,6 +325,7 @@
               <td class="product-stats__visitor-device{% if visit.device_kind == 'desktop' %} is-desktop{% endif %}">
                 {{ visit.device|default:"—" }}
               </td>
+              <td class="product-stats__visit-hits{% if visit.hit_count > 3 %} is-high{% endif %}">{{ visit.hit_count|default:1 }}</td>
               <td class="product-stats__visit-path">{{ visit.path|default:"/" }}</td>
             </tr>
             {% endfor %}

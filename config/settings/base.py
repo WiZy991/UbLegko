@@ -55,6 +55,8 @@ JAZZMIN_SETTINGS = {
         'core.ProductPageView',
         'core.SearchQueryLog',
         'core.SiteVisit',
+        'core.BlockedIP',
+        'core.IPRateHit',
     ],
     'order_with_respect_to': [
         'catalog',
@@ -147,6 +149,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.middleware.IPBlockMiddleware',
     'core.middleware.SiteVisitMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',

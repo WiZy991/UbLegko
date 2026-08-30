@@ -6,11 +6,20 @@ import hashlib
 import logging
 from datetime import datetime, time, timedelta
 
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_ipv46_address
+from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from core.geoip import lookup_ip_geo
 
 logger = logging.getLogger(__name__)
+
+FREEZE_MINUTES = 5
+RATE_WINDOW_SECONDS = 10
+RATE_LIMIT_HITS = 15
+BLOCK_DURATION = timedelta(hours=1)
 
 _BOT_MARKERS = (
     'bot',
@@ -43,15 +52,22 @@ def _is_staff_user(request) -> bool:
     )
 
 
+def _should_rate_limit_request(request) -> bool:
+    path = (request.path or '/').split('?', 1)[0]
+    if path.startswith('/static/') or path.startswith('/media/'):
+        return False
+    if path in {'/favicon.ico', '/robots.txt'}:
+        return False
+    return True
+
+
 def should_track_site_visit(request) -> bool:
     if request.method != 'GET':
         return False
     path = (request.path or '/').split('?', 1)[0]
     if path.startswith('/admin/'):
         return False
-    if path.startswith('/static/') or path.startswith('/media/'):
-        return False
-    if path in {'/favicon.ico', '/robots.txt'}:
+    if not _should_rate_limit_request(request):
         return False
     if (request.headers.get('X-Requested-With') or '').lower() == 'xmlhttprequest':
         return False
@@ -62,14 +78,61 @@ def should_track_site_visit(request) -> bool:
     return True
 
 
-def client_ip_for_request(request) -> str:
+def client_ip_for_request(request) -> str | None:
+    candidates = []
     xff = request.META.get('HTTP_X_FORWARDED_FOR')
     if xff:
-        return xff.split(',')[0].strip()[:45]
+        candidates.append(xff.split(',')[0].strip())
     xri = request.META.get('HTTP_X_REAL_IP')
     if xri:
-        return xri.strip()[:45]
-    return (request.META.get('REMOTE_ADDR') or '')[:45]
+        candidates.append(xri.strip())
+    candidates.append((request.META.get('REMOTE_ADDR') or '').strip())
+
+    for raw in candidates:
+        if not raw:
+            continue
+        try:
+            validate_ipv46_address(raw)
+        except ValidationError:
+            continue
+        return raw[:45]
+    return None
+
+
+def is_ip_blocked(ip: str | None) -> bool:
+    if not ip:
+        return False
+    from core.models import BlockedIP
+
+    return BlockedIP.objects.filter(
+        ip_address=ip,
+        blocked_until__gt=timezone.now(),
+    ).exists()
+
+
+def _block_ip(ip: str) -> None:
+    from core.models import BlockedIP
+
+    BlockedIP.objects.update_or_create(
+        ip_address=ip,
+        defaults={'blocked_until': timezone.now() + BLOCK_DURATION},
+    )
+    logger.warning('IP %s заблокирован на 1 час (DDoS-порог)', ip)
+
+
+def _register_rate_hit_and_maybe_block(ip: str) -> bool:
+    """Регистрирует хит. Возвращает True, если IP нужно заблокировать."""
+    from core.models import IPRateHit
+
+    now = timezone.now()
+    cutoff = now - timedelta(seconds=RATE_WINDOW_SECONDS)
+    IPRateHit.objects.filter(hit_at__lt=now - timedelta(minutes=5)).delete()
+    IPRateHit.objects.create(ip_address=ip)
+    hits = IPRateHit.objects.filter(ip_address=ip, hit_at__gte=cutoff).count()
+    if hits >= RATE_LIMIT_HITS:
+        _block_ip(ip)
+        return True
+    return False
 
 
 def device_label_for_user_agent(ua: str) -> str:
@@ -92,7 +155,7 @@ def device_label_for_user_agent(ua: str) -> str:
     elif 'linux' in ua_lower:
         platform = 'Linux'
     else:
-        platform = 'Компьютер'
+        platform = 'ПК'
 
     if 'yabrowser' in ua_lower:
         browser = 'Яндекс'
@@ -119,36 +182,57 @@ def device_label_for_request(request) -> str:
 
 
 def record_site_visit(request) -> None:
-    """Один заход на витрину в календарный день на посетителя (сессия / пользователь)."""
+    """Один логический заход: один IP в окне 5 минут от первого хита."""
     try:
         if not should_track_site_visit(request):
             return
 
         from core.models import SiteVisit
 
-        key = visitor_key_for_request(request)
-        today = timezone.localdate()
-        tz = timezone.get_current_timezone()
-        day_start = timezone.make_aware(datetime.combine(today, time.min), tz)
-        day_end = timezone.make_aware(datetime.combine(today, time.max), tz)
-
-        if SiteVisit.objects.filter(
-            visitor_key=key,
-            visited_at__gte=day_start,
-            visited_at__lte=day_end,
-        ).exists():
+        ip = client_ip_for_request(request)
+        if ip and is_ip_blocked(ip):
             return
 
+        now = timezone.now()
+        freeze_since = now - timedelta(minutes=FREEZE_MINUTES)
         path = (request.path or '/')[:300]
-        ip = client_ip_for_request(request)
-        geo = lookup_ip_geo(ip)
-        SiteVisit.objects.create(
-            path=path,
-            visitor_key=key,
-            ip_address=ip,
-            device=device_label_for_request(request),
-            **geo,
-        )
+        key = visitor_key_for_request(request)
+        device = device_label_for_request(request)
+
+        with transaction.atomic():
+            open_visit = None
+            if ip:
+                open_visit = (
+                    SiteVisit.objects.select_for_update()
+                    .filter(ip_address=ip, visited_at__gt=freeze_since)
+                    .order_by('-visited_at')
+                    .first()
+                )
+            if open_visit is None:
+                open_visit = (
+                    SiteVisit.objects.select_for_update()
+                    .filter(visitor_key=key, visited_at__gt=freeze_since)
+                    .order_by('-visited_at')
+                    .first()
+                )
+
+            if open_visit is not None:
+                SiteVisit.objects.filter(pk=open_visit.pk).update(
+                    hit_count=F('hit_count') + 1,
+                    last_hit_at=now,
+                    path=path,
+                )
+                return
+
+            geo = lookup_ip_geo(ip) if ip else {}
+            SiteVisit.objects.create(
+                path=path,
+                visitor_key=key,
+                ip_address=ip,
+                device=device,
+                hit_count=1,
+                **geo,
+            )
     except Exception:
         logger.exception('Не удалось записать заход на сайт')
 
@@ -160,7 +244,6 @@ def visitor_key_for_request(request) -> str:
         request.session.save()
     if request.session.session_key:
         return f's:{request.session.session_key}'
-    # Крайний случай без сессии
     raw = '|'.join(
         [
             request.META.get('REMOTE_ADDR') or '',

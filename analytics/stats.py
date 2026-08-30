@@ -260,6 +260,7 @@ def _fetch_visit_rows(site_qs):
         'path',
         'ip_address',
         'device',
+        'hit_count',
         'geo_country',
         'geo_region',
         'geo_city',
@@ -275,6 +276,7 @@ def _fetch_visit_rows(site_qs):
             row['geo_country'] = ''
             row['geo_region'] = ''
             row['geo_city'] = ''
+            row['hit_count'] = 1
 
     return [
         {

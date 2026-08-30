@@ -104,16 +104,18 @@ class SiteSettings(models.Model):
 
 
 class SiteVisit(models.Model):
-    """Один заход посетителя на витрину в календарный день (Asia/Vladivostok)."""
+    """Один логический заход: один IP в окне 5 минут (фриз-тайм)."""
 
     visitor_key = models.CharField('Посетитель', max_length=64, db_index=True)
-    ip_address = models.GenericIPAddressField('IP', null=True, blank=True)
+    ip_address = models.GenericIPAddressField('IP', null=True, blank=True, db_index=True)
     geo_country = models.CharField('Страна', max_length=80, blank=True)
     geo_region = models.CharField('Регион', max_length=120, blank=True)
     geo_city = models.CharField('Город', max_length=120, blank=True)
     device = models.CharField('Устройство', max_length=120, blank=True)
     path = models.CharField('Страница', max_length=300, blank=True)
-    visited_at = models.DateTimeField('Когда', auto_now_add=True, db_index=True)
+    hit_count = models.PositiveIntegerField('Хитов за 5 мин', default=1)
+    visited_at = models.DateTimeField('Начало захода', auto_now_add=True, db_index=True)
+    last_hit_at = models.DateTimeField('Последний хит', auto_now_add=True)
 
     class Meta:
         verbose_name = 'Заход на сайт'
@@ -121,10 +123,40 @@ class SiteVisit(models.Model):
         indexes = [
             models.Index(fields=['visited_at']),
             models.Index(fields=['visitor_key', 'visited_at']),
+            models.Index(fields=['ip_address', 'visited_at']),
         ]
 
     def __str__(self):
         return f'{self.path or "/"} @ {self.visited_at:%Y-%m-%d %H:%M}'
+
+
+class BlockedIP(models.Model):
+    """Временная блокировка IP при DDoS-подобной активности."""
+
+    ip_address = models.GenericIPAddressField('IP', primary_key=True)
+    blocked_until = models.DateTimeField('Заблокирован до', db_index=True)
+    created_at = models.DateTimeField('Когда', auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Заблокированный IP'
+        verbose_name_plural = 'Заблокированные IP'
+
+    def __str__(self):
+        return f'{self.ip_address} до {self.blocked_until:%d.%m.%Y %H:%M}'
+
+
+class IPRateHit(models.Model):
+    """Счётчик запросов для анти-DDoS (скользящее окно 10 сек)."""
+
+    ip_address = models.GenericIPAddressField('IP', db_index=True)
+    hit_at = models.DateTimeField('Когда', auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = 'Хит IP'
+        verbose_name_plural = 'Хиты IP'
+        indexes = [
+            models.Index(fields=['ip_address', 'hit_at']),
+        ]
 
 
 class ProductPageView(models.Model):
