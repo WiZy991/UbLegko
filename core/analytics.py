@@ -110,6 +110,28 @@ def is_ip_blocked(ip: str | None) -> bool:
     ).exists()
 
 
+def active_blocked_ips() -> set[str]:
+    from core.models import BlockedIP
+
+    now = timezone.now()
+    return set(
+        BlockedIP.objects.filter(blocked_until__gt=now).values_list('ip_address', flat=True)
+    )
+
+
+def unblock_ip(ip: str) -> bool:
+    """Снимает блокировку IP и очищает счётчик rate-limit."""
+    if not ip:
+        return False
+    from core.models import BlockedIP, IPRateHit
+
+    deleted, _ = BlockedIP.objects.filter(ip_address=ip).delete()
+    IPRateHit.objects.filter(ip_address=ip).delete()
+    if deleted:
+        logger.info('IP %s разблокирован вручную', ip)
+    return deleted > 0
+
+
 def _block_ip(ip: str) -> None:
     from core.models import BlockedIP
 

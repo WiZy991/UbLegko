@@ -227,6 +227,45 @@
       color: #c0392b;
       font-weight: 600;
     }
+    .product-stats__ip-status {
+      white-space: nowrap;
+    }
+    .product-stats__ip-lamp {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .product-stats__ip-lamp-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, .12);
+      flex-shrink: 0;
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, .35);
+    }
+    .product-stats__ip-lamp-dot.is-ok {
+      background: #2ecc71;
+    }
+    .product-stats__ip-lamp-dot.is-blocked {
+      background: #e74c3c;
+    }
+    .product-stats__ip-unblock {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border: 1px solid #c5d9e2;
+      border-radius: 6px;
+      background: #fff;
+      color: #123;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.3;
+      cursor: pointer;
+    }
+    .product-stats__ip-unblock:hover {
+      background: #e8f6fb;
+      border-color: #00acd7;
+    }
   </style>
 {% endblock %}
 
@@ -310,6 +349,7 @@
             <tr>
               <th>Время</th>
               <th>IP</th>
+              <th title="Зелёный — не заблокирован, красный — заблокирован за DDoS">Блок</th>
               <th>Страна, город</th>
               <th>Устройство</th>
               <th title="Запросов за 5 минут с этого IP">Хитов</th>
@@ -321,6 +361,27 @@
             <tr class="{% cycle 'visits_row1' 'visits_row2' %}">
               <td class="product-stats__visit-time">{{ visit.visited_at|date:"d.m.Y H:i" }}</td>
               <td class="product-stats__visitor-ip">{{ visit.ip_address|default:"—" }}</td>
+              <td class="product-stats__ip-status">
+                {% if visit.ip_address %}
+                <span class="product-stats__ip-lamp">
+                  <span
+                    class="product-stats__ip-lamp-dot{% if visit.ip_blocked %} is-blocked{% else %} is-ok{% endif %}"
+                    title="{% if visit.ip_blocked %}IP заблокирован (DDoS){% else %}IP не заблокирован{% endif %}"
+                    aria-hidden="true"
+                  ></span>
+                  {% if visit.ip_blocked %}
+                  <form method="post" class="product-stats__ip-unblock-form" action="?{{ request.GET.urlencode }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unblock_ip">
+                    <input type="hidden" name="ip_address" value="{{ visit.ip_address }}">
+                    <button type="submit" class="product-stats__ip-unblock">Разблокировать</button>
+                  </form>
+                  {% endif %}
+                </span>
+                {% else %}
+                —
+                {% endif %}
+              </td>
               <td class="product-stats__visit-geo">{{ visit.geo_place|default:"—" }}</td>
               <td class="product-stats__visitor-device{% if visit.device_kind == 'desktop' %} is-desktop{% endif %}">
                 {{ visit.device|default:"—" }}

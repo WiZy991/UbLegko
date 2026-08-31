@@ -14,6 +14,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
+from core.analytics import active_blocked_ips
 from core.models import ProductPageView, SiteVisit
 
 logger = logging.getLogger(__name__)
@@ -265,6 +266,12 @@ def _fetch_visit_rows(site_qs):
         'geo_region',
         'geo_city',
     )
+    blocked_ips: set[str] = set()
+    try:
+        blocked_ips = active_blocked_ips()
+    except DatabaseError:
+        logger.exception('Не удалось загрузить список заблокированных IP')
+
     try:
         rows = list(site_qs.order_by('-visited_at').values(*fields)[:500])
     except DatabaseError:
@@ -284,6 +291,7 @@ def _fetch_visit_rows(site_qs):
             'device_kind': _device_kind(row.get('device') or ''),
             'geo_label': _geo_label(row),
             'geo_place': _geo_place_label(row),
+            'ip_blocked': bool(row.get('ip_address') and row['ip_address'] in blocked_ips),
         }
         for row in rows
     ]

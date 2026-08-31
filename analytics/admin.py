@@ -1,11 +1,12 @@
 from datetime import timedelta
 
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Count, Max
-from django.shortcuts import render
+from django.shortcuts import redirect, render
+from django.urls import reverse
 from django.utils import timezone
 
-from core.analytics import SEARCH_STATS_DAYS, prune_old_search_queries
+from core.analytics import SEARCH_STATS_DAYS, prune_old_search_queries, unblock_ip
 
 from .models import SearchStatistics, SiteStatistics
 from .stats import build_site_stats_context
@@ -28,6 +29,25 @@ class SiteStatisticsAdmin(admin.ModelAdmin):
         return request.user.is_staff
 
     def changelist_view(self, request, extra_context=None):
+        if request.method == 'POST' and request.POST.get('action') == 'unblock_ip':
+            if not request.user.is_staff:
+                return self.admin_site.login(request)
+
+            ip = (request.POST.get('ip_address') or '').strip()
+            if ip:
+                if unblock_ip(ip):
+                    messages.success(request, f'IP {ip} разблокирован.')
+                else:
+                    messages.warning(request, f'IP {ip} не был в блокировке.')
+            else:
+                messages.error(request, 'Не указан IP для разблокировки.')
+
+            redirect_url = reverse('admin:analytics_sitestatistics_changelist')
+            query = request.GET.urlencode()
+            if query:
+                redirect_url = f'{redirect_url}?{query}'
+            return redirect(redirect_url)
+
         context, redirect_response = build_site_stats_context(request)
         if redirect_response is not None:
             return redirect_response
