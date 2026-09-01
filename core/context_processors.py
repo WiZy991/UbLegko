@@ -66,6 +66,33 @@ def _stain_help_search_query(request) -> str:
     return ''
 
 
+def admin_inbox_counts(request):
+    """Счётчики новых заявок/запросов для админки (сразу в HTML, без ожидания AJAX)."""
+    if not request.path.startswith('/admin/') or request.path.startswith('/admin/login'):
+        return {}
+
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated or not user.is_staff:
+        return {}
+
+    orders_new = 0
+    requests_new = 0
+    if user.has_perm('cart.view_order'):
+        from cart.models import Order
+
+        orders_new = Order.objects.filter(status=Order.Status.NEW).count()
+    if user.has_perm('cart.view_stainhelprequest'):
+        from cart.models import StainHelpRequest
+
+        requests_new = StainHelpRequest.objects.filter(is_processed=False).count()
+
+    return {
+        'admin_inbox_counts_enabled': True,
+        'admin_inbox_orders_new': orders_new,
+        'admin_inbox_requests_new': requests_new,
+    }
+
+
 def seo(request):
     """Canonical без query-string; SITE_URL для абсолютных ссылок."""
     from catalog.seo import absolute_url, dumps_ld, organization_localbusiness_ld, site_origin

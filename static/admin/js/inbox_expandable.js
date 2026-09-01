@@ -65,6 +65,11 @@
   }
 
   function applyCounts(data) {
+    if (window.UblegkoInboxCounts && typeof window.UblegkoInboxCounts.apply === 'function') {
+      window.UblegkoInboxCounts.apply(data);
+      return;
+    }
+
     var orders = Number(data.orders_new || 0);
     var requests = Number(data.requests_new || 0);
 

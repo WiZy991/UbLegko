@@ -131,6 +131,20 @@
     padding: 0;
   }
 
+  /* Заявки и Запросы в шапке — на телефоне Jazzmin прячет topmenu (d-none d-sm-inline-block) */
+  #jazzy-navbar > .container-fluid > .navbar-nav:first-child > .nav-item:has(> a.nav-link[href*="/admin/cart/order/"]),
+  #jazzy-navbar > .container-fluid > .navbar-nav:first-child > .nav-item:has(> a.nav-link[href*="/admin/cart/stainhelprequest/"]) {
+    display: list-item !important;
+  }
+
+  #jazzy-navbar > .container-fluid > .navbar-nav:first-child > .nav-item > a.nav-link[href*="/admin/cart/order/"],
+  #jazzy-navbar > .container-fluid > .navbar-nav:first-child > .nav-item > a.nav-link[href*="/admin/cart/stainhelprequest/"] {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0.45rem 0.4rem;
+    white-space: nowrap;
+  }
+
   /* Иконки справа не сжимать поиск */
   #jazzy-navbar .navbar-nav.ms-auto,
   #jazzy-navbar .navbar-nav:last-child {
@@ -301,5 +315,10 @@
   #jazzy-navbar form.d-flex .form-control-navbar:focus::placeholder {
     color: #999;
     font-size: 12px;
+  }
+
+  /* На узком телефоне — в шапке только меню + заявки/запросы со счётчиками */
+  #jazzy-navbar > .container-fluid > .navbar-nav:first-child > .nav-item:not(:first-child):not(:has(> a.nav-link[href*="/admin/cart/order/"])):not(:has(> a.nav-link[href*="/admin/cart/stainhelprequest/"])) {
+    display: none !important;
   }
 }

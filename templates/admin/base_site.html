@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  {% if admin_inbox_counts_enabled %}
+    <script>
+      window.__UBLEGKO_INBOX_COUNTS__ = {
+        orders_new: {{ admin_inbox_orders_new|default:0 }},
+        requests_new: {{ admin_inbox_requests_new|default:0 }}
+      };
+    </script>
+    <script src="{% static 'admin/js/inbox_counts.js' %}?v=1"></script>
+  {% endif %}
+{% endblock %}
