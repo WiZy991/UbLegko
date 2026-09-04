@@ -495,39 +495,68 @@ class UserAdmin(DjangoUserAdmin):
         )
 
     def _orders_section(self, orders):
-        count = len(orders)
-        if count == 0:
-            body = '<p class="user-fold__empty">Заявок пока нет.</p>'
-        else:
-            items = []
-            for order in orders:
-                lines = []
-                for item in order.items.all():
-                    lines.append(
-                        f'<li>{escape(item.product_name)} × {item.quantity} — '
-                        f'{escape(_money(item.line_total))}</li>'
-                    )
-                lines_html = (
-                    f'<ul class="user-fold__sublist">{"".join(lines)}</ul>'
-                    if lines
-                    else '<p class="user-fold__empty">Нет позиций</p>'
-                )
-                items.append(
-                    f'<li class="user-fold__order">'
-                    f'<strong>Заявка №{order.number}</strong> · '
-                    f'{escape(_format_local_datetime(order.created_at))} · '
-                    f'<strong>{escape(_money(order.total))}</strong>'
-                    f'{lines_html}'
-                    f'</li>'
-                )
-            body = f'<ul class="user-fold__list">{"".join(items)}</ul>'
+        current_year = _vladivostok_year()
+        by_year: dict[int, list] = {}
+        for order in orders:
+            year = int(getattr(order, 'number_year', None) or _vladivostok_year(order.created_at))
+            by_year.setdefault(year, []).append(order)
 
-        return (
-            f'<details class="user-fold">'
-            f'<summary>Заказы ({count})</summary>'
-            f'<div class="user-fold__body">{body}</div>'
-            f'</details>'
-        )
+        years = sorted(by_year.keys(), reverse=True)
+        if not years:
+            return (
+                '<details class="user-fold">'
+                f'<summary>Заказы (0) · <strong>{escape(_money(0))}</strong></summary>'
+                '<div class="user-fold__body">'
+                '<p class="user-fold__empty">Заявок пока нет.</p>'
+                '</div></details>'
+            )
+
+        parts = []
+        for year in years:
+            year_orders = by_year[year]
+            count = len(year_orders)
+            total = sum((order.total for order in year_orders), start=Decimal('0'))
+            body = self._orders_year_body(year_orders)
+            total_html = f'<strong>{escape(_money(total))}</strong>'
+            if year == current_year:
+                title = f'Заказы ({count}) · {total_html}'
+                open_attr = ' open'
+            else:
+                title = f'Заявки за {year} год ({count}) · {total_html}'
+                open_attr = ''
+            parts.append(
+                f'<details class="user-fold"{open_attr}>'
+                f'<summary>{title}</summary>'
+                f'<div class="user-fold__body">{body}</div>'
+                f'</details>'
+            )
+        return ''.join(parts)
+
+    def _orders_year_body(self, orders):
+        if not orders:
+            return '<p class="user-fold__empty">Заявок пока нет.</p>'
+        items = []
+        for order in orders:
+            lines = []
+            for item in order.items.all():
+                lines.append(
+                    f'<li>{escape(item.product_name)} × {item.quantity} — '
+                    f'{escape(_money(item.line_total))}</li>'
+                )
+            lines_html = (
+                f'<ul class="user-fold__sublist">{"".join(lines)}</ul>'
+                if lines
+                else '<p class="user-fold__empty">Нет позиций</p>'
+            )
+            items.append(
+                f'<li class="user-fold__order">'
+                f'<strong>Заявка №{order.number}</strong> · '
+                f'{escape(_format_local_datetime(order.created_at))} · '
+                f'<strong>{escape(_money(order.total))}</strong>'
+                f'{lines_html}'
+                f'</li>'
+            )
+        return f'<ul class="user-fold__list">{"".join(items)}</ul>'
 
 
 admin.site.unregister(User)
