@@ -138,17 +138,17 @@
 
 #result_list .field-price,
 #result_list .field-old_price {
-  width: 110px;
-  min-width: 110px;
-  max-width: 120px;
+  width: 120px;
+  min-width: 120px;
+  max-width: 140px;
   white-space: nowrap;
 }
 
 #result_list .field-price input,
 #result_list .field-old_price input {
-  width: 102px !important;
-  min-width: 96px !important;
-  max-width: 112px;
+  width: 112px !important;
+  min-width: 104px !important;
+  max-width: 130px;
   box-sizing: border-box;
 }
 

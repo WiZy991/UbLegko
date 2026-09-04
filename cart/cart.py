@@ -1,6 +1,7 @@
 from decimal import Decimal
 
 from catalog.models import Product
+from core.formatting import format_rubles
 
 CART_SESSION_KEY = 'cart'
 
@@ -48,11 +49,15 @@ class Cart:
             if not product:
                 continue
             quantity = item['quantity']
+            price = product.price
+            total = price * quantity
             yield {
                 'product': product,
                 'quantity': quantity,
-                'price': product.price,
-                'total': product.price * quantity,
+                'price': price,
+                'total': total,
+                'price_display': format_rubles(price),
+                'total_display': format_rubles(total),
             }
 
     def __len__(self):
@@ -61,6 +66,10 @@ class Cart:
     @property
     def total_price(self):
         return sum((item['total'] for item in self), Decimal('0'))
+
+    @property
+    def total_price_display(self):
+        return format_rubles(self.total_price)
 
     def quantity_of(self, product_id):
         item = self.cart.get(str(product_id))

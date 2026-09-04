@@ -277,7 +277,9 @@ class Product(models.Model):
 
     @property
     def price_display(self):
-        return f'{self.price:.0f} руб'
+        from core.formatting import format_rubles
+
+        return format_rubles(self.price)
 
     @property
     def display_sku(self):

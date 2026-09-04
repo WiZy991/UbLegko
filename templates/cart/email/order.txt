@@ -1,4 +1,4 @@
-Новая заявка №{{ order.number }} с сайта {{ site.brand_name }}
+{% load catalog_extras %}Новая заявка №{{ order.number }} с сайта {{ site.brand_name }}
 
 Клиент: {{ order.full_name }}
 Телефон: {{ order.phone }}
@@ -18,7 +18,7 @@ Email: {{ order.email|default:"—" }}
 
 Состав заявки:
 {% for item in order.items.all %}
-- {{ item.product_name }} × {{ item.quantity }} = {{ item.line_total }} руб
+- {{ item.product_name }} × {{ item.quantity }} = {{ item.line_total|rubles }}
 {% endfor %}
 
-Итого: {{ order.total }} руб
+Итого: {{ order.total|rubles }}

@@ -5,6 +5,7 @@ import logging
 import re
 from decimal import Decimal, InvalidOperation
 
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin.templatetags.admin_list import (
     ResultList,
@@ -18,6 +19,8 @@ from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import escape, format_html, format_html_join, mark_safe
 from openpyxl import load_workbook
+
+from core.formatting import format_grouped_number
 
 from .categorize import resolve_category
 from .models import Category, Product, ProductImage, ProductRecommendation, ProductReview
@@ -119,12 +122,38 @@ def parse_price(value):
         return None
     if isinstance(value, (int, float, Decimal)):
         return Decimal(str(value))
-    text = str(value).strip().replace(' ', '').replace('руб', '').replace('₽', '')
+    text = (
+        str(value)
+        .strip()
+        .replace('\u00a0', '')
+        .replace(' ', '')
+        .replace('руб', '')
+        .replace('₽', '')
+    )
     text = text.replace(',', '.')
     text = re.sub(r'[^0-9.\-]', '', text)
     if not text:
         return None
     return Decimal(text)
+
+
+class GroupedDecimalField(forms.DecimalField):
+    """Цена с пробелами тысяч: 2500 ↔ «2 500»."""
+
+    def prepare_value(self, value):
+        if value in (None, ''):
+            return value
+        try:
+            return format_grouped_number(value)
+        except Exception:
+            return value
+
+    def to_python(self, value):
+        if isinstance(value, str):
+            value = value.replace('\u00a0', '').replace(' ', '').replace(',', '.')
+            if value.strip() == '':
+                value = None
+        return super().to_python(value)
 
 
 class ProductImageInline(admin.TabularInline):
@@ -355,6 +384,17 @@ class ProductAdmin(admin.ModelAdmin):
     autocomplete_fields = ['category']
     inlines = [ProductImageInline]
     change_list_template = 'admin/catalog/product/change_list.html'
+
+    class Media:
+        js = ('admin/js/price_input_format.js',)
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name in {'price', 'old_price'}:
+            return db_field.formfield(
+                form_class=GroupedDecimalField,
+                **kwargs,
+            )
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
     fieldsets = (
         ('Основная информация', {
             'fields': (

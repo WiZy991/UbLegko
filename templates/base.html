@@ -1,4 +1,5 @@
 {% load static %}
+{% load catalog_extras %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -305,7 +306,7 @@
                 </span>
               </span>
             </span>
-            <span data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
+            <span data-cart-total>{{ cart_total_display }}</span>
           </a>
           {% if user.is_authenticated %}
             <div class="topbar__auth">
@@ -389,7 +390,7 @@
                 <circle cx="16.3" cy="19" r="1.4" fill="currentColor"/>
               </svg>
             </span>
-            <span class="search-row__cart-total" data-cart-total>{{ cart_total|floatformat:0 }} руб</span>
+            <span class="search-row__cart-total" data-cart-total>{{ cart_total_display }}</span>
           </a>
         </div>
       </div>
@@ -622,7 +623,7 @@
   </div>
 
   <script>window.ublegkoStainHelpPrefixes={{ stain_help_prefixes_json|safe }};</script>
-  <script src="{% static 'js/main.js' %}?v=20260824requestsuccess"></script>
+  <script src="{% static 'js/main.js' %}?v=20260904pricespaces2"></script>
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
   <script src="{% static 'js/pill_nav_topbar.js' %}?v=10" defer></script>
   {% block extra_js %}{% endblock %}

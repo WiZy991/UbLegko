@@ -8,6 +8,8 @@ from typing import Any
 
 from django.conf import settings
 
+from core.formatting import format_rubles
+
 from .seo_keywords import (
     GEO_CITIES,
     GEO_REGION,
@@ -158,7 +160,7 @@ def product_meta_description(product) -> str:
         return clip_meta(desc)
     return clip_meta(
         f'{product.name} — купить в Уссурийске, {GEO_REGION}. '
-        f'Профессиональная химия, цена {product.price:.0f} руб. '
+        f'Профессиональная химия, цена {format_rubles(product.price)}. '
         f'Подскажем, чем отмыть и как вывести пятна.'
     )
 

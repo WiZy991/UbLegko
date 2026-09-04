@@ -127,6 +127,11 @@ class Order(models.Model):
     def total(self):
         return sum(item.line_total for item in self.items.all())
 
+    @property
+    def total_display(self):
+        from core.formatting import format_rubles
+
+        return format_rubles(self.total)
 
 class OrderItem(models.Model):
     order = models.ForeignKey(

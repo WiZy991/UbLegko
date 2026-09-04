@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 import logging
 
 from catalog.models import Category, Product
+from core.formatting import format_grouped_number
 from catalog.pack_pricing import attach_price_per_liter
 from catalog.recommendations import get_recommendations_for_products
 from accounts.models import Profile
@@ -69,7 +70,7 @@ def cart_add(request, product_id):
             {
                 'ok': True,
                 'cart_count': len(cart),
-                'cart_total': f'{cart.total_price:.0f}',
+                'cart_total': format_grouped_number(cart.total_price),
                 'message': f'«{product.name}» добавлен в корзину',
             }
         )
@@ -113,8 +114,8 @@ def cart_update(request, product_id):
                 'ok': True,
                 'removed': removed,
                 'quantity': 0 if removed else quantity,
-                'line_total': f'{line_total:.0f}',
-                'cart_total': f'{cart.total_price:.0f}',
+                'line_total': format_grouped_number(line_total),
+                'cart_total': format_grouped_number(cart.total_price),
                 'cart_count': len(cart),
                 'product_id': int(product_id),
             }

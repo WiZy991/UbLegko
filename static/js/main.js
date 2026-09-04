@@ -6,6 +6,21 @@
     return "";
   }
 
+  function formatGroupedInt(value) {
+    const digits = String(value ?? "")
+      .replace(/[^\d-]/g, "")
+      .replace(/(?!^)-/g, "");
+    if (!digits || digits === "-") return "0";
+    const neg = digits.startsWith("-");
+    const abs = neg ? digits.slice(1) : digits;
+    const grouped = abs.replace(/\B(?=(\d{3})+(?!\d))/g, "\u00a0");
+    return neg ? `-${grouped}` : grouped;
+  }
+
+  function formatRubles(value) {
+    return `${formatGroupedInt(value)} руб`;
+  }
+
   const toast = document.getElementById("toast");
   function showToast(message) {
     if (!toast || !message) return;
@@ -849,12 +864,12 @@
   function updateCartTotals(data) {
     const pageTotal = document.querySelector("[data-cart-page-total]");
     if (pageTotal && data.cart_total !== undefined) {
-      pageTotal.textContent = `Итого: ${data.cart_total} руб`;
+      pageTotal.textContent = `Итого: ${formatRubles(data.cart_total)}`;
     }
     const headerTotals = document.querySelectorAll("[data-cart-total]");
     if (headerTotals.length && data.cart_total !== undefined) {
       headerTotals.forEach((el) => {
-        el.textContent = `${data.cart_total} руб`;
+        el.textContent = formatRubles(data.cart_total);
       });
     }
   }
@@ -934,7 +949,7 @@
       const lineTotals = row ? row.querySelectorAll("[data-cart-line-total]") : [];
       if (lineTotals.length && data.line_total !== undefined) {
         lineTotals.forEach((el) => {
-          el.textContent = `${data.line_total} руб`;
+          el.textContent = formatRubles(data.line_total);
         });
       }
       if (data.removed && row) {
@@ -1033,7 +1048,7 @@
         const totalEls = document.querySelectorAll("[data-cart-total]");
         if (totalEls.length && data.cart_total !== undefined) {
           totalEls.forEach((el) => {
-            el.textContent = `${data.cart_total} руб`;
+            el.textContent = formatRubles(data.cart_total);
           });
         }
         showToast(data.message || "Добавлено в корзину");

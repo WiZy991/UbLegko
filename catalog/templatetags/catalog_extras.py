@@ -2,6 +2,8 @@ from urllib.parse import urlencode
 
 from django import template
 
+from core.formatting import format_grouped_number, format_rubles
+
 register = template.Library()
 
 _FILTER_KEYS = ('in_stock', 'promo', 'price', 'sort', 'q', 'page')
@@ -55,3 +57,17 @@ def cart_qty(quantities, product_id):
     except (TypeError, ValueError):
         return 0
     return int(quantities.get(key) or 0)
+
+
+@register.filter(name='rubles')
+def rubles_filter(value):
+    """13520 → '13 520 руб'."""
+    return format_rubles(value)
+
+
+@register.filter(name='grouped_int')
+def grouped_int_filter(value):
+    """13520 → '13 520'."""
+    if value in (None, ''):
+        return ''
+    return format_grouped_number(value)
