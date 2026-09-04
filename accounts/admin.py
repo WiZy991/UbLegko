@@ -17,7 +17,7 @@ from django.urls import path, reverse
 from django.utils import timezone
 from django.utils.html import escape, format_html, mark_safe
 
-from cart.models import Order, _vladivostok_year
+from cart.models import Favorite, Order, _vladivostok_year
 from catalog.models import ProductReview
 
 from .models import SITE_ACTIVITY_DAYS, DeliveryAddress, Profile
@@ -131,6 +131,10 @@ class UserAdmin(DjangoUserAdmin):
             qs.select_related('profile')
             .prefetch_related(
                 'delivery_addresses',
+                Prefetch(
+                    'favorites',
+                    queryset=Favorite.objects.select_related('product').order_by('-created_at'),
+                ),
                 Prefetch(
                     'product_reviews',
                     queryset=ProductReview.objects.select_related('product').order_by('-created_at'),
@@ -344,6 +348,7 @@ class UserAdmin(DjangoUserAdmin):
             last_visit = obj.last_login
 
         addresses = list(obj.delivery_addresses.all())
+        favorites = list(obj.favorites.all())
         reviews = list(obj.product_reviews.all())
         orders = list(obj.orders.all())
 
@@ -363,6 +368,7 @@ class UserAdmin(DjangoUserAdmin):
         ]
 
         addresses_html = self._addresses_section(addresses)
+        favorites_html = self._favorites_section(favorites)
         reviews_html = self._reviews_section(reviews)
         orders_html = self._orders_section(orders)
 
@@ -372,6 +378,7 @@ class UserAdmin(DjangoUserAdmin):
             + ''.join(blocks)
             + '</div>'
             + addresses_html
+            + favorites_html
             + reviews_html
             + orders_html
             + '</div>'
@@ -409,6 +416,31 @@ class UserAdmin(DjangoUserAdmin):
         return (
             f'<details class="user-fold">'
             f'<summary>Адреса ({count})</summary>'
+            f'<div class="user-fold__body">{body}</div>'
+            f'</details>'
+        )
+
+    def _favorites_section(self, favorites):
+        count = len(favorites)
+        if count == 0:
+            body = '<p class="user-fold__empty">В избранном пусто.</p>'
+        else:
+            items = []
+            for fav in favorites:
+                product = fav.product
+                name = getattr(product, 'name', None) or 'Товар'
+                sku = getattr(product, 'sku', None) or ''
+                sku_html = f' · арт. {escape(sku)}' if sku else ''
+                items.append(
+                    f'<li><strong>{escape(name)}</strong>{sku_html}'
+                    f'<br><span class="user-fold__muted">добавлено '
+                    f'{escape(_format_local_datetime(fav.created_at))}</span></li>'
+                )
+            body = f'<ul class="user-fold__list">{"".join(items)}</ul>'
+
+        return (
+            f'<details class="user-fold">'
+            f'<summary>Избранное ({count})</summary>'
             f'<div class="user-fold__body">{body}</div>'
             f'</details>'
         )
@@ -484,7 +516,7 @@ class UserAdmin(DjangoUserAdmin):
                     f'<li class="user-fold__order">'
                     f'<strong>Заявка №{order.number}</strong> · '
                     f'{escape(_format_local_datetime(order.created_at))} · '
-                    f'{escape(_money(order.total))}'
+                    f'<strong>{escape(_money(order.total))}</strong>'
                     f'{lines_html}'
                     f'</li>'
                 )
