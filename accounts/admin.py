@@ -19,6 +19,7 @@ from django.utils.html import escape, format_html, mark_safe
 
 from cart.models import Favorite, Order, _vladivostok_year
 from catalog.models import ProductReview
+from core.formatting import format_rubles
 
 from .models import SITE_ACTIVITY_DAYS, DeliveryAddress, Profile
 
@@ -59,11 +60,7 @@ def _format_local_datetime(value):
 
 
 def _money(value) -> str:
-    try:
-        amount = Decimal(value or 0)
-    except Exception:
-        amount = Decimal('0')
-    return f'{amount:.0f} руб'
+    return format_rubles(value)
 
 
 class UserAdmin(DjangoUserAdmin):

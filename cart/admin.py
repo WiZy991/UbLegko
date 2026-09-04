@@ -16,6 +16,7 @@ from django.utils.html import escape, format_html, mark_safe
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font
 
+from core.formatting import format_rubles
 from core.models import SiteSettings
 
 from .models import Favorite, Order, OrderItem, StainHelpRequest
@@ -256,7 +257,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
                 (order.comment or '').strip(),
                 products,
                 quantities,
-                f'{order.total:.0f} руб',
+                f'{format_rubles(order.total)}',
             )
             ws.append(row)
             for cell in ws[ws.max_row]:
@@ -431,18 +432,18 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.display(description='Сумма')
     def total_display(self, obj):
-        return f'{obj.total:.0f} руб'
+        return format_rubles(obj.total)
 
     def row_details_html(self, obj):
         items = list(obj.items.all())
         if items:
             items_html = '<ul class="inbox-row-detail__items">' + ''.join(
                 f'<li>{escape(item.product_name)} × {item.quantity} — '
-                f'{item.line_total:.0f} руб</li>'
+                f'{escape(format_rubles(item.line_total))}</li>'
                 for item in items
             ) + (
                 f'<li class="inbox-row-detail__total"><strong>Итого: '
-                f'{obj.total:.0f} руб</strong></li>'
+                f'{escape(format_rubles(obj.total))}</strong></li>'
             ) + '</ul>'
         else:
             items_html = '<span class="inbox-row-detail__value">Нет позиций</span>'
