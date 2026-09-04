@@ -1,0 +1,28 @@
+{% extends "admin/change_list.html" %}
+{% load static admin_list %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=17">
+  <link rel="stylesheet" href="{% static 'admin/css/user_expandable.css' %}?v=2">
+  <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=9"></script>
+  <script defer src="{% static 'admin/js/user_expandable.js' %}?v=1"></script>
+{% endblock %}
+
+{% block content_title %}
+  Пользователи
+{% endblock %}
+
+{% block result_list %}
+  <p class="inbox-expandable-hint">
+    <strong>▼</strong> — email, адреса, отзывы и заказы. Активность: заход на сайт за последние {{ site_activity_days|default:30 }} дней.
+    Список отсортирован по последнему входу на сайт.
+  </p>
+  {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+  {% if expandable_rows %}
+    {% include "admin/cart/inbox_change_list_results.html" %}
+  {% else %}
+    {% result_list cl %}
+  {% endif %}
+  {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+{% endblock %}

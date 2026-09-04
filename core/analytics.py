@@ -73,8 +73,7 @@ def should_track_site_visit(request) -> bool:
         return False
     if _is_bot(request):
         return False
-    if _is_staff_user(request):
-        return False
+    # Администраторы тоже учитываются в статистике заходов на витрину
     return True
 
 
@@ -203,6 +202,16 @@ def device_label_for_request(request) -> str:
     return device_label_for_user_agent(request.META.get('HTTP_USER_AGENT') or '')
 
 
+def _touch_authenticated_user_visit(request, when) -> None:
+    """Обновляет last_site_visit_at у авторизованного пользователя."""
+    user = getattr(request, 'user', None)
+    if user is None or not user.is_authenticated:
+        return
+    from accounts.models import Profile
+
+    Profile.objects.filter(user_id=user.pk).update(last_site_visit_at=when)
+
+
 def record_site_visit(request) -> None:
     """Один логический заход: один IP в окне 5 минут от первого хита."""
     try:
@@ -244,6 +253,7 @@ def record_site_visit(request) -> None:
                     last_hit_at=now,
                     path=path,
                 )
+                _touch_authenticated_user_visit(request, now)
                 return
 
             geo = lookup_ip_geo(ip) if ip else {}
@@ -255,6 +265,7 @@ def record_site_visit(request) -> None:
                 hit_count=1,
                 **geo,
             )
+            _touch_authenticated_user_visit(request, now)
     except Exception:
         logger.exception('Не удалось записать заход на сайт')
 

@@ -1,0 +1,274 @@
+/* Пользователи: раскрытие строки и вложенные блоки */
+
+.user-activity-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.user-activity-badge--on {
+  color: #1b5e20;
+  background: #e8f5e9;
+  border: 1px solid #66bb6a;
+}
+
+.user-activity-badge--off {
+  color: #7f1d1d;
+  background: #fdecea;
+  border: 1px solid #e57373;
+}
+
+.user-row-detail .user-fold {
+  margin: 12px 0 0;
+  border: 1px solid #d6e4ea;
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.user-row-detail .user-fold--static {
+  padding: 10px 12px;
+}
+
+.user-row-detail .user-fold > summary,
+.user-row-detail .user-fold__title {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #123;
+  user-select: none;
+}
+
+.user-row-detail .user-fold--static .user-fold__title {
+  cursor: default;
+  padding: 0 0 8px;
+}
+
+.user-row-detail .user-fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.user-row-detail .user-fold > summary::after {
+  content: "▸";
+  float: right;
+  color: #667;
+}
+
+.user-row-detail .user-fold[open] > summary::after {
+  content: "▾";
+}
+
+.user-row-detail .user-fold__body {
+  border-top: 1px solid #e8edf2;
+  padding: 10px 12px 12px;
+}
+
+.user-row-detail .user-fold__list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.user-row-detail .user-fold__list > li {
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.user-row-detail .user-fold__list > li:last-child {
+  margin-bottom: 0;
+}
+
+.user-row-detail .user-fold__sublist {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  color: #334;
+}
+
+.user-row-detail .user-fold__empty {
+  margin: 0;
+  color: #667;
+  font-size: 13px;
+}
+
+.user-row-detail .user-fold__muted {
+  color: #667;
+  font-size: 12px;
+}
+
+.user-fold__list--reviews {
+  list-style: none;
+  padding-left: 0;
+}
+
+.user-review-item {
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid #d6e4ea;
+  border-radius: 8px;
+  background: #f8fbfd;
+}
+
+.user-review-item:last-child {
+  margin-bottom: 0;
+}
+
+.user-review-item.is-saving {
+  opacity: 0.7;
+}
+
+.user-review-item__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.user-review-item__label {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #445;
+}
+
+.user-review-item__rating,
+.user-review-item__comment {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  box-sizing: border-box;
+  border: 1px solid #c5d9e2;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: inherit;
+  color: #123;
+  background: #fff;
+}
+
+.user-review-item__comment {
+  resize: vertical;
+  min-height: 72px;
+  white-space: pre-wrap;
+}
+
+.user-review-item__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.user-review-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-review-btn--save {
+  background: #00acd7;
+  border-color: #00acd7;
+  color: #fff;
+}
+
+.user-review-btn--save:hover {
+  background: #0090b5;
+}
+
+.user-review-btn--delete {
+  background: #fff;
+  border-color: #e57373;
+  color: #c0392b;
+}
+
+.user-review-btn--delete:hover {
+  background: #fdecea;
+}
+
+.user-review-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.user-review-item__status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.user-review-item__status.is-ok {
+  color: #1b5e20;
+}
+
+.user-review-item__status.is-error {
+  color: #c0392b;
+}
+
+html[data-bs-theme="dark"] .user-review-item {
+  background: #18222b;
+  border-color: #3a4652;
+}
+
+html[data-bs-theme="dark"] .user-review-item__rating,
+html[data-bs-theme="dark"] .user-review-item__comment {
+  background: #101820;
+  border-color: #3a4652;
+  color: #e8eef3;
+}
+
+html[data-bs-theme="dark"] .user-review-btn--delete {
+  background: #1f2933;
+}
+
+#result_list tbody tr.inbox-row[data-inbox-status="inactive"] td.field-site_activity_col {
+  opacity: 0.95;
+}
+
+html[data-bs-theme="dark"] .user-row-detail .user-fold {
+  background: #1f2933;
+  border-color: #3a4652;
+}
+
+html[data-bs-theme="dark"] .user-row-detail .user-fold > summary,
+html[data-bs-theme="dark"] .user-row-detail .user-fold__title {
+  color: #e8eef3;
+}
+
+html[data-bs-theme="dark"] .user-row-detail .user-fold__body {
+  border-top-color: #3a4652;
+}
+
+html[data-bs-theme="dark"] .user-activity-badge--on {
+  color: #b9f6ca;
+  background: #1b4332;
+  border-color: #2d6a4f;
+}
+
+html[data-bs-theme="dark"] .user-activity-badge--off {
+  color: #ffc9c9;
+  background: #4a1c1c;
+  border-color: #7f1d1d;
+}
+
+@media (max-width: 900px) {
+  #result_list th.column-admin_access_col,
+  #result_list td.field-admin_access_col,
+  #result_list th.column-phone_col,
+  #result_list td.field-phone_col {
+    display: none !important;
+  }
+}

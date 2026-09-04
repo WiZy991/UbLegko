@@ -4,6 +4,9 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 
+SITE_ACTIVITY_DAYS = 30
+
+
 class Profile(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -12,6 +15,12 @@ class Profile(models.Model):
         verbose_name='Пользователь',
     )
     phone = models.CharField('Телефон', max_length=40, blank=True)
+    last_site_visit_at = models.DateTimeField(
+        'Последний вход на сайт',
+        null=True,
+        blank=True,
+        db_index=True,
+    )
 
     class Meta:
         verbose_name = 'Профиль'
@@ -19,6 +28,19 @@ class Profile(models.Model):
 
     def __str__(self):
         return f'Профиль {self.user.username}'
+
+    @property
+    def is_site_active(self) -> bool:
+        """Активен, если заходил на витрину за последние 30 дней."""
+        from django.utils import timezone
+        from datetime import timedelta
+
+        last = self.last_site_visit_at
+        if last is None:
+            last = self.user.last_login or self.user.date_joined
+        if last is None:
+            return False
+        return last >= timezone.now() - timedelta(days=SITE_ACTIVITY_DAYS)
 
 
 class DeliveryAddress(models.Model):
