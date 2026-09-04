@@ -16,7 +16,7 @@
 {% block result_list %}
   <p class="inbox-expandable-hint">
     <strong>▼</strong> — email, адреса, отзывы и заказы. Активность: заход на сайт за последние {{ site_activity_days|default:30 }} дней.
-    Список отсортирован по последнему входу на сайт.
+    В колонках «Права» и «Группа клиента» можно менять значения прямо в таблице.
   </p>
   {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
   {% if expandable_rows %}

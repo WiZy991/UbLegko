@@ -560,15 +560,15 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         extra_context['stain_help_auto_modal_url'] = reverse(
             'admin:cart_stainhelprequest_auto_modal'
         )
-        extra_context['can_toggle_stain_help_auto_modal'] = self.has_change_permission(
-            request
+        extra_context['can_toggle_stain_help_auto_modal'] = bool(
+            request.user.is_superuser
         )
         return super().changelist_view(request, extra_context)
 
     def auto_modal_view(self, request):
         if request.method != 'POST':
             return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
-        if not self.has_change_permission(request):
+        if not request.user.is_superuser:
             return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
 
         try:

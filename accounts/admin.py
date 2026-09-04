@@ -9,7 +9,7 @@ from django.contrib.admin.templatetags.admin_list import (
     result_hidden_fields,
 )
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.db.models import Count, DecimalField, ExpressionWrapper, F, Prefetch, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
@@ -21,7 +21,23 @@ from cart.models import Favorite, Order, _vladivostok_year
 from catalog.models import ProductReview
 from core.formatting import format_rubles
 
+from .admin_groups import SimpleGroupAdmin
+from .forms_roles import UserRoleAdminForm, UserRoleCreationForm
 from .models import SITE_ACTIVITY_DAYS, DeliveryAddress, Profile
+from .roles import (
+    ROLE_ADMIN,
+    ROLE_CHOICES,
+    ROLE_LABELS,
+    ROLE_STAFF,
+    ROLE_USER,
+    SEGMENT_CHOICES,
+    SEGMENT_LABELS,
+    detect_user_access_role,
+    detect_user_segment,
+    ensure_default_groups,
+    set_user_access_role,
+    set_user_segment,
+)
 
 
 class ProfileInline(admin.StackedInline):
@@ -36,21 +52,43 @@ class DeliveryAddressInline(admin.TabularInline):
     extra = 0
 
 
-@admin.action(description='Выдать полный доступ в админку')
-def grant_admin_access(modeladmin, request, queryset):
-    updated = queryset.update(is_staff=True, is_superuser=True)
-    messages.success(request, f'Полный доступ в админку выдан: {updated}')
+@admin.action(description='Права: Администратор')
+def set_role_admin(modeladmin, request, queryset):
+    ok = 0
+    for user in queryset:
+        try:
+            set_user_access_role(user, ROLE_ADMIN, actor=request.user)
+            ok += 1
+        except PermissionError as exc:
+            messages.warning(request, str(exc))
+    if ok:
+        messages.success(request, f'Администратор: {ok}')
 
 
-@admin.action(description='Забрать доступ в админку')
-def revoke_admin_access(modeladmin, request, queryset):
-    qs = queryset.exclude(pk=request.user.pk)
-    updated = qs.update(is_staff=False, is_superuser=False)
-    skipped = queryset.count() - qs.count()
-    if updated:
-        messages.success(request, f'Доступ в админку отключён: {updated}')
-    if skipped:
-        messages.warning(request, 'Свой аккаунт через это действие не меняется.')
+@admin.action(description='Права: Персонал')
+def set_role_staff(modeladmin, request, queryset):
+    ok = 0
+    for user in queryset:
+        try:
+            set_user_access_role(user, ROLE_STAFF, actor=request.user)
+            ok += 1
+        except PermissionError as exc:
+            messages.warning(request, str(exc))
+    if ok:
+        messages.success(request, f'Персонал: {ok}')
+
+
+@admin.action(description='Права: Пользователь')
+def set_role_user(modeladmin, request, queryset):
+    ok = 0
+    for user in queryset:
+        try:
+            set_user_access_role(user, ROLE_USER, actor=request.user)
+            ok += 1
+        except PermissionError as exc:
+            messages.warning(request, str(exc))
+    if ok:
+        messages.success(request, f'Пользователь: {ok}')
 
 
 def _format_local_datetime(value):
@@ -63,8 +101,18 @@ def _money(value) -> str:
     return format_rubles(value)
 
 
+def _options_html(choices, selected):
+    parts = []
+    for value, label in choices:
+        sel = ' selected' if value == selected else ''
+        parts.append(f'<option value="{escape(value)}"{sel}>{escape(label)}</option>')
+    return ''.join(parts)
+
+
 class UserAdmin(DjangoUserAdmin):
     change_list_template = 'admin/auth/user/change_list.html'
+    form = UserRoleAdminForm
+    add_form = UserRoleCreationForm
     inlines = [ProfileInline, DeliveryAddressInline]
     list_display = (
         'expand_toggle',
@@ -75,12 +123,13 @@ class UserAdmin(DjangoUserAdmin):
         'orders_year_sum',
         'site_activity_col',
         'last_site_visit_col',
-        'admin_access_col',
+        'access_role_col',
+        'segment_col',
     )
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
     search_fields = ('username', 'email', 'first_name', 'last_name', 'profile__phone')
-    actions = (grant_admin_access, revoke_admin_access)
-    filter_horizontal = ('groups', 'user_permissions')
+    actions = (set_role_admin, set_role_staff, set_role_user)
+    filter_horizontal = ()
     ordering = (
         F('profile__last_site_visit_at').desc(nulls_last=True),
         F('last_login').desc(nulls_last=True),
@@ -91,15 +140,14 @@ class UserAdmin(DjangoUserAdmin):
         (None, {'fields': ('username', 'password')}),
         ('Личные данные', {'fields': ('first_name', 'last_name', 'email')}),
         (
-            'Доступ в админку',
+            'Права и сегмент',
             {
                 'description': (
-                    'Для полноценной работы в админке включите «Статус суперпользователя» — '
-                    'тогда человек увидит все разделы, как главный администратор. '
-                    'Только «Статус персонала» без суперпользователя открывает вход, '
-                    'но меню останется пустым.'
+                    'Права: Администратор / Персонал / Пользователь — без длинного списка разрешений. '
+                    'Сегмент клиента (VIP / постоянные / клиенты) — только метка группы, '
+                    'права сайта у всех сегментов одинаковые.'
                 ),
-                'fields': ('is_active', 'is_superuser', 'is_staff', 'groups', 'user_permissions'),
+                'fields': ('is_active', 'access_role', 'customer_segment'),
             },
         ),
         ('Системное', {'fields': ('last_login', 'date_joined')}),
@@ -115,11 +163,16 @@ class UserAdmin(DjangoUserAdmin):
                     'password2',
                     'email',
                     'first_name',
-                    'is_superuser',
+                    'access_role',
+                    'customer_segment',
                 ),
             },
         ),
     )
+
+    class Media:
+        css = {'all': ('admin/css/user_roles.css',)}
+        js = ('admin/js/user_roles.js',)
 
     def get_queryset(self, request):
         year = _vladivostok_year()
@@ -127,6 +180,7 @@ class UserAdmin(DjangoUserAdmin):
         return (
             qs.select_related('profile')
             .prefetch_related(
+                'groups',
                 'delivery_addresses',
                 Prefetch(
                     'favorites',
@@ -160,14 +214,70 @@ class UserAdmin(DjangoUserAdmin):
             )
         )
 
+    def changelist_view(self, request, extra_context=None):
+        ensure_default_groups()
+        extra_context = extra_context or {}
+        extra_context['site_activity_days'] = SITE_ACTIVITY_DAYS
+        response = super().changelist_view(request, extra_context=extra_context)
+        if not hasattr(response, 'context_data'):
+            return response
+
+        cl = response.context_data.get('cl')
+        if not cl:
+            return response
+
+        rows = []
+        if cl.formset:
+            for res, form in zip(cl.result_list, cl.formset.forms):
+                rows.append({
+                    'result': ResultList(form, items_for_result(cl, res, form)),
+                    'obj': res,
+                    'row_status': self.get_row_status(res),
+                    'details_html': self.row_details_html(res),
+                })
+        else:
+            for res in cl.result_list:
+                rows.append({
+                    'result': ResultList(None, items_for_result(cl, res, None)),
+                    'obj': res,
+                    'row_status': self.get_row_status(res),
+                    'details_html': self.row_details_html(res),
+                })
+
+        headers = list(result_headers(cl))
+        num_sorted_fields = sum(
+            1 for header in headers if header.get('sortable') and header.get('sorted')
+        )
+        response.context_data.update({
+            'expandable_rows': rows,
+            'result_headers': headers,
+            'num_sorted_fields': num_sorted_fields,
+            'result_hidden_fields': list(result_hidden_fields(cl)),
+        })
+        return response
+
     def save_model(self, request, obj, form, change):
-        if obj.is_superuser:
-            obj.is_staff = True
         super().save_model(request, obj, form, change)
+        apply = getattr(form, 'apply_access', None)
+        if callable(apply):
+            try:
+                apply(obj, actor=request.user)
+            except PermissionError as exc:
+                messages.error(request, str(exc))
 
     def get_urls(self):
         urls = super().get_urls()
         custom = [
+            path(
+                '<path:object_id>/set-role/',
+                self.admin_site.admin_view(self.set_role_view),
+                name='auth_user_set_role',
+            ),
+            path(
+                '<path:object_id>/set-segment/',
+                self.admin_site.admin_view(self.set_segment_view),
+                name='auth_user_set_segment',
+            ),
             path(
                 '<path:object_id>/review/<int:review_id>/save/',
                 self.admin_site.admin_view(self.save_review_view),
@@ -180,6 +290,67 @@ class UserAdmin(DjangoUserAdmin):
             ),
         ]
         return custom + urls
+
+    def _can_manage_users(self, request):
+        return request.user.is_superuser or request.user.has_perm('auth.change_user')
+
+    def set_role_view(self, request, object_id):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self._can_manage_users(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        role = str(payload.get('role') or '').strip()
+        if role not in ROLE_LABELS:
+            return JsonResponse({'ok': False, 'error': 'Неизвестная роль'}, status=400)
+
+        user = User.objects.filter(pk=object_id).first()
+        if not user:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        try:
+            set_user_access_role(user, role, actor=request.user)
+        except PermissionError as exc:
+            return JsonResponse({'ok': False, 'error': str(exc)}, status=400)
+
+        user.refresh_from_db()
+        return JsonResponse({
+            'ok': True,
+            'role': detect_user_access_role(user),
+            'label': ROLE_LABELS[detect_user_access_role(user)],
+        })
+
+    def set_segment_view(self, request, object_id):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self._can_manage_users(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        segment = str(payload.get('segment') or '').strip()
+        if segment not in SEGMENT_LABELS and segment != '':
+            return JsonResponse({'ok': False, 'error': 'Неизвестный сегмент'}, status=400)
+
+        user = User.objects.filter(pk=object_id).first()
+        if not user:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        set_user_segment(user, segment)
+        current = detect_user_segment(user)
+        return JsonResponse({
+            'ok': True,
+            'segment': current,
+            'label': SEGMENT_LABELS.get(current, '— без сегмента'),
+        })
 
     def save_review_view(self, request, object_id, review_id):
         if request.method != 'POST':
@@ -232,47 +403,6 @@ class UserAdmin(DjangoUserAdmin):
             'ok': True,
             'reviews_count': ProductReview.objects.filter(user_id=object_id).count(),
         })
-
-    def changelist_view(self, request, extra_context=None):
-        extra_context = extra_context or {}
-        extra_context['site_activity_days'] = SITE_ACTIVITY_DAYS
-        response = super().changelist_view(request, extra_context=extra_context)
-        if not hasattr(response, 'context_data'):
-            return response
-
-        cl = response.context_data.get('cl')
-        if not cl:
-            return response
-
-        rows = []
-        if cl.formset:
-            for res, form in zip(cl.result_list, cl.formset.forms):
-                rows.append({
-                    'result': ResultList(form, items_for_result(cl, res, form)),
-                    'obj': res,
-                    'row_status': self.get_row_status(res),
-                    'details_html': self.row_details_html(res),
-                })
-        else:
-            for res in cl.result_list:
-                rows.append({
-                    'result': ResultList(None, items_for_result(cl, res, None)),
-                    'obj': res,
-                    'row_status': self.get_row_status(res),
-                    'details_html': self.row_details_html(res),
-                })
-
-        headers = list(result_headers(cl))
-        num_sorted_fields = sum(
-            1 for header in headers if header.get('sortable') and header.get('sorted')
-        )
-        response.context_data.update({
-            'expandable_rows': rows,
-            'result_headers': headers,
-            'num_sorted_fields': num_sorted_fields,
-            'result_hidden_fields': list(result_hidden_fields(cl)),
-        })
-        return response
 
     def get_row_status(self, obj):
         profile = getattr(obj, 'profile', None)
@@ -327,13 +457,29 @@ class UserAdmin(DjangoUserAdmin):
             value = obj.last_login
         return _format_local_datetime(value)
 
-    @admin.display(description='Админка', ordering='is_superuser')
-    def admin_access_col(self, obj):
-        if obj.is_superuser:
-            return format_html('<span style="font-weight:600;">{}</span>', 'полный доступ')
-        if obj.is_staff:
-            return format_html('<span style="color:#c60;">{}</span>', 'только вход')
-        return format_html('<span style="color:#888;">{}</span>', 'нет')
+    @admin.display(description='Права', ordering='is_superuser')
+    def access_role_col(self, obj):
+        role = detect_user_access_role(obj)
+        url = reverse('admin:auth_user_set_role', args=[obj.pk])
+        return mark_safe(
+            f'<select class="user-role-select user-role-select--{escape(role)}" '
+            f'data-role-url="{escape(url)}" data-user-id="{obj.pk}" '
+            f'title="Права доступа">'
+            f'{_options_html(ROLE_CHOICES, role)}'
+            f'</select>'
+        )
+
+    @admin.display(description='Группа клиента')
+    def segment_col(self, obj):
+        segment = detect_user_segment(obj)
+        url = reverse('admin:auth_user_set_segment', args=[obj.pk])
+        return mark_safe(
+            f'<select class="user-segment-select" '
+            f'data-segment-url="{escape(url)}" data-user-id="{obj.pk}" '
+            f'title="Сегмент клиента">'
+            f'{_options_html(SEGMENT_CHOICES, segment)}'
+            f'</select>'
+        )
 
     def row_details_html(self, obj):
         profile = getattr(obj, 'profile', None)
@@ -344,6 +490,9 @@ class UserAdmin(DjangoUserAdmin):
         elif obj.last_login:
             last_visit = obj.last_login
 
+        role = ROLE_LABELS.get(detect_user_access_role(obj), 'Пользователь')
+        segment = SEGMENT_LABELS.get(detect_user_segment(obj), '— без сегмента')
+
         addresses = list(obj.delivery_addresses.all())
         favorites = list(obj.favorites.all())
         reviews = list(obj.product_reviews.all())
@@ -352,6 +501,8 @@ class UserAdmin(DjangoUserAdmin):
         blocks = [
             self._detail_block('Email', obj.email or '—'),
             self._detail_block('Телефон', phone),
+            self._detail_block('Права доступа', role),
+            self._detail_block('Группа клиента', segment),
             self._detail_block('Регистрация', _format_local_datetime(obj.date_joined)),
             self._detail_block('Последний вход на сайт', _format_local_datetime(last_visit)),
             self._detail_block(
@@ -553,6 +704,13 @@ class UserAdmin(DjangoUserAdmin):
             )
         return f'<ul class="user-fold__list">{"".join(items)}</ul>'
 
+
+# Group уже регистрируется в admin_groups; здесь только перестраховка
+try:
+    admin.site.unregister(Group)
+except admin.sites.NotRegistered:
+    pass
+admin.site.register(Group, SimpleGroupAdmin)
 
 admin.site.unregister(User)
 admin.site.register(User, UserAdmin)
