@@ -16,7 +16,7 @@
           <input type="search" id="group-member-search" class="group-members__search"
                  placeholder="Логин, имя или email…" autocomplete="off">
           <input type="hidden" name="user_id" id="group-member-user-id" value="">
-          <button type="submit" class="button default" id="group-member-add-btn" disabled>Добавить</button>
+          <button type="submit" class="button group-members__btn group-members__btn--primary" id="group-member-add-btn" disabled>Добавить</button>
         </div>
         <ul class="group-members__suggest" id="group-member-suggest" hidden></ul>
       </form>
@@ -51,11 +51,11 @@
                   <option value="{{ g.pk }}">{{ g.name }}</option>
                   {% endfor %}
                 </select>
-                <button type="submit" class="button">Перенести</button>
+                <button type="submit" class="button group-members__btn">Перенести</button>
               </form>
             </td>
             <td>
-              <button type="button" class="button group-members__remove"
+              <button type="button" class="button group-members__btn group-members__btn--danger"
                       data-url="{% url 'admin:auth_group_remove_member' original.pk user.pk %}">
                 Убрать
               </button>

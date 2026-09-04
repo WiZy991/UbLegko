@@ -126,7 +126,7 @@
       });
     });
 
-    root.querySelectorAll('.group-members__remove').forEach(function (btn) {
+    root.querySelectorAll('.group-members__btn--danger, .group-members__remove').forEach(function (btn) {
       btn.addEventListener('click', function () {
         if (!window.confirm('Убрать пользователя из группы?')) return;
         postForm(btn.getAttribute('data-url'), {})
