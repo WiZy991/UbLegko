@@ -6,14 +6,15 @@ from .roles import (
     ROLE_ADMIN,
     ROLE_CHOICES,
     ROLE_HELP,
+    ROLE_STAFF,
     ROLE_USER,
-    SEGMENT_CHOICES,
+    MEMBERSHIP_CHOICES,
+    SEGMENT_BASE,
     apply_permissions_for_role,
     detect_group_role,
     detect_user_access_role,
-    detect_user_segment,
-    set_user_access_role,
-    set_user_segment,
+    detect_user_membership,
+    set_user_membership,
 )
 
 
@@ -84,13 +85,13 @@ class UserRoleAdminForm(UserChangeForm):
         choices=ROLE_CHOICES,
         help_text=' · '.join(ROLE_HELP[k] for k, _ in ROLE_CHOICES),
     )
-    customer_segment = forms.ChoiceField(
-        label='Сегмент клиента',
-        choices=SEGMENT_CHOICES,
+    customer_group = forms.ChoiceField(
+        label='Группа',
+        choices=MEMBERSHIP_CHOICES,
         required=False,
         help_text=(
-            'VIP — крупные покупки; постоянные — средняя активность; '
-            'клиенты — остальные. Права сайта у всех сегментов одинаковые.'
+            'Выбор группы сразу выставляет права: '
+            'Администраторы / Персонал / VIP / постоянные / клиенты.'
         ),
     )
 
@@ -99,19 +100,19 @@ class UserRoleAdminForm(UserChangeForm):
         user = self.instance
         if user and user.pk:
             self.fields['access_role'].initial = detect_user_access_role(user)
-            self.fields['customer_segment'].initial = detect_user_segment(user)
+            self.fields['customer_group'].initial = detect_user_membership(user)
         else:
             self.fields['access_role'].initial = ROLE_USER
-            self.fields['customer_segment'].initial = ''
+            self.fields['customer_group'].initial = SEGMENT_BASE
         for name in ('is_staff', 'is_superuser', 'user_permissions', 'groups'):
             self.fields.pop(name, None)
 
     def apply_access(self, user, *, actor=None):
-        """Вызывается после save_model: админка сохраняет с commit=False."""
-        role = self.cleaned_data.get('access_role') or ROLE_USER
-        segment = self.cleaned_data.get('customer_segment') or ''
-        set_user_access_role(user, role, actor=actor)
-        set_user_segment(user, segment)
+        """Группа — источник истины: по ней выставляются и права."""
+        membership = self.cleaned_data.get('customer_group')
+        if membership is None:
+            membership = ''
+        set_user_membership(user, membership, actor=actor)
 
 
 class UserRoleCreationForm(UserCreationForm):
@@ -121,11 +122,11 @@ class UserRoleCreationForm(UserCreationForm):
         initial=ROLE_USER,
         help_text=ROLE_HELP[ROLE_ADMIN],
     )
-    customer_segment = forms.ChoiceField(
-        label='Сегмент клиента',
-        choices=SEGMENT_CHOICES,
+    customer_group = forms.ChoiceField(
+        label='Группа',
+        choices=MEMBERSHIP_CHOICES,
         required=False,
-        initial='',
+        initial=SEGMENT_BASE,
     )
 
     class Meta(UserCreationForm.Meta):
@@ -133,7 +134,14 @@ class UserRoleCreationForm(UserCreationForm):
         fields = ('username', 'email', 'first_name')
 
     def apply_access(self, user, *, actor=None):
+        membership = self.cleaned_data.get('customer_group')
+        if membership:
+            set_user_membership(user, membership, actor=actor)
+            return
         role = self.cleaned_data.get('access_role') or ROLE_USER
-        segment = self.cleaned_data.get('customer_segment') or ''
-        set_user_access_role(user, role, actor=actor)
-        set_user_segment(user, segment)
+        if role == ROLE_ADMIN:
+            set_user_membership(user, ROLE_ADMIN, actor=actor)
+        elif role == ROLE_STAFF:
+            set_user_membership(user, ROLE_STAFF, actor=actor)
+        else:
+            set_user_membership(user, '', actor=actor)

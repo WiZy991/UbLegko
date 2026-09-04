@@ -1,0 +1,73 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+
+{% block after_related_objects %}
+  {{ block.super }}
+  {% if original %}
+  <div class="group-members" id="group-members"
+       data-add-url="{{ add_user_url }}"
+       data-search-url="{{ users_autocomplete_url }}">
+    <div class="group-members__head">
+      <h2>Участники группы ({{ group_members|length }})</h2>
+      <form class="group-members__add" id="group-member-add-form">
+        {% csrf_token %}
+        <label class="group-members__label" for="group-member-search">Добавить пользователя</label>
+        <div class="group-members__add-row">
+          <input type="search" id="group-member-search" class="group-members__search"
+                 placeholder="Логин, имя или email…" autocomplete="off">
+          <input type="hidden" name="user_id" id="group-member-user-id" value="">
+          <button type="submit" class="button default" id="group-member-add-btn" disabled>Добавить</button>
+        </div>
+        <ul class="group-members__suggest" id="group-member-suggest" hidden></ul>
+      </form>
+    </div>
+
+    {% if group_members %}
+    <div class="group-members__table-wrap">
+      <table class="group-members__table">
+        <thead>
+          <tr>
+            <th>Пользователь</th>
+            <th>Имя</th>
+            <th>Email</th>
+            <th>Перенести в группу</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in group_members %}
+          <tr data-user-id="{{ user.pk }}">
+            <td>
+              <a href="{% url 'admin:auth_user_change' user.pk %}">{{ user.username }}</a>
+            </td>
+            <td>{{ user.get_full_name|default:"—" }}</td>
+            <td>{{ user.email|default:"—" }}</td>
+            <td>
+              <form class="group-members__move" data-url="{% url 'admin:auth_group_move_member' original.pk user.pk %}">
+                {% csrf_token %}
+                <select name="target_group_id" class="group-members__move-select">
+                  <option value="">— выбрать —</option>
+                  {% for g in other_groups %}
+                  <option value="{{ g.pk }}">{{ g.name }}</option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="button">Перенести</button>
+              </form>
+            </td>
+            <td>
+              <button type="button" class="button group-members__remove"
+                      data-url="{% url 'admin:auth_group_remove_member' original.pk user.pk %}">
+                Убрать
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="group-members__empty">В этой группе пока никого нет. Добавьте пользователя выше.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+{% endblock %}

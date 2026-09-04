@@ -33,10 +33,32 @@
     });
   }
 
+  function syncRowSelects(userId, data) {
+    var roleSelect = document.querySelector(
+      '.user-role-select[data-user-id="' + userId + '"]'
+    );
+    var membershipSelect = document.querySelector(
+      '.user-membership-select[data-user-id="' + userId + '"]'
+    );
+    if (roleSelect && data.role != null) {
+      roleSelect.value = data.role;
+      roleSelect.classList.remove(
+        'user-role-select--admin',
+        'user-role-select--staff',
+        'user-role-select--user'
+      );
+      roleSelect.classList.add('user-role-select--' + data.role);
+    }
+    if (membershipSelect && data.membership != null) {
+      membershipSelect.value = data.membership;
+    }
+  }
+
   function bindSelect(select, urlAttr, payloadKey) {
     if (!select || select.dataset.bound === '1') return;
     select.dataset.bound = '1';
     var previous = select.value;
+    var userId = select.getAttribute('data-user-id');
 
     select.addEventListener('change', function () {
       var url = select.getAttribute(urlAttr);
@@ -51,14 +73,7 @@
         .then(function (data) {
           previous = select.value;
           select.classList.remove('is-saving');
-          if (payloadKey === 'role') {
-            select.classList.remove(
-              'user-role-select--admin',
-              'user-role-select--staff',
-              'user-role-select--user'
-            );
-            select.classList.add('user-role-select--' + (data.role || select.value));
-          }
+          syncRowSelects(userId, data);
         })
         .catch(function (err) {
           select.value = previous;
@@ -74,8 +89,8 @@
     scope.querySelectorAll('.user-role-select').forEach(function (el) {
       bindSelect(el, 'data-role-url', 'role');
     });
-    scope.querySelectorAll('.user-segment-select').forEach(function (el) {
-      bindSelect(el, 'data-segment-url', 'segment');
+    scope.querySelectorAll('.user-membership-select').forEach(function (el) {
+      bindSelect(el, 'data-membership-url', 'membership');
     });
   }
 

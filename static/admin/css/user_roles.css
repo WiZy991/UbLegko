@@ -1,9 +1,9 @@
 /* Упрощённые права и сегменты в списке пользователей */
 
 .user-role-select,
-.user-segment-select {
-  max-width: 150px;
-  min-width: 120px;
+.user-membership-select {
+  max-width: 170px;
+  min-width: 130px;
   padding: 4px 6px;
   border: 1px solid #c5d5de;
   border-radius: 6px;
@@ -33,13 +33,13 @@
 }
 
 .user-role-select.is-saving,
-.user-segment-select.is-saving {
+.user-membership-select.is-saving {
   opacity: 0.55;
   pointer-events: none;
 }
 
 .user-role-select.is-error,
-.user-segment-select.is-error {
+.user-membership-select.is-error {
   border-color: #c62828;
   box-shadow: 0 0 0 1px #ef9a9a;
 }

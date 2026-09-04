@@ -1,4 +1,4 @@
-"""Упрощённые роли доступа и сегменты клиентов."""
+"""Упрощённые роли доступа и группы пользователей."""
 
 from __future__ import annotations
 
@@ -49,6 +49,26 @@ ACCESS_GROUP_NAMES = {
     ROLE_ADMIN: GROUP_ADMIN,
     ROLE_STAFF: GROUP_STAFF,
 }
+
+# Единый выбор «Группа» в таблице пользователей (группа ↔ права)
+MEMBERSHIP_CHOICES = (
+    (ROLE_ADMIN, GROUP_ADMIN),
+    (ROLE_STAFF, GROUP_STAFF),
+    (SEGMENT_VIP, GROUP_VIP),
+    (SEGMENT_REGULAR, GROUP_REGULAR),
+    (SEGMENT_BASE, GROUP_BASE),
+    ('', '— без сегмента'),
+)
+
+MEMBERSHIP_LABELS = dict(MEMBERSHIP_CHOICES)
+
+ALL_MANAGED_GROUP_NAMES = (
+    GROUP_ADMIN,
+    GROUP_STAFF,
+    GROUP_VIP,
+    GROUP_REGULAR,
+    GROUP_BASE,
+)
 
 ROLE_HELP = {
     ROLE_ADMIN: 'Полный доступ ко всей админке, настройкам и удалению.',
@@ -124,17 +144,42 @@ def detect_user_access_role(user: User) -> str:
     return ROLE_USER
 
 
+def _user_group_names(user: User) -> set[str]:
+    if hasattr(user, '_prefetched_objects_cache') and 'groups' in user._prefetched_objects_cache:
+        return {g.name for g in user.groups.all()}
+    return set(user.groups.values_list('name', flat=True))
+
+
 def detect_user_segment(user: User) -> str:
-    names = set(user.groups.values_list('name', flat=True))
+    names = _user_group_names(user)
     for key, group_name in SEGMENT_GROUP_NAMES.items():
         if group_name in names:
             return key
     return ''
 
 
+def detect_user_membership(user: User) -> str:
+    """Главная группа пользователя для колонки «Группа»."""
+    names = _user_group_names(user)
+    if user.is_superuser or GROUP_ADMIN in names:
+        return ROLE_ADMIN
+    if user.is_staff or GROUP_STAFF in names:
+        return ROLE_STAFF
+    for key, group_name in SEGMENT_GROUP_NAMES.items():
+        if group_name in names:
+            return key
+    return ''
+
 def get_or_create_named_group(name: str) -> Group:
     group, _ = Group.objects.get_or_create(name=name)
     return group
+
+
+def _clear_managed_groups(user: User) -> None:
+    for group_name in ALL_MANAGED_GROUP_NAMES:
+        group = Group.objects.filter(name=group_name).first()
+        if group:
+            user.groups.remove(group)
 
 
 @transaction.atomic
@@ -160,25 +205,21 @@ def ensure_default_groups() -> dict[str, Group]:
 
 @transaction.atomic
 def set_user_access_role(user: User, role: str, *, actor: User | None = None) -> None:
-    """Назначает пользователю упрощённую роль доступа."""
+    """Назначает пользователю упрощённую роль доступа и синхронизирует группу."""
     if role not in ROLE_LABELS:
         raise ValueError('Неизвестная роль')
 
     ensure_default_groups()
 
-    # Нельзя снять себе админку
     if actor is not None and actor.pk == user.pk and role != ROLE_ADMIN and user.is_superuser:
         raise PermissionError('Нельзя понизить права своему аккаунту')
 
-    # Убрать из групп доступа
-    for group_name in ACCESS_GROUP_NAMES.values():
-        group = Group.objects.filter(name=group_name).first()
-        if group:
-            user.groups.remove(group)
-
+    current_membership = detect_user_membership(user)
+    current_segment = detect_user_segment(user)
     user.user_permissions.clear()
 
     if role == ROLE_ADMIN:
+        _clear_managed_groups(user)
         user.is_superuser = True
         user.is_staff = True
         user.save(update_fields=['is_superuser', 'is_staff'])
@@ -186,6 +227,7 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
         return
 
     if role == ROLE_STAFF:
+        _clear_managed_groups(user)
         user.is_superuser = False
         user.is_staff = True
         user.save(update_fields=['is_superuser', 'is_staff'])
@@ -194,10 +236,21 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
         user.groups.add(staff_group)
         return
 
-    # Пользователь сайта
+    # Пользователь сайта: убрать access-группы, оставить/назначить клиентский сегмент
+    for group_name in ACCESS_GROUP_NAMES.values():
+        group = Group.objects.filter(name=group_name).first()
+        if group:
+            user.groups.remove(group)
+
     user.is_superuser = False
     user.is_staff = False
     user.save(update_fields=['is_superuser', 'is_staff'])
+
+    # Если сегмента нет — по умолчанию «Клиенты»
+    if current_membership in (ROLE_ADMIN, ROLE_STAFF) or not current_segment:
+        set_user_segment(user, SEGMENT_BASE)
+    elif current_segment:
+        set_user_segment(user, current_segment)
 
 
 @transaction.atomic
@@ -222,9 +275,64 @@ def set_user_segment(user: User, segment: str) -> None:
     user.groups.add(group)
 
 
+@transaction.atomic
+def set_user_membership(user: User, membership: str, *, actor: User | None = None) -> None:
+    """Назначает группу и сразу выставляет соответствующие права."""
+    if membership not in MEMBERSHIP_LABELS:
+        raise ValueError('Неизвестная группа')
+
+    ensure_default_groups()
+
+    if membership == ROLE_ADMIN:
+        set_user_access_role(user, ROLE_ADMIN, actor=actor)
+        return
+
+    if membership == ROLE_STAFF:
+        set_user_access_role(user, ROLE_STAFF, actor=actor)
+        return
+
+    if membership in SEGMENT_LABELS:
+        # Сначала роль пользователя, потом нужный сегмент (роль по умолчанию ставит Клиенты)
+        if actor is not None and actor.pk == user.pk and user.is_superuser:
+            raise PermissionError('Нельзя понизить права своему аккаунту')
+
+        for group_name in ACCESS_GROUP_NAMES.values():
+            group = Group.objects.filter(name=group_name).first()
+            if group:
+                user.groups.remove(group)
+
+        user.user_permissions.clear()
+        user.is_superuser = False
+        user.is_staff = False
+        user.save(update_fields=['is_superuser', 'is_staff'])
+        set_user_segment(user, membership)
+        return
+
+    # — без сегмента: обычный пользователь без клиентской группы
+    if actor is not None and actor.pk == user.pk and user.is_superuser:
+        raise PermissionError('Нельзя понизить права своему аккаунту')
+
+    _clear_managed_groups(user)
+    user.user_permissions.clear()
+    user.is_superuser = False
+    user.is_staff = False
+    user.save(update_fields=['is_superuser', 'is_staff'])
+
+
+def move_user_to_group(user: User, target_group: Group, *, actor: User | None = None) -> None:
+    """Переносит пользователя в управляемую группу по её имени."""
+    name = (target_group.name or '').strip()
+    membership_by_name = {label: key for key, label in MEMBERSHIP_CHOICES if key}
+    if name in membership_by_name:
+        set_user_membership(user, membership_by_name[name], actor=actor)
+        return
+    # Произвольная группа: просто добавить, не трогая права
+    user.groups.add(target_group)
+
+
 def format_user_groups_summary(user: User) -> str:
     role = ROLE_LABELS.get(detect_user_access_role(user), 'Пользователь')
-    segment = SEGMENT_LABELS.get(detect_user_segment(user), '')
-    if segment:
-        return f'{role} · {segment}'
-    return role
+    membership = MEMBERSHIP_LABELS.get(detect_user_membership(user), '')
+    if membership and membership not in ROLE_LABELS.values():
+        return f'{role} · {membership}'
+    return membership or role

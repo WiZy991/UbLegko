@@ -21,6 +21,7 @@ from cart.models import Favorite, Order, _vladivostok_year
 from catalog.models import ProductReview
 from core.formatting import format_rubles
 
+from .admin_filters import AccessRoleFilter, ManagedGroupFilter
 from .admin_groups import SimpleGroupAdmin
 from .forms_roles import UserRoleAdminForm, UserRoleCreationForm
 from .models import SITE_ACTIVITY_DAYS, DeliveryAddress, Profile
@@ -30,13 +31,13 @@ from .roles import (
     ROLE_LABELS,
     ROLE_STAFF,
     ROLE_USER,
-    SEGMENT_CHOICES,
-    SEGMENT_LABELS,
+    MEMBERSHIP_CHOICES,
+    MEMBERSHIP_LABELS,
     detect_user_access_role,
-    detect_user_segment,
+    detect_user_membership,
     ensure_default_groups,
     set_user_access_role,
-    set_user_segment,
+    set_user_membership,
 )
 
 
@@ -124,9 +125,9 @@ class UserAdmin(DjangoUserAdmin):
         'site_activity_col',
         'last_site_visit_col',
         'access_role_col',
-        'segment_col',
+        'membership_col',
     )
-    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
+    list_filter = (AccessRoleFilter, 'is_active', ManagedGroupFilter)
     search_fields = ('username', 'email', 'first_name', 'last_name', 'profile__phone')
     actions = (set_role_admin, set_role_staff, set_role_user)
     filter_horizontal = ()
@@ -143,11 +144,11 @@ class UserAdmin(DjangoUserAdmin):
             'Права и сегмент',
             {
                 'description': (
-                    'Права: Администратор / Персонал / Пользователь — без длинного списка разрешений. '
-                    'Сегмент клиента (VIP / постоянные / клиенты) — только метка группы, '
-                    'права сайта у всех сегментов одинаковые.'
+                    'Права: Администратор / Персонал / Пользователь. '
+                    'Группа: Администраторы, Персонал, VIP, постоянные, клиенты — '
+                    'выбор группы сразу выставляет соответствующие права.'
                 ),
-                'fields': ('is_active', 'access_role', 'customer_segment'),
+                'fields': ('is_active', 'access_role', 'customer_group'),
             },
         ),
         ('Системное', {'fields': ('last_login', 'date_joined')}),
@@ -164,7 +165,7 @@ class UserAdmin(DjangoUserAdmin):
                     'email',
                     'first_name',
                     'access_role',
-                    'customer_segment',
+                    'customer_group',
                 ),
             },
         ),
@@ -274,9 +275,9 @@ class UserAdmin(DjangoUserAdmin):
                 name='auth_user_set_role',
             ),
             path(
-                '<path:object_id>/set-segment/',
-                self.admin_site.admin_view(self.set_segment_view),
-                name='auth_user_set_segment',
+                '<path:object_id>/set-membership/',
+                self.admin_site.admin_view(self.set_membership_view),
+                name='auth_user_set_membership',
             ),
             path(
                 '<path:object_id>/review/<int:review_id>/save/',
@@ -309,7 +310,7 @@ class UserAdmin(DjangoUserAdmin):
         if role not in ROLE_LABELS:
             return JsonResponse({'ok': False, 'error': 'Неизвестная роль'}, status=400)
 
-        user = User.objects.filter(pk=object_id).first()
+        user = User.objects.filter(pk=object_id).prefetch_related('groups').first()
         if not user:
             return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
 
@@ -319,13 +320,19 @@ class UserAdmin(DjangoUserAdmin):
             return JsonResponse({'ok': False, 'error': str(exc)}, status=400)
 
         user.refresh_from_db()
+        # Invalidate prefetch
+        user = User.objects.prefetch_related('groups').get(pk=user.pk)
+        role_now = detect_user_access_role(user)
+        membership = detect_user_membership(user)
         return JsonResponse({
             'ok': True,
-            'role': detect_user_access_role(user),
-            'label': ROLE_LABELS[detect_user_access_role(user)],
+            'role': role_now,
+            'label': ROLE_LABELS[role_now],
+            'membership': membership,
+            'membership_label': MEMBERSHIP_LABELS.get(membership, '— без сегмента'),
         })
 
-    def set_segment_view(self, request, object_id):
+    def set_membership_view(self, request, object_id):
         if request.method != 'POST':
             return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
         if not self._can_manage_users(request):
@@ -336,20 +343,28 @@ class UserAdmin(DjangoUserAdmin):
         except (TypeError, ValueError, json.JSONDecodeError):
             return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
 
-        segment = str(payload.get('segment') or '').strip()
-        if segment not in SEGMENT_LABELS and segment != '':
-            return JsonResponse({'ok': False, 'error': 'Неизвестный сегмент'}, status=400)
+        membership = str(payload.get('membership') or '').strip()
+        if membership not in MEMBERSHIP_LABELS:
+            return JsonResponse({'ok': False, 'error': 'Неизвестная группа'}, status=400)
 
         user = User.objects.filter(pk=object_id).first()
         if not user:
             return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
 
-        set_user_segment(user, segment)
-        current = detect_user_segment(user)
+        try:
+            set_user_membership(user, membership, actor=request.user)
+        except PermissionError as exc:
+            return JsonResponse({'ok': False, 'error': str(exc)}, status=400)
+
+        user = User.objects.prefetch_related('groups').get(pk=user.pk)
+        role_now = detect_user_access_role(user)
+        membership_now = detect_user_membership(user)
         return JsonResponse({
             'ok': True,
-            'segment': current,
-            'label': SEGMENT_LABELS.get(current, '— без сегмента'),
+            'membership': membership_now,
+            'membership_label': MEMBERSHIP_LABELS.get(membership_now, '— без сегмента'),
+            'role': role_now,
+            'label': ROLE_LABELS[role_now],
         })
 
     def save_review_view(self, request, object_id, review_id):
@@ -469,15 +484,15 @@ class UserAdmin(DjangoUserAdmin):
             f'</select>'
         )
 
-    @admin.display(description='Группа клиента')
-    def segment_col(self, obj):
-        segment = detect_user_segment(obj)
-        url = reverse('admin:auth_user_set_segment', args=[obj.pk])
+    @admin.display(description='Группа')
+    def membership_col(self, obj):
+        membership = detect_user_membership(obj)
+        url = reverse('admin:auth_user_set_membership', args=[obj.pk])
         return mark_safe(
-            f'<select class="user-segment-select" '
-            f'data-segment-url="{escape(url)}" data-user-id="{obj.pk}" '
-            f'title="Сегмент клиента">'
-            f'{_options_html(SEGMENT_CHOICES, segment)}'
+            f'<select class="user-membership-select" '
+            f'data-membership-url="{escape(url)}" data-user-id="{obj.pk}" '
+            f'title="Группа">'
+            f'{_options_html(MEMBERSHIP_CHOICES, membership)}'
             f'</select>'
         )
 
@@ -491,7 +506,7 @@ class UserAdmin(DjangoUserAdmin):
             last_visit = obj.last_login
 
         role = ROLE_LABELS.get(detect_user_access_role(obj), 'Пользователь')
-        segment = SEGMENT_LABELS.get(detect_user_segment(obj), '— без сегмента')
+        membership = MEMBERSHIP_LABELS.get(detect_user_membership(obj), '— без сегмента')
 
         addresses = list(obj.delivery_addresses.all())
         favorites = list(obj.favorites.all())
@@ -502,7 +517,7 @@ class UserAdmin(DjangoUserAdmin):
             self._detail_block('Email', obj.email or '—'),
             self._detail_block('Телефон', phone),
             self._detail_block('Права доступа', role),
-            self._detail_block('Группа клиента', segment),
+            self._detail_block('Группа', membership),
             self._detail_block('Регистрация', _format_local_datetime(obj.date_joined)),
             self._detail_block('Последний вход на сайт', _format_local_datetime(last_visit)),
             self._detail_block(

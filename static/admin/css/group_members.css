@@ -1,0 +1,128 @@
+/* Участники группы */
+
+.group-members {
+  margin: 24px 0 8px;
+  padding: 16px 18px 18px;
+  border: 1px solid #d6e4ea;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.group-members__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.group-members__head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.group-members__label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #546e7a;
+}
+
+.group-members__add {
+  position: relative;
+  min-width: min(100%, 420px);
+  flex: 1 1 280px;
+}
+
+.group-members__add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.group-members__search {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid #c5d5de;
+  border-radius: 6px;
+}
+
+.group-members__suggest {
+  position: absolute;
+  z-index: 20;
+  left: 0;
+  right: 80px;
+  top: calc(100% + 2px);
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  border: 1px solid #c5d5de;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  max-height: 240px;
+  overflow: auto;
+}
+
+.group-members__suggest button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.group-members__suggest button:hover,
+.group-members__suggest button.is-active {
+  background: #e3f2fd;
+}
+
+.group-members__table-wrap {
+  overflow-x: auto;
+}
+
+.group-members__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.group-members__table th,
+.group-members__table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e6eef2;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.group-members__table th {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #607d8b;
+}
+
+.group-members__move {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+}
+
+.group-members__move-select {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.group-members__empty {
+  margin: 0;
+  color: #78909c;
+}
+
+.group-members__remove {
+  color: #b71c1c !important;
+}
