@@ -12,6 +12,14 @@
     return '';
   }
 
+  function collapseUserFolds(root) {
+    var scope = root || document;
+    scope.querySelectorAll('details.user-fold').forEach(function (el) {
+      el.open = false;
+      el.removeAttribute('open');
+    });
+  }
+
   function setStatus(item, text, kind) {
     var status = item.querySelector('.user-review-item__status');
     if (!status) return;
@@ -128,6 +136,16 @@
   }
 
   document.addEventListener('click', function (event) {
+    var expandBtn = event.target.closest('.inbox-row-expand');
+    if (expandBtn) {
+      var id = expandBtn.getAttribute('data-inbox-id');
+      var detail = id ? document.getElementById('inbox-detail-' + id) : null;
+      if (detail) {
+        // При каждом раскрытии строки все вложенные блоки снова свёрнуты
+        collapseUserFolds(detail);
+      }
+    }
+
     var saveBtn = event.target.closest('.user-review-btn--save');
     if (saveBtn) {
       event.preventDefault();
@@ -142,5 +160,18 @@
       var deleteItem = deleteBtn.closest('.user-review-item');
       if (deleteItem && !deleteItem.classList.contains('is-saving')) deleteReview(deleteItem);
     }
+  });
+
+  function init() {
+    collapseUserFolds(document);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+  window.addEventListener('pageshow', function () {
+    collapseUserFolds(document);
   });
 })();

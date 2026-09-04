@@ -487,7 +487,7 @@ class UserAdmin(DjangoUserAdmin):
             body = f'<ul class="user-fold__list user-fold__list--reviews">{"".join(items)}</ul>'
 
         return (
-            f'<details class="user-fold" open>'
+            f'<details class="user-fold">'
             f'<summary class="user-reviews-summary">Комментарии и оценки '
             f'(<span class="user-reviews-count">{count}</span>)</summary>'
             f'<div class="user-fold__body">{body}</div>'
@@ -520,12 +520,10 @@ class UserAdmin(DjangoUserAdmin):
             total_html = f'<strong>{escape(_money(total))}</strong>'
             if year == current_year:
                 title = f'Заказы ({count}) · {total_html}'
-                open_attr = ' open'
             else:
                 title = f'Заявки за {year} год ({count}) · {total_html}'
-                open_attr = ''
             parts.append(
-                f'<details class="user-fold"{open_attr}>'
+                f'<details class="user-fold">'
                 f'<summary>{title}</summary>'
                 f'<div class="user-fold__body">{body}</div>'
                 f'</details>'
