@@ -2,7 +2,9 @@
   'use strict';
 
   var PRICE_SELECTOR =
+    'input.price-input-grouped, ' +
     'input[name="price"], input[name="old_price"], ' +
+    'input[name$="-price"], input[name$="-old_price"], ' +
     '.field-price input, .field-old_price input, ' +
     '#result_list .field-price input, #result_list .field-old_price input';
 
@@ -17,6 +19,11 @@
 
   function formatPriceInput(input) {
     if (!input || input.dataset.priceFormatting === '1') return;
+    // type=number не умеет пробелы — на всякий случай переключаем
+    if (input.type === 'number') {
+      input.type = 'text';
+      input.setAttribute('inputmode', 'numeric');
+    }
     input.dataset.priceFormatting = '1';
     var start = input.selectionStart;
     var before = input.value || '';

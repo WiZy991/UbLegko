@@ -4,7 +4,7 @@
 {% block extrahead %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=32">
-  <script defer src="{% static 'admin/js/price_input_format.js' %}?v=1"></script>
+  <script defer src="{% static 'admin/js/price_input_format.js' %}?v=2"></script>
   <script defer src="{% static 'admin/js/product_expandable.js' %}?v=20"></script>
   <script>
     window.UBLEGKO_PRODUCT_SEARCH_SUGGEST = "{{ product_search_suggest_url|default:''|escapejs }}";

@@ -138,19 +138,47 @@ def parse_price(value):
 
 
 class GroupedDecimalField(forms.DecimalField):
-    """Цена с пробелами тысяч: 2500 ↔ «2 500»."""
+    """Цена с пробелами тысяч: 2500 ↔ «2 500».
+
+    Важно: TextInput, не NumberInput — браузер не показывает «2 500» в type=number.
+    """
+
+    widget = forms.TextInput
+
+    def __init__(self, *args, **kwargs):
+        # Всегда TextInput: NumberInput из DecimalField скрывает значения с пробелами
+        kwargs['widget'] = forms.TextInput(attrs={
+            'inputmode': 'numeric',
+            'autocomplete': 'off',
+            'class': 'vTextField price-input-grouped',
+        })
+        super().__init__(*args, **kwargs)
 
     def prepare_value(self, value):
         if value in (None, ''):
             return value
+        if isinstance(value, str):
+            cleaned = value.replace('\u00a0', '').replace(' ', '').replace(',', '.')
+            if cleaned.strip() == '':
+                return ''
+            try:
+                value = Decimal(cleaned)
+            except Exception:
+                return value
         try:
-            return format_grouped_number(value)
+            # Обычный пробел — удобнее для input, чем NBSP
+            return format_grouped_number(value).replace('\u00a0', ' ')
         except Exception:
             return value
 
     def to_python(self, value):
         if isinstance(value, str):
-            value = value.replace('\u00a0', '').replace(' ', '').replace(',', '.')
+            value = (
+                value.replace('\u00a0', '')
+                .replace('\u202f', '')
+                .replace(' ', '')
+                .replace(',', '.')
+            )
             if value.strip() == '':
                 value = None
         return super().to_python(value)
