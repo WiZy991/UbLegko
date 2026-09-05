@@ -91,11 +91,17 @@
           if (payloadKey === 'membership' && select.classList.contains('group-page-membership')) {
             var currentKey = select.getAttribute('data-current-group-key') || '';
             if (String(data.membership || '') !== String(currentKey)) {
-              var row = select.closest('tr');
+              var row = select.closest('tr.inbox-row') || select.closest('tr');
+              var detail = userId
+                ? document.getElementById('inbox-detail-' + userId)
+                : null;
               if (row) row.remove();
+              if (detail) detail.remove();
               var counter = document.querySelector('[data-members-count]');
               if (counter) {
-                var n = document.querySelectorAll('.group-page-members tbody tr').length;
+                var n = document.querySelectorAll(
+                  '.group-page-members tr.inbox-row'
+                ).length;
                 counter.textContent = String(n);
               }
             }

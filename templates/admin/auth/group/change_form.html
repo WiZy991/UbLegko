@@ -3,14 +3,18 @@
 
 {% block extrastyle %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/group_members.css' %}?v=3">
-  <link rel="stylesheet" href="{% static 'admin/css/user_roles.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=17">
+  <link rel="stylesheet" href="{% static 'admin/css/user_expandable.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'admin/css/group_members.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'admin/css/user_roles.css' %}?v=5">
 {% endblock %}
 
 {% block extrahead %}
   {{ block.super }}
-  <script defer src="{% static 'admin/js/user_roles.js' %}?v=4"></script>
-  <script defer src="{% static 'admin/js/group_members.js' %}?v=3"></script>
+  <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=9"></script>
+  <script defer src="{% static 'admin/js/user_expandable.js' %}?v=2"></script>
+  <script defer src="{% static 'admin/js/user_roles.js' %}?v=5"></script>
+  <script defer src="{% static 'admin/js/group_members.js' %}?v=4"></script>
 {% endblock %}
 
 {% block content_title %}
@@ -66,34 +70,15 @@
       </form>
     </div>
 
-    <div class="group-members__table-wrap">
-      <table class="group-members__table">
-        <thead>
-          <tr>
-            <th>Пользователь</th>
-            <th>Имя</th>
-            <th>Email</th>
-            <th>Телефон</th>
-            <th>Права</th>
-            <th>Группа</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in member_rows_html %}
-            {{ row }}
-          {% empty %}
-            <tr class="group-members__empty-row">
-              <td colspan="6">В этой группе пока никого нет. Добавьте пользователя выше.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+    <p class="inbox-expandable-hint">
+      <strong>▼</strong> — email, адреса, отзывы и заказы. Активность: заход на сайт за последние {{ site_activity_days|default:30 }} дней.
+    </p>
 
-  <p class="group-page__hint">
-    Смена группы в таблице сохраняется сразу. Пользователь пропадёт из этой группы и появится в выбранной.
-    Права вручную можно менять только при «— без сегмента».
-  </p>
+    {% if expandable_rows %}
+      {% include "admin/cart/inbox_change_list_results.html" %}
+    {% else %}
+      <p class="group-members__empty">В этой группе пока никого нет. Добавьте пользователя выше.</p>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

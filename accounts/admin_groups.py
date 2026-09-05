@@ -6,21 +6,18 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
-from django.utils.html import escape, mark_safe
+from django.utils.html import escape, format_html, mark_safe
 
 from .forms_roles import SimpleGroupForm
+from .models import SITE_ACTIVITY_DAYS
 from .roles import (
     ALL_MANAGED_GROUP_NAMES,
-    MEMBERSHIP_CHOICES,
     ROLE_CHOICES,
     ROLE_LABELS,
     apply_permissions_for_role,
     detect_group_role,
-    detect_user_access_role,
-    detect_user_membership,
     ensure_default_groups,
     get_members_queryset,
-    is_role_manually_editable,
     membership_key_for_group,
     move_user_to_group,
     set_user_membership,
@@ -28,12 +25,22 @@ from .roles import (
 )
 
 
-def _options_html(choices, selected):
-    parts = []
-    for value, label in choices:
-        sel = ' selected' if value == selected else ''
-        parts.append(f'<option value="{escape(value)}"{sel}>{escape(label)}</option>')
-    return ''.join(parts)
+def _header(text):
+    return {
+        'text': text,
+        'sortable': False,
+        'sorted': False,
+        'ascending': False,
+        'sort_priority': 0,
+        'url_primary': '',
+        'url_remove': '',
+        'url_toggle': '',
+        'class_attrib': mark_safe(''),
+    }
+
+
+def _td(content):
+    return mark_safe(f'<td>{content}</td>')
 
 
 class SimpleGroupAdmin(DjangoGroupAdmin):
@@ -49,11 +56,15 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
     class Media:
         css = {
             'all': (
+                'admin/css/inbox_expandable.css',
+                'admin/css/user_expandable.css',
                 'admin/css/group_members.css',
                 'admin/css/user_roles.css',
             )
         }
         js = (
+            'admin/js/inbox_expandable.js',
+            'admin/js/user_expandable.js',
             'admin/js/user_roles.js',
             'admin/js/group_members.js',
         )
@@ -81,14 +92,11 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
         group = get_object_or_404(Group, pk=object_id)
         sync_group_members(group)
 
-        members = list(
-            get_members_queryset(group)
-            .select_related('profile')
-            .prefetch_related('groups')
-            .order_by('username')
-        )
         role = detect_group_role(group)
         membership_key = membership_key_for_group(group) or ''
+        expandable_rows, members_count = self._members_expandable_rows(
+            request, group, membership_key
+        )
 
         context = {
             **self.admin_site.each_context(request),
@@ -99,15 +107,26 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
             'group_obj': group,
             'group_role': role,
             'group_role_choices': ROLE_CHOICES,
-            'group_members': members,
-            'members_count': len(members),
-            'membership_choices': MEMBERSHIP_CHOICES,
+            'members_count': members_count,
             'membership_key': membership_key,
             'add_user_url': reverse('admin:auth_group_add_member', args=[group.pk]),
             'users_autocomplete_url': reverse('admin:auth_group_users_search', args=[group.pk]),
-            'member_rows_html': [
-                self._member_row_html(u, membership_key) for u in members
+            'expandable_rows': expandable_rows,
+            'result_headers': [
+                _header(''),
+                _header('имя пользователя'),
+                _header('имя'),
+                _header('телефон'),
+                _header('заявок за год'),
+                _header('сумма за год'),
+                _header('активность'),
+                _header('последний вход'),
+                _header('права'),
+                _header('группа'),
             ],
+            'num_sorted_fields': 0,
+            'result_hidden_fields': [],
+            'site_activity_days': SITE_ACTIVITY_DAYS,
             'has_view_permission': self.has_view_permission(request, group),
             'has_add_permission': self.has_add_permission(request),
             'has_change_permission': self.has_change_permission(request, group),
@@ -115,6 +134,54 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
             'media': self.media,
         }
         return TemplateResponse(request, 'admin/auth/group/change_form.html', context)
+
+    def _members_expandable_rows(self, request, group, membership_key):
+        user_admin = self.admin_site._registry.get(User)
+        if user_admin is None:
+            return [], 0
+
+        member_ids = list(get_members_queryset(group).values_list('pk', flat=True))
+        qs = (
+            user_admin.get_queryset(request)
+            .filter(pk__in=member_ids)
+            .order_by('username')
+        )
+        rows = []
+        for user in qs:
+            membership_html = user_admin.membership_col(user)
+            # Пометить select для авто-удаления строки при смене группы
+            membership_html = mark_safe(
+                str(membership_html).replace(
+                    'class="user-membership-select"',
+                    f'class="user-membership-select group-page-membership" '
+                    f'data-current-group-key="{escape(membership_key)}"',
+                    1,
+                )
+            )
+            username = format_html(
+                '<a href="{}">{}</a>',
+                reverse('admin:auth_user_change', args=[user.pk]),
+                user.username,
+            )
+            cells = [
+                _td(user_admin.expand_toggle(user)),
+                _td(username),
+                _td(escape(user.first_name or '')),
+                _td(user_admin.phone_col(user)),
+                _td(user_admin.orders_year_count(user)),
+                _td(user_admin.orders_year_sum(user)),
+                _td(user_admin.site_activity_col(user)),
+                _td(user_admin.last_site_visit_col(user)),
+                _td(user_admin.access_role_col(user)),
+                _td(membership_html),
+            ]
+            rows.append({
+                'result': cells,
+                'obj': user,
+                'row_status': user_admin.get_row_status(user),
+                'details_html': user_admin.row_details_html(user),
+            })
+        return rows, len(rows)
 
     def _toolbar_save(self, request, group):
         if not self._can_manage(request):
@@ -140,36 +207,6 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
             'role': role,
             'title': f'ГРУППА {group.name.upper()}',
         })
-
-    def _member_row_html(self, user, current_group_key):
-        membership = detect_user_membership(user)
-        role = detect_user_access_role(user)
-        locked = not is_role_manually_editable(user)
-        membership_url = reverse('admin:auth_user_set_membership', args=[user.pk])
-        role_url = reverse('admin:auth_user_set_role', args=[user.pk])
-        disabled = ' disabled' if locked else ''
-        lock_cls = ' is-locked' if locked else ''
-        phone = ''
-        profile = getattr(user, 'profile', None)
-        if profile:
-            phone = profile.phone or ''
-
-        return mark_safe(
-            f'<tr data-user-id="{user.pk}">'
-            f'<td><a href="{escape(reverse("admin:auth_user_change", args=[user.pk]))}">'
-            f'{escape(user.username)}</a></td>'
-            f'<td>{escape(user.get_full_name() or "—")}</td>'
-            f'<td>{escape(user.email or "—")}</td>'
-            f'<td>{escape(phone or "—")}</td>'
-            f'<td><select class="user-role-select user-role-select--{escape(role)}{lock_cls}" '
-            f'data-role-url="{escape(role_url)}" data-user-id="{user.pk}"{disabled}>'
-            f'{_options_html(ROLE_CHOICES, role)}</select></td>'
-            f'<td><select class="user-membership-select group-page-membership" '
-            f'data-membership-url="{escape(membership_url)}" data-user-id="{user.pk}" '
-            f'data-current-group-key="{escape(current_group_key)}">'
-            f'{_options_html(MEMBERSHIP_CHOICES, membership)}</select></td>'
-            f'</tr>'
-        )
 
     def get_urls(self):
         urls = super().get_urls()

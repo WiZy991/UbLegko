@@ -176,7 +176,15 @@
 
 /* Страница группы: тулбар вместо карточки Jazzmin */
 .group-page {
-  max-width: 1100px;
+  max-width: none;
+}
+
+.group-page-members .results {
+  margin-top: 8px;
+}
+
+.group-page-members #result_list {
+  width: 100%;
 }
 
 .group-page__toolbar {
