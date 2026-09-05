@@ -33,6 +33,15 @@
     });
   }
 
+  function setRoleLock(roleSelect, locked) {
+    if (!roleSelect) return;
+    roleSelect.disabled = !!locked;
+    roleSelect.classList.toggle('is-locked', !!locked);
+    roleSelect.title = locked
+      ? 'Права задаёт группа — смените группу или выберите «— без сегмента»'
+      : 'Права доступа';
+  }
+
   function syncRowSelects(userId, data) {
     var roleSelect = document.querySelector(
       '.user-role-select[data-user-id="' + userId + '"]'
@@ -51,6 +60,9 @@
     }
     if (membershipSelect && data.membership != null) {
       membershipSelect.value = data.membership;
+      setRoleLock(roleSelect, data.role_locked != null ? data.role_locked : data.membership !== '');
+    } else if (data.role_locked != null) {
+      setRoleLock(roleSelect, data.role_locked);
     }
   }
 
@@ -61,6 +73,7 @@
     var userId = select.getAttribute('data-user-id');
 
     select.addEventListener('change', function () {
+      if (select.disabled) return;
       var url = select.getAttribute(urlAttr);
       if (!url) return;
 
@@ -74,6 +87,19 @@
           previous = select.value;
           select.classList.remove('is-saving');
           syncRowSelects(userId, data);
+          // Если смена группы на странице группы — убрать строку, если больше не в этой группе
+          if (payloadKey === 'membership' && select.classList.contains('group-page-membership')) {
+            var currentKey = select.getAttribute('data-current-group-key') || '';
+            if (String(data.membership || '') !== String(currentKey)) {
+              var row = select.closest('tr');
+              if (row) row.remove();
+              var counter = document.querySelector('[data-members-count]');
+              if (counter) {
+                var n = document.querySelectorAll('.group-page-members tbody tr').length;
+                counter.textContent = String(n);
+              }
+            }
+          }
         })
         .catch(function (err) {
           select.value = previous;

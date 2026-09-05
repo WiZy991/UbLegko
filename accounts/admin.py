@@ -36,6 +36,7 @@ from .roles import (
     detect_user_access_role,
     detect_user_membership,
     ensure_default_groups,
+    is_role_manually_editable,
     set_user_access_role,
     set_user_membership,
 )
@@ -314,6 +315,12 @@ class UserAdmin(DjangoUserAdmin):
         if not user:
             return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
 
+        if not is_role_manually_editable(user):
+            return JsonResponse({
+                'ok': False,
+                'error': 'Права задаёт группа. Сначала выберите «— без сегмента», либо смените группу.',
+            }, status=400)
+
         try:
             set_user_access_role(user, role, actor=request.user)
         except PermissionError as exc:
@@ -330,6 +337,7 @@ class UserAdmin(DjangoUserAdmin):
             'label': ROLE_LABELS[role_now],
             'membership': membership,
             'membership_label': MEMBERSHIP_LABELS.get(membership, '— без сегмента'),
+            'role_locked': membership != '',
         })
 
     def set_membership_view(self, request, object_id):
@@ -365,6 +373,7 @@ class UserAdmin(DjangoUserAdmin):
             'membership_label': MEMBERSHIP_LABELS.get(membership_now, '— без сегмента'),
             'role': role_now,
             'label': ROLE_LABELS[role_now],
+            'role_locked': membership_now != '',
         })
 
     def save_review_view(self, request, object_id, review_id):
@@ -475,11 +484,19 @@ class UserAdmin(DjangoUserAdmin):
     @admin.display(description='Права', ordering='is_superuser')
     def access_role_col(self, obj):
         role = detect_user_access_role(obj)
+        locked = not is_role_manually_editable(obj)
         url = reverse('admin:auth_user_set_role', args=[obj.pk])
+        disabled = ' disabled' if locked else ''
+        lock_cls = ' is-locked' if locked else ''
+        title = (
+            'Права задаёт группа — смените группу или выберите «— без сегмента»'
+            if locked
+            else 'Права доступа'
+        )
         return mark_safe(
-            f'<select class="user-role-select user-role-select--{escape(role)}" '
+            f'<select class="user-role-select user-role-select--{escape(role)}{lock_cls}" '
             f'data-role-url="{escape(url)}" data-user-id="{obj.pk}" '
-            f'title="Права доступа">'
+            f'title="{escape(title)}"{disabled}>'
             f'{_options_html(ROLE_CHOICES, role)}'
             f'</select>'
         )
@@ -491,7 +508,7 @@ class UserAdmin(DjangoUserAdmin):
         return mark_safe(
             f'<select class="user-membership-select" '
             f'data-membership-url="{escape(url)}" data-user-id="{obj.pk}" '
-            f'title="Группа">'
+            f'title="Группа (сохраняется сразу)">'
             f'{_options_html(MEMBERSHIP_CHOICES, membership)}'
             f'</select>'
         )

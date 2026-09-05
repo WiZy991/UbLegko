@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from django.contrib.auth.models import Group, Permission, User
 from django.db import transaction
+from django.db.models import Q
 
 # --- Роли доступа в админку ---
 ROLE_ADMIN = 'admin'
@@ -169,6 +170,56 @@ def detect_user_membership(user: User) -> str:
         if group_name in names:
             return key
     return ''
+
+
+def is_role_manually_editable(user: User) -> bool:
+    """Права вручную можно менять только при «— без сегмента»."""
+    return detect_user_membership(user) == ''
+
+
+def role_for_membership(membership: str) -> str | None:
+    """Какие права диктует группа. None — группа не задаёт права (без сегмента)."""
+    if membership == ROLE_ADMIN:
+        return ROLE_ADMIN
+    if membership == ROLE_STAFF:
+        return ROLE_STAFF
+    if membership in SEGMENT_LABELS:
+        return ROLE_USER
+    return None
+
+
+def membership_key_for_group(group: Group) -> str | None:
+    name = (group.name or '').strip()
+    by_name = {label: key for key, label in MEMBERSHIP_CHOICES}
+    return by_name.get(name)
+
+
+def get_members_queryset(group: Group):
+    """Участники группы с учётом флагов staff/superuser."""
+    name = (group.name or '').strip()
+    if name == GROUP_ADMIN:
+        return User.objects.filter(Q(groups=group) | Q(is_superuser=True)).distinct()
+    if name == GROUP_STAFF:
+        return User.objects.filter(
+            Q(groups=group) | Q(is_staff=True, is_superuser=False)
+        ).distinct()
+    return group.user_set.all()
+
+
+def sync_group_members(group: Group) -> int:
+    """Подтягивает в M2M суперпользователей / персонал, если группа стандартная."""
+    name = (group.name or '').strip()
+    added = 0
+    if name == GROUP_ADMIN:
+        for user in User.objects.filter(is_superuser=True).exclude(groups=group):
+            user.groups.add(group)
+            added += 1
+    elif name == GROUP_STAFF:
+        for user in User.objects.filter(is_staff=True, is_superuser=False).exclude(groups=group):
+            user.groups.add(group)
+            added += 1
+    return added
+
 
 def get_or_create_named_group(name: str) -> Group:
     group, _ = Group.objects.get_or_create(name=name)

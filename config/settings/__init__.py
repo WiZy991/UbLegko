@@ -3,8 +3,11 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Загрузка .env из корня проекта (локально и на сервере)
-load_dotenv(Path(__file__).resolve().parent.parent.parent / '.env')
+# .env из корня проекта. override=True — файл важнее пустых/старых переменных окружения
+load_dotenv(
+    Path(__file__).resolve().parent.parent.parent / '.env',
+    override=True,
+)
 
 env = os.environ.get('DJANGO_ENV', 'local')
 

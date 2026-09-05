@@ -27,7 +27,7 @@ from .forms import (
 )
 from .models import DeliveryAddress, Profile
 from .tokens import email_confirm_token
-from .utils import send_email_confirmation
+from .utils import EmailSendError, send_email_confirmation
 
 
 class UserLoginView(LoginView):
@@ -83,6 +83,13 @@ def register(request):
             request.session['pending_verify_email'] = user.email
             try:
                 send_email_confirmation(request, user)
+            except EmailSendError as exc:
+                messages.warning(
+                    request,
+                    f'Аккаунт создан, но письмо не отправилось: {exc} '
+                    'Запросите повторную отправку ниже.',
+                )
+                return redirect('accounts:resend_email_confirm')
             except Exception:
                 messages.warning(
                     request,
@@ -145,8 +152,16 @@ def resend_email_confirm(request):
                 .first()
             )
             if user is not None:
-                send_email_confirmation(request, user)
-                request.session['pending_verify_email'] = user.email
+                try:
+                    send_email_confirmation(request, user)
+                    request.session['pending_verify_email'] = user.email
+                except EmailSendError as exc:
+                    messages.error(request, str(exc))
+                    return render(
+                        request,
+                        'accounts/resend_email_confirm.html',
+                        {'form': form},
+                    )
             messages.success(
                 request,
                 'Если аккаунт с этим email ожидает подтверждения, мы отправили письмо ещё раз.',

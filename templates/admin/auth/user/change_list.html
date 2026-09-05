@@ -16,7 +16,8 @@
 {% block result_list %}
   <p class="inbox-expandable-hint">
     <strong>▼</strong> — email, адреса, отзывы и заказы. Активность: заход на сайт за последние {{ site_activity_days|default:30 }} дней.
-    В колонках «Права» и «Группа» можно менять значения прямо в таблице — они синхронизируются.
+    В колонках «Права» и «Группа» значения сохраняются сразу.
+    Права вручную доступны только при «— без сегмента»; иначе права задаёт группа.
   </p>
   {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
   {% if expandable_rows %}

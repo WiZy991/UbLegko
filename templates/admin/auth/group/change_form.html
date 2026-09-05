@@ -1,14 +1,58 @@
-{% extends "admin/change_form.html" %}
+{% extends "admin/base_site.html" %}
 {% load i18n admin_urls static %}
 
-{% block after_related_objects %}
+{% block extrastyle %}
   {{ block.super }}
-  {% if original %}
-  <div class="group-members" id="group-members"
+  <link rel="stylesheet" href="{% static 'admin/css/group_members.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'admin/css/user_roles.css' %}?v=4">
+{% endblock %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <script defer src="{% static 'admin/js/user_roles.js' %}?v=4"></script>
+  <script defer src="{% static 'admin/js/group_members.js' %}?v=3"></script>
+{% endblock %}
+
+{% block content_title %}
+  <h1 id="group-page-title">ГРУППА {{ group_obj.name|upper }}</h1>
+{% endblock %}
+
+{% block content %}
+<div class="group-page" id="group-page"
+     data-save-url="{% url 'admin:auth_group_toolbar_save' group_obj.pk %}"
+     data-add-url="{{ add_user_url }}"
+     data-search-url="{{ users_autocomplete_url }}">
+
+  <form class="group-page__toolbar" id="group-toolbar-form">
+    {% csrf_token %}
+    <input type="hidden" name="_group_toolbar_save" value="1">
+
+    <label class="group-page__field">
+      <span class="group-page__label">Имя группы</span>
+      <input type="text" name="name" id="group-toolbar-name"
+             class="group-page__input" value="{{ group_obj.name }}" required>
+    </label>
+
+    <label class="group-page__field">
+      <span class="group-page__label">Права</span>
+      <select name="role" id="group-toolbar-role" class="group-page__select">
+        {% for value, label in group_role_choices %}
+          <option value="{{ value }}"{% if value == group_role %} selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <button type="submit" class="button group-members__btn group-members__btn--primary group-page__save" id="group-toolbar-save">
+      Сохранить
+    </button>
+    <span class="group-page__status" id="group-toolbar-status" hidden></span>
+  </form>
+
+  <div class="group-members group-page-members" id="group-members"
        data-add-url="{{ add_user_url }}"
        data-search-url="{{ users_autocomplete_url }}">
     <div class="group-members__head">
-      <h2>Участники группы ({{ group_members|length }})</h2>
+      <h2>Участники группы (<span data-members-count>{{ members_count }}</span>)</h2>
       <form class="group-members__add" id="group-member-add-form">
         {% csrf_token %}
         <label class="group-members__label" for="group-member-search">Добавить пользователя</label>
@@ -22,7 +66,6 @@
       </form>
     </div>
 
-    {% if group_members %}
     <div class="group-members__table-wrap">
       <table class="group-members__table">
         <thead>
@@ -30,44 +73,27 @@
             <th>Пользователь</th>
             <th>Имя</th>
             <th>Email</th>
-            <th>Перенести в группу</th>
-            <th></th>
+            <th>Телефон</th>
+            <th>Права</th>
+            <th>Группа</th>
           </tr>
         </thead>
         <tbody>
-          {% for user in group_members %}
-          <tr data-user-id="{{ user.pk }}">
-            <td>
-              <a href="{% url 'admin:auth_user_change' user.pk %}">{{ user.username }}</a>
-            </td>
-            <td>{{ user.get_full_name|default:"—" }}</td>
-            <td>{{ user.email|default:"—" }}</td>
-            <td>
-              <form class="group-members__move" data-url="{% url 'admin:auth_group_move_member' original.pk user.pk %}">
-                {% csrf_token %}
-                <select name="target_group_id" class="group-members__move-select">
-                  <option value="">— выбрать —</option>
-                  {% for g in other_groups %}
-                  <option value="{{ g.pk }}">{{ g.name }}</option>
-                  {% endfor %}
-                </select>
-                <button type="submit" class="button group-members__btn">Перенести</button>
-              </form>
-            </td>
-            <td>
-              <button type="button" class="button group-members__btn group-members__btn--danger"
-                      data-url="{% url 'admin:auth_group_remove_member' original.pk user.pk %}">
-                Убрать
-              </button>
-            </td>
-          </tr>
+          {% for row in member_rows_html %}
+            {{ row }}
+          {% empty %}
+            <tr class="group-members__empty-row">
+              <td colspan="6">В этой группе пока никого нет. Добавьте пользователя выше.</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
-    {% else %}
-    <p class="group-members__empty">В этой группе пока никого нет. Добавьте пользователя выше.</p>
-    {% endif %}
   </div>
-  {% endif %}
+
+  <p class="group-page__hint">
+    Смена группы в таблице сохраняется сразу. Пользователь пропадёт из этой группы и появится в выбранной.
+    Права вручную можно менять только при «— без сегмента».
+  </p>
+</div>
 {% endblock %}

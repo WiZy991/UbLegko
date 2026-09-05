@@ -141,9 +141,60 @@
     });
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initMembers);
-  } else {
+  function initToolbar() {
+    var form = document.getElementById('group-toolbar-form');
+    var page = document.getElementById('group-page');
+    if (!form || !page) return;
+
+    var saveUrl = page.getAttribute('data-save-url');
+    var status = document.getElementById('group-toolbar-status');
+    var title = document.getElementById('group-page-title');
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      var nameInput = document.getElementById('group-toolbar-name');
+      var roleSelect = document.getElementById('group-toolbar-role');
+      var btn = document.getElementById('group-toolbar-save');
+      if (btn) btn.disabled = true;
+      if (status) {
+        status.hidden = false;
+        status.textContent = 'Сохранение…';
+        status.classList.remove('is-ok', 'is-error');
+      }
+
+      postForm(saveUrl, {
+        name: nameInput ? nameInput.value : '',
+        role: roleSelect ? roleSelect.value : '',
+        _group_toolbar_save: '1',
+      })
+        .then(function (data) {
+          if (btn) btn.disabled = false;
+          if (title && data.title) title.textContent = data.title;
+          if (status) {
+            status.textContent = 'Сохранено';
+            status.classList.add('is-ok');
+          }
+        })
+        .catch(function (err) {
+          if (btn) btn.disabled = false;
+          if (status) {
+            status.textContent = err.message || 'Ошибка';
+            status.classList.add('is-error');
+          } else {
+            window.alert(err.message || 'Не удалось сохранить');
+          }
+        });
+    });
+  }
+
+  function initAll() {
     initMembers();
+    initToolbar();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
   }
 })();

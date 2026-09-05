@@ -43,3 +43,9 @@
   border-color: #c62828;
   box-shadow: 0 0 0 1px #ef9a9a;
 }
+
+.user-role-select.is-locked {
+  opacity: 0.72;
+  cursor: not-allowed;
+  background: #eceff1 !important;
+}
