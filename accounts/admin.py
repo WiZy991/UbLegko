@@ -31,12 +31,13 @@ from .roles import (
     ROLE_LABELS,
     ROLE_STAFF,
     ROLE_USER,
-    MEMBERSHIP_CHOICES,
-    MEMBERSHIP_LABELS,
     detect_user_access_role,
     detect_user_membership,
     ensure_default_groups,
+    get_membership_choices,
+    is_known_membership,
     is_role_manually_editable,
+    membership_label,
     set_user_access_role,
     set_user_membership,
 )
@@ -336,7 +337,7 @@ class UserAdmin(DjangoUserAdmin):
             'role': role_now,
             'label': ROLE_LABELS[role_now],
             'membership': membership,
-            'membership_label': MEMBERSHIP_LABELS.get(membership, '— без сегмента'),
+            'membership_label': membership_label(membership),
             'role_locked': membership != '',
         })
 
@@ -352,7 +353,7 @@ class UserAdmin(DjangoUserAdmin):
             return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
 
         membership = str(payload.get('membership') or '').strip()
-        if membership not in MEMBERSHIP_LABELS:
+        if not is_known_membership(membership):
             return JsonResponse({'ok': False, 'error': 'Неизвестная группа'}, status=400)
 
         user = User.objects.filter(pk=object_id).first()
@@ -370,7 +371,7 @@ class UserAdmin(DjangoUserAdmin):
         return JsonResponse({
             'ok': True,
             'membership': membership_now,
-            'membership_label': MEMBERSHIP_LABELS.get(membership_now, '— без сегмента'),
+            'membership_label': membership_label(membership_now),
             'role': role_now,
             'label': ROLE_LABELS[role_now],
             'role_locked': membership_now != '',
@@ -509,7 +510,7 @@ class UserAdmin(DjangoUserAdmin):
             f'<select class="user-membership-select" '
             f'data-membership-url="{escape(url)}" data-user-id="{obj.pk}" '
             f'title="Группа (сохраняется сразу)">'
-            f'{_options_html(MEMBERSHIP_CHOICES, membership)}'
+            f'{_options_html(get_membership_choices(), membership)}'
             f'</select>'
         )
 
@@ -523,7 +524,7 @@ class UserAdmin(DjangoUserAdmin):
             last_visit = obj.last_login
 
         role = ROLE_LABELS.get(detect_user_access_role(obj), 'Пользователь')
-        membership = MEMBERSHIP_LABELS.get(detect_user_membership(obj), '— без сегмента')
+        membership = membership_label(detect_user_membership(obj))
 
         addresses = list(obj.delivery_addresses.all())
         favorites = list(obj.favorites.all())

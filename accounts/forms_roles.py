@@ -14,6 +14,7 @@ from .roles import (
     detect_group_role,
     detect_user_access_role,
     detect_user_membership,
+    get_membership_choices,
     set_user_membership,
 )
 
@@ -98,12 +99,13 @@ class UserRoleAdminForm(UserChangeForm):
         required=False,
         help_text=(
             'Выбор группы сразу выставляет права: '
-            'Администраторы / Персонал / VIP / постоянные / клиенты.'
+            'Администраторы / Персонал / VIP / постоянные / клиенты / свои группы.'
         ),
     )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields['customer_group'].choices = get_membership_choices()
         user = self.instance
         if user and user.pk:
             self.fields['access_role'].initial = detect_user_access_role(user)
@@ -139,6 +141,10 @@ class UserRoleCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
         fields = ('username', 'email', 'first_name')
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['customer_group'].choices = get_membership_choices()
 
     def apply_access(self, user, *, actor=None):
         membership = self.cleaned_data.get('customer_group')

@@ -208,6 +208,19 @@ html[data-bs-theme="light"] .app-main #changelist #result_list tbody tr:nth-chil
   background: #f7fbfe !important;
 }
 
+/* Группы: имя = размер «Права» */
+html .app-main body.app-auth.model-group #result_list td.field-name_col a.group-name-link,
+body.app-auth.model-group .app-main #result_list td.field-name_col a.group-name-link,
+.app-auth.model-group #result_list td.field-name_col,
+.app-auth.model-group #result_list td.field-name_col a,
+.app-auth.model-group #result_list td.field-name_col a.group-name-link,
+.app-auth.model-group #result_list td.field-role_col,
+.app-auth.model-group #result_list td.field-role_col .group-role-label {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
+}
+
 /* Обычные Django-кнопки (.button) — чёрный текст; белый только у цветных/default */
 html[data-bs-theme="light"] .app-main a.button,
 html[data-bs-theme="light"] .app-main .button:not(.default):not(.product-row-save),

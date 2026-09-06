@@ -355,7 +355,9 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
     @admin.display(description='Имя', ordering='name')
     def name_col(self, obj):
         return format_html(
-            '<a class="group-name-link" href="{}">{}</a>',
+            '<a class="group-name-link" href="{}" '
+            'style="font-size:15px!important;font-weight:600!important;'
+            'line-height:1.4!important;text-decoration:none;color:inherit;">{}</a>',
             reverse('admin:auth_group_change', args=[obj.pk]),
             obj.name,
         )
@@ -363,7 +365,9 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
     @admin.display(description='Права')
     def role_col(self, obj):
         return format_html(
-            '<span class="group-role-label">{}</span>',
+            '<span class="group-role-label" '
+            'style="font-size:15px!important;font-weight:600!important;'
+            'line-height:1.4!important;">{}</span>',
             ROLE_LABELS.get(detect_group_role(obj), 'Пользователь'),
         )
 

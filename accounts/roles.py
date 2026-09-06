@@ -51,14 +51,14 @@ ACCESS_GROUP_NAMES = {
     ROLE_STAFF: GROUP_STAFF,
 }
 
-# Единый выбор «Группа» в таблице пользователей (группа ↔ права)
+# Единый выбор «Группа» в таблице пользователей (стандарт; + кастомные через get_membership_choices)
 MEMBERSHIP_CHOICES = (
+    ('', '— без сегмента'),
     (ROLE_ADMIN, GROUP_ADMIN),
     (ROLE_STAFF, GROUP_STAFF),
     (SEGMENT_VIP, GROUP_VIP),
     (SEGMENT_REGULAR, GROUP_REGULAR),
     (SEGMENT_BASE, GROUP_BASE),
-    ('', '— без сегмента'),
 )
 
 MEMBERSHIP_LABELS = dict(MEMBERSHIP_CHOICES)
@@ -70,6 +70,8 @@ ALL_MANAGED_GROUP_NAMES = (
     GROUP_REGULAR,
     GROUP_BASE,
 )
+
+CUSTOM_GROUP_PREFIX = 'g:'
 
 ROLE_HELP = {
     ROLE_ADMIN: 'Полный доступ ко всей админке, настройкам и удалению.',
@@ -159,6 +161,47 @@ def detect_user_segment(user: User) -> str:
     return ''
 
 
+def custom_membership_key(group_id: int) -> str:
+    return f'{CUSTOM_GROUP_PREFIX}{int(group_id)}'
+
+
+def parse_custom_membership(membership: str) -> int | None:
+    if not membership or not str(membership).startswith(CUSTOM_GROUP_PREFIX):
+        return None
+    try:
+        return int(str(membership)[len(CUSTOM_GROUP_PREFIX):])
+    except (TypeError, ValueError):
+        return None
+
+
+def get_membership_choices() -> tuple[tuple[str, str], ...]:
+    """Стандартные группы + все созданные вручную."""
+    items: list[tuple[str, str]] = [
+        ('', '— без сегмента'),
+        (ROLE_ADMIN, GROUP_ADMIN),
+        (ROLE_STAFF, GROUP_STAFF),
+        (SEGMENT_VIP, GROUP_VIP),
+        (SEGMENT_REGULAR, GROUP_REGULAR),
+        (SEGMENT_BASE, GROUP_BASE),
+    ]
+    for group in Group.objects.exclude(name__in=ALL_MANAGED_GROUP_NAMES).order_by('name'):
+        items.append((custom_membership_key(group.pk), group.name))
+    return tuple(items)
+
+
+def membership_label(key: str) -> str:
+    return dict(get_membership_choices()).get(key, '— без сегмента')
+
+
+def is_known_membership(membership: str) -> bool:
+    if membership in MEMBERSHIP_LABELS:
+        return True
+    pk = parse_custom_membership(membership)
+    if pk is None:
+        return False
+    return Group.objects.filter(pk=pk).exclude(name__in=ALL_MANAGED_GROUP_NAMES).exists()
+
+
 def detect_user_membership(user: User) -> str:
     """Главная группа пользователя для колонки «Группа»."""
     names = _user_group_names(user)
@@ -169,6 +212,11 @@ def detect_user_membership(user: User) -> str:
     for key, group_name in SEGMENT_GROUP_NAMES.items():
         if group_name in names:
             return key
+    custom_names = names - set(ALL_MANAGED_GROUP_NAMES)
+    if custom_names:
+        group = Group.objects.filter(name__in=custom_names).order_by('name').first()
+        if group:
+            return custom_membership_key(group.pk)
     return ''
 
 
@@ -185,13 +233,19 @@ def role_for_membership(membership: str) -> str | None:
         return ROLE_STAFF
     if membership in SEGMENT_LABELS:
         return ROLE_USER
+    if parse_custom_membership(membership) is not None:
+        return ROLE_USER
     return None
 
 
 def membership_key_for_group(group: Group) -> str | None:
     name = (group.name or '').strip()
-    by_name = {label: key for key, label in MEMBERSHIP_CHOICES}
-    return by_name.get(name)
+    by_name = {label: key for key, label in MEMBERSHIP_CHOICES if key}
+    if name in by_name:
+        return by_name[name]
+    if name and name not in ALL_MANAGED_GROUP_NAMES:
+        return custom_membership_key(group.pk)
+    return None
 
 
 def get_members_queryset(group: Group):
@@ -233,6 +287,16 @@ def _clear_managed_groups(user: User) -> None:
             user.groups.remove(group)
 
 
+def _clear_custom_groups(user: User) -> None:
+    for group in list(user.groups.exclude(name__in=ALL_MANAGED_GROUP_NAMES)):
+        user.groups.remove(group)
+
+
+def _clear_all_membership_groups(user: User) -> None:
+    _clear_managed_groups(user)
+    _clear_custom_groups(user)
+
+
 @transaction.atomic
 def ensure_default_groups() -> dict[str, Group]:
     """Создаёт стандартные группы с нужными правами."""
@@ -270,7 +334,7 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
     user.user_permissions.clear()
 
     if role == ROLE_ADMIN:
-        _clear_managed_groups(user)
+        _clear_all_membership_groups(user)
         user.is_superuser = True
         user.is_staff = True
         user.save(update_fields=['is_superuser', 'is_staff'])
@@ -278,7 +342,7 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
         return
 
     if role == ROLE_STAFF:
-        _clear_managed_groups(user)
+        _clear_all_membership_groups(user)
         user.is_superuser = False
         user.is_staff = True
         user.save(update_fields=['is_superuser', 'is_staff'])
@@ -297,8 +361,11 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
     user.is_staff = False
     user.save(update_fields=['is_superuser', 'is_staff'])
 
-    # Если сегмента нет — по умолчанию «Клиенты»
+    # Если сегмента нет — по умолчанию «Клиенты» (кастомную группу не трогаем)
+    if parse_custom_membership(current_membership):
+        return
     if current_membership in (ROLE_ADMIN, ROLE_STAFF) or not current_segment:
+        _clear_custom_groups(user)
         set_user_segment(user, SEGMENT_BASE)
     elif current_segment:
         set_user_segment(user, current_segment)
@@ -329,10 +396,25 @@ def set_user_segment(user: User, segment: str) -> None:
 @transaction.atomic
 def set_user_membership(user: User, membership: str, *, actor: User | None = None) -> None:
     """Назначает группу и сразу выставляет соответствующие права."""
-    if membership not in MEMBERSHIP_LABELS:
+    if not is_known_membership(membership):
         raise ValueError('Неизвестная группа')
 
     ensure_default_groups()
+
+    custom_id = parse_custom_membership(membership)
+    if custom_id is not None:
+        if actor is not None and actor.pk == user.pk and user.is_superuser:
+            raise PermissionError('Нельзя понизить права своему аккаунту')
+        group = Group.objects.filter(pk=custom_id).first()
+        if not group:
+            raise ValueError('Группа не найдена')
+        _clear_all_membership_groups(user)
+        user.user_permissions.clear()
+        user.is_superuser = False
+        user.is_staff = False
+        user.save(update_fields=['is_superuser', 'is_staff'])
+        user.groups.add(group)
+        return
 
     if membership == ROLE_ADMIN:
         set_user_access_role(user, ROLE_ADMIN, actor=actor)
@@ -343,15 +425,10 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
         return
 
     if membership in SEGMENT_LABELS:
-        # Сначала роль пользователя, потом нужный сегмент (роль по умолчанию ставит Клиенты)
         if actor is not None and actor.pk == user.pk and user.is_superuser:
             raise PermissionError('Нельзя понизить права своему аккаунту')
 
-        for group_name in ACCESS_GROUP_NAMES.values():
-            group = Group.objects.filter(name=group_name).first()
-            if group:
-                user.groups.remove(group)
-
+        _clear_all_membership_groups(user)
         user.user_permissions.clear()
         user.is_superuser = False
         user.is_staff = False
@@ -359,11 +436,11 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
         set_user_segment(user, membership)
         return
 
-    # — без сегмента: обычный пользователь без клиентской группы
+    # — без сегмента
     if actor is not None and actor.pk == user.pk and user.is_superuser:
         raise PermissionError('Нельзя понизить права своему аккаунту')
 
-    _clear_managed_groups(user)
+    _clear_all_membership_groups(user)
     user.user_permissions.clear()
     user.is_superuser = False
     user.is_staff = False
@@ -371,19 +448,17 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
 
 
 def move_user_to_group(user: User, target_group: Group, *, actor: User | None = None) -> None:
-    """Переносит пользователя в управляемую группу по её имени."""
-    name = (target_group.name or '').strip()
-    membership_by_name = {label: key for key, label in MEMBERSHIP_CHOICES if key}
-    if name in membership_by_name:
-        set_user_membership(user, membership_by_name[name], actor=actor)
+    """Переносит пользователя в группу (стандартную или созданную)."""
+    key = membership_key_for_group(target_group)
+    if key:
+        set_user_membership(user, key, actor=actor)
         return
-    # Произвольная группа: просто добавить, не трогая права
     user.groups.add(target_group)
 
 
 def format_user_groups_summary(user: User) -> str:
     role = ROLE_LABELS.get(detect_user_access_role(user), 'Пользователь')
-    membership = MEMBERSHIP_LABELS.get(detect_user_membership(user), '')
-    if membership and membership not in ROLE_LABELS.values():
+    membership = membership_label(detect_user_membership(user))
+    if membership and membership not in ('— без сегмента',) and membership not in ROLE_LABELS.values():
         return f'{role} · {membership}'
-    return membership or role
+    return membership if membership != '— без сегмента' else role
