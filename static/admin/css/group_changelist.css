@@ -1,14 +1,20 @@
-/* Список групп: имя как колонка «Права» */
-#changelist #result_list td.field-name,
-#changelist #result_list td.field-name a {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.35;
+/* Список групп: имя = тот же размер, что и «Права» */
+body.app-auth.model-group #changelist #result_list td.field-name_col,
+body.app-auth.model-group #changelist #result_list td.field-name_col a.group-name-link,
+body.app-auth.model-group #changelist #result_list td.field-role_col,
+body.app-auth.model-group #changelist #result_list td.field-role_col .group-role-label,
+body.app-auth.model-group #changelist #result_list td.field-users_count {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 1.4 !important;
 }
 
-#changelist #result_list td.field-role_col,
-#changelist #result_list td.field-users_count {
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.35;
+body.app-auth.model-group #changelist #result_list td.field-name_col a.group-name-link {
+  text-decoration: none !important;
+  color: inherit !important;
+}
+
+body.app-auth.model-group #changelist #result_list td.field-name_col a.group-name-link:hover {
+  text-decoration: underline !important;
+  color: #1565c0 !important;
 }

@@ -46,7 +46,7 @@ def _td(content):
 class SimpleGroupAdmin(DjangoGroupAdmin):
     form = SimpleGroupForm
     change_list_template = 'admin/auth/group/change_list.html'
-    list_display = ('name', 'role_col', 'users_count')
+    list_display = ('name_col', 'role_col', 'users_count')
     search_fields = ('name',)
     ordering = ('name',)
     filter_horizontal = ()
@@ -60,6 +60,7 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
                 'admin/css/inbox_expandable.css',
                 'admin/css/user_expandable.css',
                 'admin/css/group_members.css',
+                'admin/css/group_changelist.css',
                 'admin/css/user_roles.css',
             )
         }
@@ -134,7 +135,7 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
             'has_delete_permission': self.has_delete_permission(request, group),
             'media': self.media,
         }
-        return TemplateResponse(request, 'admin/auth/group/change_form.html', context)
+        return TemplateResponse(request, 'admin/auth/group/group_detail.html', context)
 
     def _members_expandable_rows(self, request, group, membership_key):
         user_admin = self.admin_site._registry.get(User)
@@ -351,9 +352,20 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
         for formset in formsets:
             self.save_formset(request, form, formset, change=change)
 
+    @admin.display(description='Имя', ordering='name')
+    def name_col(self, obj):
+        return format_html(
+            '<a class="group-name-link" href="{}">{}</a>',
+            reverse('admin:auth_group_change', args=[obj.pk]),
+            obj.name,
+        )
+
     @admin.display(description='Права')
     def role_col(self, obj):
-        return ROLE_LABELS.get(detect_group_role(obj), 'Пользователь')
+        return format_html(
+            '<span class="group-role-label">{}</span>',
+            ROLE_LABELS.get(detect_group_role(obj), 'Пользователь'),
+        )
 
     @admin.display(description='Участников')
     def users_count(self, obj):
