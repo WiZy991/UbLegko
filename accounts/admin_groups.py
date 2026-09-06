@@ -45,6 +45,7 @@ def _td(content):
 
 class SimpleGroupAdmin(DjangoGroupAdmin):
     form = SimpleGroupForm
+    change_list_template = 'admin/auth/group/change_list.html'
     list_display = ('name', 'role_col', 'users_count')
     search_fields = ('name',)
     ordering = ('name',)

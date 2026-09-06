@@ -45,12 +45,15 @@ class SimpleGroupForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk:
             self.fields['role'].initial = detect_group_role(self.instance)
-            self.fields['use_role_template'].initial = False
+            if 'use_role_template' in self.fields:
+                self.fields['use_role_template'].initial = False
         else:
             self.fields['role'].initial = ROLE_USER
-            self.fields['use_role_template'].initial = True
-        self.fields['permissions'].required = False
-        self.fields['permissions'].label = 'Права'
+            if 'use_role_template' in self.fields:
+                self.fields['use_role_template'].initial = True
+        if 'permissions' in self.fields:
+            self.fields['permissions'].required = False
+            self.fields['permissions'].label = 'Права'
 
     def save(self, commit=True):
         group = super().save(commit=False)
@@ -70,7 +73,11 @@ class SimpleGroupForm(forms.ModelForm):
         role = getattr(self, '_pending_role', None) or self.cleaned_data.get('role') or ROLE_USER
         use_template = getattr(self, '_pending_use_template', None)
         if use_template is None:
-            use_template = bool(self.cleaned_data.get('use_role_template'))
+            # На add/edit без галочки в fieldsets — всегда шаблон роли
+            if 'use_role_template' in self.fields:
+                use_template = bool(self.cleaned_data.get('use_role_template'))
+            else:
+                use_template = True
         if use_template:
             apply_permissions_for_role(group, role)
         else:

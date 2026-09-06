@@ -1,0 +1,14 @@
+/* Список групп: имя как колонка «Права» */
+#changelist #result_list td.field-name,
+#changelist #result_list td.field-name a {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+#changelist #result_list td.field-role_col,
+#changelist #result_list td.field-users_count {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
