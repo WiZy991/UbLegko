@@ -4,10 +4,12 @@ from django.contrib.auth.models import Group, User
 
 from .roles import (
     ROLE_ADMIN,
+    ROLE_BLOCKED,
     ROLE_CHOICES,
     ROLE_HELP,
     ROLE_STAFF,
     ROLE_USER,
+    GROUP_ROLE_CHOICES,
     MEMBERSHIP_CHOICES,
     SEGMENT_BASE,
     apply_permissions_for_role,
@@ -15,6 +17,7 @@ from .roles import (
     detect_user_access_role,
     detect_user_membership,
     get_membership_choices,
+    set_user_access_role,
     set_user_membership,
 )
 
@@ -22,7 +25,7 @@ from .roles import (
 class SimpleGroupForm(forms.ModelForm):
     role = forms.ChoiceField(
         label='Права группы',
-        choices=ROLE_CHOICES,
+        choices=GROUP_ROLE_CHOICES,
         help_text=(
             'Администратор — полный доступ. '
             'Персонал — заявки и запросы, кнопки «Готово», без удаления и настроек. '
@@ -117,7 +120,11 @@ class UserRoleAdminForm(UserChangeForm):
             self.fields.pop(name, None)
 
     def apply_access(self, user, *, actor=None):
-        """Группа — источник истины: по ней выставляются и права."""
+        """Группа — источник истины; «Заблокированные» имеет приоритет."""
+        role = self.cleaned_data.get('access_role')
+        if role == ROLE_BLOCKED:
+            set_user_access_role(user, ROLE_BLOCKED, actor=actor)
+            return
         membership = self.cleaned_data.get('customer_group')
         if membership is None:
             membership = ''
@@ -147,11 +154,14 @@ class UserRoleCreationForm(UserCreationForm):
         self.fields['customer_group'].choices = get_membership_choices()
 
     def apply_access(self, user, *, actor=None):
+        role = self.cleaned_data.get('access_role') or ROLE_USER
+        if role == ROLE_BLOCKED:
+            set_user_access_role(user, ROLE_BLOCKED, actor=actor)
+            return
         membership = self.cleaned_data.get('customer_group')
         if membership:
             set_user_membership(user, membership, actor=actor)
             return
-        role = self.cleaned_data.get('access_role') or ROLE_USER
         if role == ROLE_ADMIN:
             set_user_membership(user, ROLE_ADMIN, actor=actor)
         elif role == ROLE_STAFF:

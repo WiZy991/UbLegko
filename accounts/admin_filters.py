@@ -5,6 +5,7 @@ from django.db.models import Q
 from .roles import (
     ALL_MANAGED_GROUP_NAMES,
     ROLE_ADMIN,
+    ROLE_BLOCKED,
     ROLE_STAFF,
     ROLE_USER,
 )
@@ -19,16 +20,23 @@ class AccessRoleFilter(admin.SimpleListFilter):
             (ROLE_ADMIN, 'Администратор'),
             (ROLE_STAFF, 'Персонал'),
             (ROLE_USER, 'Пользователь'),
+            (ROLE_BLOCKED, 'Заблокированные'),
         )
 
     def queryset(self, request, queryset):
         value = self.value()
         if value == ROLE_ADMIN:
-            return queryset.filter(is_superuser=True)
+            return queryset.filter(is_superuser=True).exclude(profile__is_blocked=True)
         if value == ROLE_STAFF:
-            return queryset.filter(is_staff=True, is_superuser=False)
+            return queryset.filter(is_staff=True, is_superuser=False).exclude(
+                profile__is_blocked=True
+            )
         if value == ROLE_USER:
-            return queryset.filter(is_staff=False, is_superuser=False)
+            return queryset.filter(is_staff=False, is_superuser=False).exclude(
+                profile__is_blocked=True
+            )
+        if value == ROLE_BLOCKED:
+            return queryset.filter(profile__is_blocked=True)
         return queryset
 
 

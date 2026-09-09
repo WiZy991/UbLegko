@@ -10,14 +10,23 @@ from django.db.models import Q
 ROLE_ADMIN = 'admin'
 ROLE_STAFF = 'staff'
 ROLE_USER = 'user'
+ROLE_BLOCKED = 'blocked'
 
 ROLE_CHOICES = (
     (ROLE_ADMIN, 'Администратор'),
     (ROLE_STAFF, 'Персонал'),
     (ROLE_USER, 'Пользователь'),
+    (ROLE_BLOCKED, 'Заблокированные'),
 )
 
 ROLE_LABELS = dict(ROLE_CHOICES)
+
+# Роли для шаблона прав группы (без «Заблокированные»)
+GROUP_ROLE_CHOICES = (
+    (ROLE_ADMIN, 'Администратор'),
+    (ROLE_STAFF, 'Персонал'),
+    (ROLE_USER, 'Пользователь'),
+)
 
 GROUP_ADMIN = 'Администраторы'
 GROUP_STAFF = 'Персонал'
@@ -80,6 +89,7 @@ ROLE_HELP = {
         'Без удаления и без настроек сайта.'
     ),
     ROLE_USER: 'Обычный пользователь сайта без входа в админку.',
+    ROLE_BLOCKED: 'Вход на сайт запрещён, аккаунт отключён.',
 }
 
 # Права персонала: заявки и запросы — смотреть и менять статус, без delete
@@ -140,11 +150,40 @@ def detect_group_role(group: Group) -> str:
 
 
 def detect_user_access_role(user: User) -> str:
+    profile = getattr(user, 'profile', None)
+    if profile is None:
+        try:
+            profile = user.profile
+        except Exception:
+            profile = None
+    if profile is not None and getattr(profile, 'is_blocked', False):
+        return ROLE_BLOCKED
     if user.is_superuser:
         return ROLE_ADMIN
     if user.is_staff:
         return ROLE_STAFF
     return ROLE_USER
+
+
+def _set_user_blocked(user: User, blocked: bool) -> None:
+    from .models import Profile
+
+    profile, _ = Profile.objects.get_or_create(user=user)
+    if profile.is_blocked != blocked:
+        profile.is_blocked = blocked
+        profile.save(update_fields=['is_blocked'])
+
+
+def user_is_blocked(user: User) -> bool:
+    if not getattr(user, 'is_authenticated', False):
+        return False
+    profile = getattr(user, 'profile', None)
+    if profile is None:
+        try:
+            profile = user.profile
+        except Exception:
+            return False
+    return bool(getattr(profile, 'is_blocked', False))
 
 
 def _user_group_names(user: User) -> set[str]:
@@ -326,18 +365,31 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
 
     ensure_default_groups()
 
-    if actor is not None and actor.pk == user.pk and role != ROLE_ADMIN and user.is_superuser:
-        raise PermissionError('Нельзя понизить права своему аккаунту')
+    if actor is not None and actor.pk == user.pk and role != ROLE_ADMIN:
+        if user.is_superuser or user_is_blocked(user) or role == ROLE_BLOCKED:
+            raise PermissionError('Нельзя менять права своему аккаунту таким образом')
 
     current_membership = detect_user_membership(user)
     current_segment = detect_user_segment(user)
     user.user_permissions.clear()
 
+    if role == ROLE_BLOCKED:
+        _clear_all_membership_groups(user)
+        user.is_superuser = False
+        user.is_staff = False
+        user.is_active = False
+        user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
+        _set_user_blocked(user, True)
+        return
+
+    _set_user_blocked(user, False)
+
     if role == ROLE_ADMIN:
         _clear_all_membership_groups(user)
         user.is_superuser = True
         user.is_staff = True
-        user.save(update_fields=['is_superuser', 'is_staff'])
+        user.is_active = True
+        user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
         user.groups.add(get_or_create_named_group(GROUP_ADMIN))
         return
 
@@ -345,13 +397,14 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
         _clear_all_membership_groups(user)
         user.is_superuser = False
         user.is_staff = True
-        user.save(update_fields=['is_superuser', 'is_staff'])
+        user.is_active = True
+        user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
         staff_group = get_or_create_named_group(GROUP_STAFF)
         apply_permissions_for_role(staff_group, ROLE_STAFF)
         user.groups.add(staff_group)
         return
 
-    # Пользователь сайта: убрать access-группы, оставить/назначить клиентский сегмент
+    # Пользователь сайта
     for group_name in ACCESS_GROUP_NAMES.values():
         group = Group.objects.filter(name=group_name).first()
         if group:
@@ -359,9 +412,9 @@ def set_user_access_role(user: User, role: str, *, actor: User | None = None) ->
 
     user.is_superuser = False
     user.is_staff = False
-    user.save(update_fields=['is_superuser', 'is_staff'])
+    user.is_active = True
+    user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
 
-    # Если сегмента нет — по умолчанию «Клиенты» (кастомную группу не трогаем)
     if parse_custom_membership(current_membership):
         return
     if current_membership in (ROLE_ADMIN, ROLE_STAFF) or not current_segment:
@@ -412,7 +465,9 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
         user.user_permissions.clear()
         user.is_superuser = False
         user.is_staff = False
-        user.save(update_fields=['is_superuser', 'is_staff'])
+        user.is_active = True
+        user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
+        _set_user_blocked(user, False)
         user.groups.add(group)
         return
 
@@ -432,7 +487,9 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
         user.user_permissions.clear()
         user.is_superuser = False
         user.is_staff = False
-        user.save(update_fields=['is_superuser', 'is_staff'])
+        user.is_active = True
+        user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
+        _set_user_blocked(user, False)
         set_user_segment(user, membership)
         return
 
@@ -444,7 +501,9 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
     user.user_permissions.clear()
     user.is_superuser = False
     user.is_staff = False
-    user.save(update_fields=['is_superuser', 'is_staff'])
+    user.is_active = True
+    user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
+    _set_user_blocked(user, False)
 
 
 def move_user_to_group(user: User, target_group: Group, *, actor: User | None = None) -> None:

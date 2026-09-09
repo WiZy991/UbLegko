@@ -35,10 +35,11 @@
 
   function setRoleLock(roleSelect, locked) {
     if (!roleSelect) return;
-    roleSelect.disabled = !!locked;
+    // Не disabled: можно сразу выбрать «Заблокированные»
+    roleSelect.disabled = false;
     roleSelect.classList.toggle('is-locked', !!locked);
     roleSelect.title = locked
-      ? 'Права задаёт группа — смените группу или выберите «— без сегмента»'
+      ? 'Права задаёт группа. Можно сразу выбрать «Заблокированные».'
       : 'Права доступа';
   }
 
@@ -54,7 +55,8 @@
       roleSelect.classList.remove(
         'user-role-select--admin',
         'user-role-select--staff',
-        'user-role-select--user'
+        'user-role-select--user',
+        'user-role-select--blocked'
       );
       roleSelect.classList.add('user-role-select--' + data.role);
     }

@@ -125,6 +125,12 @@ def confirm_email(request, uidb64, token):
         messages.info(request, 'Email уже подтверждён. Можно войти.')
         return redirect('accounts:login')
 
+    from .roles import user_is_blocked
+
+    if user_is_blocked(user):
+        messages.error(request, 'Аккаунт заблокирован. Подтверждение email недоступно.')
+        return redirect('accounts:login')
+
     user.is_active = True
     user.save(update_fields=['is_active'])
     request.session.pop('pending_verify_email', None)

@@ -1324,12 +1324,6 @@ class ProductImageAdmin(admin.ModelAdmin):
         return render(request, 'admin/catalog/productimage/bulk_upload.html', context)
 
 
-@admin.register(ProductRecommendation)
-class ProductRecommendationAdmin(admin.ModelAdmin):
-    list_display = ('product', 'recommended_product', 'sort_order')
-    autocomplete_fields = ['product', 'recommended_product']
-
-
 @admin.register(ProductReview)
 class ProductReviewAdmin(admin.ModelAdmin):
     list_display = ('product', 'user', 'rating', 'comment_col', 'created_at')

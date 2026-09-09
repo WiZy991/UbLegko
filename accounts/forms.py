@@ -108,14 +108,22 @@ class LoginForm(AuthenticationForm):
         password = self.cleaned_data.get('password')
         if username and password:
             try:
-                user = User.objects.get(username=username)
+                user = User.objects.select_related('profile').get(username=username)
             except User.DoesNotExist:
                 user = None
-            if user is not None and not user.is_active and user.check_password(password):
-                raise forms.ValidationError(
-                    'Аккаунт ещё не подтверждён. Проверьте почту и перейдите по ссылке из письма.',
-                    code='inactive',
-                )
+            if user is not None and user.check_password(password):
+                from .roles import user_is_blocked
+
+                if user_is_blocked(user):
+                    raise forms.ValidationError(
+                        'Аккаунт заблокирован. Вход на сайт недоступен.',
+                        code='blocked',
+                    )
+                if not user.is_active:
+                    raise forms.ValidationError(
+                        'Аккаунт ещё не подтверждён. Проверьте почту и перейдите по ссылке из письма.',
+                        code='inactive',
+                    )
         return super().clean()
 
 

@@ -12,7 +12,7 @@ from .forms_roles import SimpleGroupForm
 from .models import SITE_ACTIVITY_DAYS
 from .roles import (
     ALL_MANAGED_GROUP_NAMES,
-    ROLE_CHOICES,
+    GROUP_ROLE_CHOICES,
     ROLE_LABELS,
     apply_permissions_for_role,
     detect_group_role,
@@ -108,7 +108,7 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
             'original': group,
             'group_obj': group,
             'group_role': role,
-            'group_role_choices': ROLE_CHOICES,
+            'group_role_choices': GROUP_ROLE_CHOICES,
             'members_count': members_count,
             'membership_key': membership_key,
             'add_user_url': reverse('admin:auth_group_add_member', args=[group.pk]),

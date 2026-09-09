@@ -21,6 +21,12 @@ class Profile(models.Model):
         blank=True,
         db_index=True,
     )
+    is_blocked = models.BooleanField(
+        'Заблокирован',
+        default=False,
+        db_index=True,
+        help_text='Отдельный флаг блокировки (не путать с неподтверждённым email).',
+    )
 
     class Meta:
         verbose_name = 'Профиль'

@@ -1,3 +1,4 @@
+from django.contrib.auth import logout
 from django.http import HttpResponseForbidden
 
 from core.analytics import (
@@ -7,6 +8,23 @@ from core.analytics import (
     is_ip_blocked,
     record_site_visit,
 )
+
+
+class BlockedUserMiddleware:
+    """Разлогинивает заблокированных пользователей на любом запросе."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, 'user', None)
+        if user is not None and getattr(user, 'is_authenticated', False):
+            from accounts.roles import user_is_blocked
+
+            if user_is_blocked(user):
+                logout(request)
+        return self.get_response(request)
+
 
 
 class IPBlockMiddleware:

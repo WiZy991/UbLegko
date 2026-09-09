@@ -32,6 +32,12 @@
   background: #f5f7f8;
 }
 
+.user-role-select--blocked {
+  border-color: #c62828;
+  color: #b71c1c;
+  background: #ffebee;
+}
+
 .user-role-select.is-saving,
 .user-membership-select.is-saving {
   opacity: 0.55;
@@ -45,7 +51,7 @@
 }
 
 .user-role-select.is-locked {
-  opacity: 0.72;
-  cursor: not-allowed;
-  background: #eceff1 !important;
+  /* Можно менять на «Заблокированные», остальные роли отклонит сервер */
+  opacity: 0.9;
+  background: #eceff1;
 }
