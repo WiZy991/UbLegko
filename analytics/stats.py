@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 
 from django.db import DatabaseError
 from django.db.models import Count
+from django.db.models.functions import ExtractHour, TruncDate, TruncMonth
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.utils import timezone
@@ -19,7 +20,9 @@ from core.models import ProductPageView, SiteVisit
 
 logger = logging.getLogger(__name__)
 
+# days=None — особый период (не «N дней до сегодня»)
 STATS_PERIODS = (
+    ('yesterday', 'Вчера', None),
     ('today', 'Сегодня', 1),
     ('week', 'Неделя', 7),
     ('month', 'Месяц', 30),
@@ -27,7 +30,10 @@ STATS_PERIODS = (
     ('halfyear', 'Полгода', 182),
     ('year', 'Год', 365),
 )
-STATS_PERIOD_DAYS = {key: days for key, _label, days in STATS_PERIODS}
+STATS_PERIOD_KEYS = {key for key, _label, _days in STATS_PERIODS}
+STATS_PERIOD_DAYS = {
+    key: days for key, _label, days in STATS_PERIODS if days is not None
+}
 
 _MONTH_LABELS = (
     'янв', 'фев', 'мар', 'апр', 'май', 'июн',
@@ -45,6 +51,9 @@ def _device_kind(device: str) -> str:
 
 
 def stats_period_range(today, key):
+    if key == 'yesterday':
+        yesterday = today - timedelta(days=1)
+        return yesterday, yesterday
     days = STATS_PERIOD_DAYS.get(key)
     if not days:
         return None
@@ -129,7 +138,7 @@ def resolve_stats_period(request, *, default='today'):
 
     date_from = None
     date_to = None
-    if raw_period in STATS_PERIOD_DAYS:
+    if raw_period in STATS_PERIOD_KEYS:
         date_from, date_to = stats_period_range(today, raw_period)
     else:
         date_from = parse_date(raw_from) if raw_from else None
@@ -146,52 +155,22 @@ def resolve_stats_period(request, *, default='today'):
 
 
 def _chart_granularity(date_from: date, date_to: date) -> str:
-    span = (date_to - date_from).days + 1
-    # День, неделя, месяц, квартал — сводка по часам суток (00–23)
-    if span <= 92:
-        return 'hour_of_day'
-    if span <= 182:
-        return 'day'
-    return 'month'
-
-
-def _bucket_key_from_dt(value, granularity: str, tz):
-    if value is None:
-        return None
-    local = timezone.localtime(value, tz)
-    if granularity == 'hour_of_day':
-        return local.hour
-    if granularity == 'hour':
-        return (local.year, local.month, local.day, local.hour)
-    if granularity == 'day':
-        return (local.year, local.month, local.day)
-    return (local.year, local.month)
+    # Все быстрые периоды (включая полгода и год) — по часам суток (00–23)
+    return 'hour_of_day'
 
 
 def _format_chart_label(bucket_key, granularity: str) -> str:
     if granularity == 'hour_of_day':
         return f'{bucket_key:02d}:00'
     year, month = bucket_key[0], bucket_key[1]
-    if granularity == 'hour':
-        return f'{bucket_key[3]:02d}:00'
     if granularity == 'day':
         return f'{bucket_key[2]:02d}.{month:02d}'
     return f'{_MONTH_LABELS[month - 1]} {year}'
 
 
-def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str, tz):
+def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str):
     if granularity == 'hour_of_day':
-        for hour in range(24):
-            yield hour
-        return
-
-    if granularity == 'hour':
-        cursor = timezone.make_aware(datetime.combine(date_from, time.min), tz)
-        end = timezone.make_aware(datetime.combine(date_to, time.max), tz)
-        while cursor <= end:
-            local = timezone.localtime(cursor, tz)
-            yield (local.year, local.month, local.day, local.hour)
-            cursor += timedelta(hours=1)
+        yield from range(24)
         return
 
     if granularity == 'day':
@@ -211,25 +190,63 @@ def _iter_chart_bucket_keys(date_from: date, date_to: date, granularity: str, tz
             cursor = date(cursor.year, cursor.month + 1, 1)
 
 
+def _aggregate_chart_counts(qs, field_name: str, granularity: str, tz) -> dict:
+    """Считает точки графика в БД — без выгрузки всех timestamp в Python."""
+    if granularity == 'hour_of_day':
+        rows = (
+            qs.annotate(bucket=ExtractHour(field_name, tzinfo=tz))
+            .values('bucket')
+            .annotate(total=Count('id'))
+        )
+        return {
+            int(row['bucket']): int(row['total'])
+            for row in rows
+            if row['bucket'] is not None
+        }
+
+    if granularity == 'day':
+        rows = (
+            qs.annotate(bucket=TruncDate(field_name, tzinfo=tz))
+            .values('bucket')
+            .annotate(total=Count('id'))
+        )
+        result = {}
+        for row in rows:
+            bucket = row['bucket']
+            if bucket is None:
+                continue
+            if isinstance(bucket, datetime):
+                bucket = timezone.localtime(bucket, tz).date()
+            result[(bucket.year, bucket.month, bucket.day)] = int(row['total'])
+        return result
+
+    rows = (
+        qs.annotate(bucket=TruncMonth(field_name, tzinfo=tz))
+        .values('bucket')
+        .annotate(total=Count('id'))
+    )
+    result = {}
+    for row in rows:
+        bucket = row['bucket']
+        if bucket is None:
+            continue
+        if isinstance(bucket, datetime):
+            local = timezone.localtime(bucket, tz)
+            result[(local.year, local.month)] = int(row['total'])
+        else:
+            result[(bucket.year, bucket.month)] = int(row['total'])
+    return result
+
+
 def build_chart_data(date_from, date_to, site_qs, product_qs, tz):
     granularity = _chart_granularity(date_from, date_to)
-
-    visits_map = {}
-    for visited_at in site_qs.values_list('visited_at', flat=True):
-        key = _bucket_key_from_dt(visited_at, granularity, tz)
-        if key is not None:
-            visits_map[key] = visits_map.get(key, 0) + 1
-
-    views_map = {}
-    for viewed_at in product_qs.values_list('viewed_at', flat=True):
-        key = _bucket_key_from_dt(viewed_at, granularity, tz)
-        if key is not None:
-            views_map[key] = views_map.get(key, 0) + 1
+    visits_map = _aggregate_chart_counts(site_qs, 'visited_at', granularity, tz)
+    views_map = _aggregate_chart_counts(product_qs, 'viewed_at', granularity, tz)
 
     labels = []
     visits = []
     views = []
-    for bucket_key in _iter_chart_bucket_keys(date_from, date_to, granularity, tz):
+    for bucket_key in _iter_chart_bucket_keys(date_from, date_to, granularity):
         labels.append(_format_chart_label(bucket_key, granularity))
         visits.append(visits_map.get(bucket_key, 0))
         views.append(views_map.get(bucket_key, 0))
