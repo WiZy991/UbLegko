@@ -27,7 +27,6 @@ from .forms_roles import UserRoleAdminForm, UserRoleCreationForm
 from .models import SITE_ACTIVITY_DAYS, DeliveryAddress, Profile
 from .roles import (
     ROLE_ADMIN,
-    ROLE_BLOCKED,
     ROLE_CHOICES,
     ROLE_LABELS,
     ROLE_STAFF,
@@ -317,13 +316,10 @@ class UserAdmin(DjangoUserAdmin):
         if not user:
             return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
 
-        if not is_role_manually_editable(user) and role != ROLE_BLOCKED:
+        if not is_role_manually_editable(user):
             return JsonResponse({
                 'ok': False,
-                'error': (
-                    'Права задаёт группа. Сначала выберите «— без сегмента», '
-                    'либо смените группу. Заблокировать можно сразу.'
-                ),
+                'error': 'Права задаёт группа. Сначала выберите «— без сегмента».',
             }, status=400)
 
         try:
@@ -491,17 +487,17 @@ class UserAdmin(DjangoUserAdmin):
         role = detect_user_access_role(obj)
         locked = not is_role_manually_editable(obj)
         url = reverse('admin:auth_user_set_role', args=[obj.pk])
-        # Не disabled: даже при группе можно выставить «Заблокированные»
+        disabled = ' disabled' if locked else ''
         lock_cls = ' is-locked' if locked else ''
         title = (
-            'Права задаёт группа. Можно сразу выбрать «Заблокированные».'
+            'Права задаёт группа — смените группу или выберите «— без сегмента»'
             if locked
             else 'Права доступа'
         )
         return mark_safe(
             f'<select class="user-role-select user-role-select--{escape(role)}{lock_cls}" '
             f'data-role-url="{escape(url)}" data-user-id="{obj.pk}" '
-            f'title="{escape(title)}">'
+            f'title="{escape(title)}"{disabled}>'
             f'{_options_html(ROLE_CHOICES, role)}'
             f'</select>'
         )

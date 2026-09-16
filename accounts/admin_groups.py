@@ -13,7 +13,9 @@ from .models import SITE_ACTIVITY_DAYS
 from .roles import (
     ALL_MANAGED_GROUP_NAMES,
     GROUP_ROLE_CHOICES,
+    ROLE_BLOCKED,
     ROLE_LABELS,
+    apply_blocked_status_to_group_members,
     apply_permissions_for_role,
     detect_group_role,
     ensure_default_groups,
@@ -203,6 +205,8 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
             group.save(update_fields=['name'])
 
         apply_permissions_for_role(group, role)
+        if role == ROLE_BLOCKED:
+            apply_blocked_status_to_group_members(group, actor=request.user)
         return JsonResponse({
             'ok': True,
             'name': group.name,

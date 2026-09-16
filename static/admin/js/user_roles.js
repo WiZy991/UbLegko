@@ -35,11 +35,10 @@
 
   function setRoleLock(roleSelect, locked) {
     if (!roleSelect) return;
-    // Не disabled: можно сразу выбрать «Заблокированные»
-    roleSelect.disabled = false;
+    roleSelect.disabled = !!locked;
     roleSelect.classList.toggle('is-locked', !!locked);
     roleSelect.title = locked
-      ? 'Права задаёт группа. Можно сразу выбрать «Заблокированные».'
+      ? 'Права задаёт группа — смените группу или выберите «— без сегмента»'
       : 'Права доступа';
   }
 

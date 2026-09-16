@@ -21,12 +21,8 @@ ROLE_CHOICES = (
 
 ROLE_LABELS = dict(ROLE_CHOICES)
 
-# Роли для шаблона прав группы (без «Заблокированные»)
-GROUP_ROLE_CHOICES = (
-    (ROLE_ADMIN, 'Администратор'),
-    (ROLE_STAFF, 'Персонал'),
-    (ROLE_USER, 'Пользователь'),
-)
+# Роли для шаблона прав группы (включая «Заблокированные»)
+GROUP_ROLE_CHOICES = ROLE_CHOICES
 
 GROUP_ADMIN = 'Администраторы'
 GROUP_STAFF = 'Персонал'
@@ -101,6 +97,21 @@ STAFF_PERMISSION_CODES = (
     ('cart', 'change_stainhelprequest'),
 )
 
+# Маркер «группа заблокированных» (отличает от пустых прав обычного пользователя)
+BLOCKED_GROUP_PERM_CODENAME = 'role_blocked'
+
+
+def get_blocked_group_permission() -> Permission:
+    from django.contrib.contenttypes.models import ContentType
+
+    ct = ContentType.objects.get_for_model(Group)
+    perm, _ = Permission.objects.get_or_create(
+        content_type=ct,
+        codename=BLOCKED_GROUP_PERM_CODENAME,
+        defaults={'name': 'Роль группы: заблокированные'},
+    )
+    return perm
+
 
 def get_staff_permissions():
     perms = []
@@ -124,6 +135,8 @@ def apply_permissions_for_role(group: Group, role: str) -> None:
         group.permissions.set(get_all_permissions())
     elif role == ROLE_STAFF:
         group.permissions.set(get_staff_permissions())
+    elif role == ROLE_BLOCKED:
+        group.permissions.set([get_blocked_group_permission()])
     else:
         group.permissions.clear()
 
@@ -139,6 +152,8 @@ def detect_group_role(group: Group) -> str:
         return ROLE_USER
 
     codes = set(group.permissions.values_list('codename', flat=True))
+    if codes == {BLOCKED_GROUP_PERM_CODENAME}:
+        return ROLE_BLOCKED
     if not codes:
         return ROLE_USER
     staff_codes = {code for _app, code in STAFF_PERMISSION_CODES}
@@ -272,7 +287,11 @@ def role_for_membership(membership: str) -> str | None:
         return ROLE_STAFF
     if membership in SEGMENT_LABELS:
         return ROLE_USER
-    if parse_custom_membership(membership) is not None:
+    custom_id = parse_custom_membership(membership)
+    if custom_id is not None:
+        group = Group.objects.filter(pk=custom_id).first()
+        if group:
+            return detect_group_role(group)
         return ROLE_USER
     return None
 
@@ -461,8 +480,21 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
         group = Group.objects.filter(pk=custom_id).first()
         if not group:
             raise ValueError('Группа не найдена')
+        role = detect_group_role(group)
         _clear_all_membership_groups(user)
         user.user_permissions.clear()
+
+        if role == ROLE_BLOCKED:
+            if actor is not None and actor.pk == user.pk:
+                raise PermissionError('Нельзя заблокировать свой аккаунт')
+            user.is_superuser = False
+            user.is_staff = False
+            user.is_active = False
+            user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
+            _set_user_blocked(user, True)
+            user.groups.add(group)
+            return
+
         user.is_superuser = False
         user.is_staff = False
         user.is_active = True
@@ -504,6 +536,21 @@ def set_user_membership(user: User, membership: str, *, actor: User | None = Non
     user.is_active = True
     user.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
     _set_user_blocked(user, False)
+
+
+def apply_blocked_status_to_group_members(group: Group, *, actor: User | None = None) -> int:
+    """Блокирует всех участников группы (кроме actor)."""
+    updated = 0
+    for member in list(group.user_set.all()):
+        if actor is not None and actor.pk == member.pk:
+            continue
+        member.is_superuser = False
+        member.is_staff = False
+        member.is_active = False
+        member.save(update_fields=['is_superuser', 'is_staff', 'is_active'])
+        _set_user_blocked(member, True)
+        updated += 1
+    return updated
 
 
 def move_user_to_group(user: User, target_group: Group, *, actor: User | None = None) -> None:
