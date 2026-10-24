@@ -36,15 +36,21 @@ class SearchUtilsTests(SimpleTestCase):
             name='Пятновыводитель Pro',
             description='Для КОВРОВ',
         )
-        self.assertEqual(text, 'пятновыводитель pro для ковров')
+        self.assertIn('пятновыводитель pro', text)
+        self.assertIn('для ковров', text)
+        self.assertEqual(text, text.casefold())
 
-    def test_build_product_search_text_includes_seo_phrases(self):
+    def test_build_product_search_text_excludes_seo_phrases(self):
         text = build_product_search_text(
-            name='Средство для пола',
-            category_name='Общая уборка',
+            name='Жидкое мыло',
+            description='Для рук',
+            category_name='Мыло',
         )
-        self.assertIn('чем отмыть жир', text)
-        self.assertIn('приморский край', text)
+        self.assertIn('жидкое мыло', text)
+        self.assertIn('для рук', text)
+        # SEO-фразы больше не попадают в индекс — иначе «для пола» находило весь каталог
+        self.assertNotIn('купить средство для пола', text)
+        self.assertNotIn('приморский край', text)
 
     def test_query_variants_layout(self):
         variants = query_variants('vfkm')
@@ -110,3 +116,39 @@ class SearchCaseInsensitivityTests(TestCase):
         qs = Product.objects.filter(is_visible=True)
         found = filter_products_by_query(qs, 'Пятновыводитель')
         self.assertIn(self.product, list(found))
+
+
+class SearchRelevanceTests(TestCase):
+    def setUp(self):
+        floor_cat = Category.objects.create(name='Общая уборка', slug='floor-cat')
+        soap_cat = Category.objects.create(name='Мыло', slug='soap-cat')
+        self.floor = Product.objects.create(
+            name='Concentrate Floor',
+            category=floor_cat,
+            price='100.00',
+            description='Средство для пола и твёрдых поверхностей',
+        )
+        self.soap = Product.objects.create(
+            name='Жидкое мыло',
+            category=soap_cat,
+            price='50.00',
+            description='Мыло для рук и тела',
+        )
+
+    def test_dlya_pola_does_not_match_soap(self):
+        qs = Product.objects.filter(is_visible=True)
+        found = list(filter_products_by_query(qs, 'для пола'))
+        self.assertIn(self.floor, found)
+        self.assertNotIn(self.soap, found)
+
+    def test_pola_not_inside_opolaskivatel(self):
+        cat = Category.objects.create(name='Посуда', slug='dish-cat')
+        rinse = Product.objects.create(
+            name='Rinse',
+            category=cat,
+            price='10.00',
+            description='Ополаскиватель для машинной мойки',
+        )
+        qs = Product.objects.filter(is_visible=True)
+        found = list(filter_products_by_query(qs, 'для пола'))
+        self.assertNotIn(rinse, found)

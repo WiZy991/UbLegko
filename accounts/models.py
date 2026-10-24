@@ -27,6 +27,12 @@ class Profile(models.Model):
         db_index=True,
         help_text='Отдельный флаг блокировки (не путать с неподтверждённым email).',
     )
+    admin_note = models.CharField(
+        'Кто это (заметка админа)',
+        max_length=200,
+        blank=True,
+        help_text='Только для админки. Клиент не видит. Показывается в скобках рядом с именем в заявках.',
+    )
 
     class Meta:
         verbose_name = 'Профиль'

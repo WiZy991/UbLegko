@@ -18,6 +18,11 @@ from openpyxl.styles import Alignment, Font
 
 from core.formatting import format_rubles
 from core.models import SiteSettings
+from accounts.admin_notes import (
+    format_name_with_admin_note,
+    get_admin_note_for_contact,
+    name_with_admin_note_html,
+)
 
 from .models import Favorite, Order, OrderItem, StainHelpRequest
 
@@ -133,7 +138,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     list_display = (
         'expand_toggle',
         'order_number',
-        'full_name',
+        'full_name_col',
         'phone',
         'delivery_col',
         'email',
@@ -170,7 +175,9 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.action(description='Сформировать лист доставки')
     def export_delivery_sheet(self, request, queryset):
-        orders = list(queryset.order_by('-created_at', '-id'))
+        orders = list(
+            queryset.order_by('-created_at', '-id').select_related('user', 'user__profile')
+        )
         if not orders:
             self.message_user(request, 'Не выбрано ни одной заявки', level=messages.WARNING)
             return None
@@ -190,7 +197,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             row = (
                 order.number,
                 format_local_datetime(order.created_at),
-                (order.full_name or '').strip(),
+                self._order_display_name(order),
                 (order.phone or '').strip(),
                 address,
                 comment,
@@ -217,7 +224,9 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     @admin.action(description='Сформировать лист заявок')
     def export_orders_sheet(self, request, queryset):
         orders = list(
-            queryset.order_by('-created_at', '-id').prefetch_related('items')
+            queryset.order_by('-created_at', '-id')
+            .select_related('user', 'user__profile')
+            .prefetch_related('items')
         )
         if not orders:
             self.message_user(request, 'Не выбрано ни одной заявки', level=messages.WARNING)
@@ -251,7 +260,7 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             row = (
                 order.number,
                 format_local_datetime(order.created_at),
-                (order.full_name or '').strip(),
+                self._order_display_name(order),
                 (order.phone or '').strip(),
                 self._delivery_address_for_sheet(order),
                 (order.comment or '').strip(),
@@ -336,7 +345,21 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         return name or result or '—'
 
     def get_queryset(self, request):
-        return super().get_queryset(request).prefetch_related('items')
+        return (
+            super()
+            .get_queryset(request)
+            .select_related('user', 'user__profile')
+            .prefetch_related('items')
+        )
+
+    def _order_display_name(self, order) -> str:
+        note = get_admin_note_for_contact(user=order.user, phone=order.phone)
+        return format_name_with_admin_note(order.full_name, note)
+
+    @admin.display(description='Имя', ordering='full_name')
+    def full_name_col(self, obj):
+        note = get_admin_note_for_contact(user=obj.user, phone=obj.phone)
+        return mark_safe(name_with_admin_note_html(obj.full_name, note))
 
     def get_urls(self):
         urls = super().get_urls()
@@ -456,10 +479,15 @@ class OrderAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         email = (obj.email or '').strip() or '—'
         delivery = obj.get_delivery_method_display() if obj.delivery_method else '—'
         email_sent = 'Да' if obj.email_sent else 'Нет'
+        note = get_admin_note_for_contact(user=obj.user, phone=obj.phone)
+        name_html = name_with_admin_note_html(obj.full_name, note)
 
         return mark_safe(
             '<div class="inbox-row-detail__inner">'
             '<div class="inbox-row-detail__grid">'
+            f'<div class="inbox-row-detail__block">'
+            f'<span class="inbox-row-detail__label">Имя</span>'
+            f'<div class="inbox-row-detail__value">{name_html}</div></div>'
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Email</span>'
             f'<div class="inbox-row-detail__value">{escape(email)}</div></div>'
@@ -504,7 +532,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         'expand_toggle',
         'request_number',
         'created_col',
-        'full_name',
+        'full_name_col',
         'phone',
         'contact_col',
         'short_problem',
@@ -630,6 +658,14 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
     def request_number(self, obj):
         return obj.pk
 
+    @admin.display(description='Имя', ordering='full_name')
+    def full_name_col(self, obj):
+        note = get_admin_note_for_contact(user=obj.user, phone=obj.phone)
+        return mark_safe(name_with_admin_note_html(obj.full_name, note))
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'user__profile')
+
     @admin.display(description='Создано', ordering='created_at')
     def created_col(self, obj):
         return format_local_datetime(obj.created_at)
@@ -656,7 +692,8 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
         problem = (obj.problem or '').strip() or '—'
         contact = (obj.contact_method or '').strip() or '—'
         phone = (obj.phone or '').strip() or '—'
-        name = (obj.full_name or '').strip() or '—'
+        note = get_admin_note_for_contact(user=obj.user, phone=obj.phone)
+        name_html = name_with_admin_note_html(obj.full_name, note)
         email_sent = 'Да' if obj.email_sent else 'Нет'
         user = str(obj.user) if obj.user_id else '—'
         created = format_local_datetime(obj.created_at)
@@ -668,7 +705,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             f'<div class="inbox-row-detail__value">{escape(created)}</div></div>'
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Имя</span>'
-            f'<div class="inbox-row-detail__value">{escape(name)}</div></div>'
+            f'<div class="inbox-row-detail__value">{name_html}</div></div>'
             f'<div class="inbox-row-detail__block">'
             f'<span class="inbox-row-detail__label">Телефон</span>'
             f'<div class="inbox-row-detail__value">{escape(phone)}</div></div>'
@@ -692,7 +729,9 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.action(description='Сформировать лист запросов')
     def export_requests_sheet(self, request, queryset):
-        requests_list = list(queryset.order_by('-created_at', '-id'))
+        requests_list = list(
+            queryset.order_by('-created_at', '-id').select_related('user', 'user__profile')
+        )
         if not requests_list:
             self.message_user(request, 'Не выбрано ни одного запроса', level=messages.WARNING)
             return None
@@ -707,10 +746,11 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
             cell.alignment = Alignment(vertical='center', wrap_text=True)
 
         for obj in requests_list:
+            note = get_admin_note_for_contact(user=obj.user, phone=obj.phone)
             row = (
                 obj.pk,
                 format_local_datetime(obj.created_at),
-                (obj.full_name or '').strip(),
+                format_name_with_admin_note(obj.full_name, note),
                 (obj.phone or '').strip(),
                 (obj.contact_method or '').strip(),
                 (obj.problem or '').strip(),

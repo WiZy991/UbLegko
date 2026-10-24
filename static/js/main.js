@@ -29,6 +29,35 @@
     setTimeout(() => toast.classList.remove("is-visible"), 2200);
   }
 
+  // Кнопка «наверх» справа снизу
+  (function initScrollTop() {
+    const btn = document.querySelector("[data-scroll-top]");
+    if (!btn) return;
+    const threshold = 420;
+    let ticking = false;
+
+    function sync() {
+      const y = window.scrollY || document.documentElement.scrollTop || 0;
+      btn.hidden = false;
+      btn.classList.toggle("is-visible", y > threshold);
+      ticking = false;
+    }
+
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(sync);
+    }
+
+    btn.addEventListener("click", function () {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+    });
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    sync();
+  })();
+
   let suppressMenuToggleClick = false;
 
   function normalizeStainHelpQuery(q) {
@@ -1756,6 +1785,120 @@
     let activeIndex = -1;
     let items = [];
     let lastQuery = "";
+
+    // Анимация подсказки в поле поиска (эффект печати)
+    (function initTypingPlaceholder() {
+      const hintsRaw = input.getAttribute("data-placeholder-hints") || "";
+      const hints = hintsRaw
+        .split("|")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (!hints.length) return;
+
+      const prefixDesktop =
+        input.getAttribute("data-placeholder-prefix") || "Например: ";
+      const prefixMobile =
+        input.getAttribute("data-placeholder-prefix-mobile") || prefixDesktop;
+      const mq = window.matchMedia("(max-width: 900px)");
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+      let hintIndex = 0;
+      let charIndex = 0;
+      let deleting = false;
+      let animTimer = null;
+      let paused = false;
+
+      function currentPrefix() {
+        return mq.matches ? prefixMobile : prefixDesktop;
+      }
+
+      function setPlaceholder(text) {
+        input.placeholder = text;
+      }
+
+      function shouldPause() {
+        return (
+          paused ||
+          document.hidden ||
+          document.activeElement === input ||
+          Boolean(input.value && input.value.trim())
+        );
+      }
+
+      function stopAnim() {
+        if (animTimer) {
+          window.clearTimeout(animTimer);
+          animTimer = null;
+        }
+      }
+
+      function schedule(fn, delay) {
+        stopAnim();
+        animTimer = window.setTimeout(fn, delay);
+      }
+
+      function tick() {
+        if (shouldPause()) {
+          schedule(tick, 400);
+          return;
+        }
+
+        const hint = hints[hintIndex % hints.length];
+        const prefix = currentPrefix();
+
+        if (reduceMotion.matches) {
+          setPlaceholder(prefix + hint);
+          hintIndex = (hintIndex + 1) % hints.length;
+          schedule(tick, 2800);
+          return;
+        }
+
+        if (!deleting) {
+          charIndex += 1;
+          setPlaceholder(prefix + hint.slice(0, charIndex));
+          if (charIndex >= hint.length) {
+            deleting = true;
+            schedule(tick, 1800);
+            return;
+          }
+          schedule(tick, 75 + Math.floor(Math.random() * 35));
+          return;
+        }
+
+        charIndex -= 1;
+        setPlaceholder(prefix + hint.slice(0, Math.max(0, charIndex)));
+        if (charIndex <= 0) {
+          deleting = false;
+          hintIndex = (hintIndex + 1) % hints.length;
+          schedule(tick, 350);
+          return;
+        }
+        schedule(tick, 40);
+      }
+
+      function onPause() {
+        paused = true;
+      }
+
+      function onResume() {
+        paused = false;
+        if (!shouldPause() && !animTimer) schedule(tick, 200);
+      }
+
+      input.addEventListener("focus", onPause);
+      input.addEventListener("blur", onResume);
+      input.addEventListener("input", function () {
+        if (input.value && input.value.trim()) onPause();
+        else onResume();
+      });
+      document.addEventListener("visibilitychange", function () {
+        if (document.hidden) onPause();
+        else onResume();
+      });
+
+      setPlaceholder(currentPrefix());
+      schedule(tick, 400);
+    })();
 
     function escapeHtml(text) {
       return String(text)

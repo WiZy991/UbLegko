@@ -5,7 +5,7 @@ from catalog.search_utils import build_product_search_text
 
 
 class Command(BaseCommand):
-    help = 'Пересобрать search_text у всех товаров (включая SEO-фразы и гео Приморского края).'
+    help = 'Пересобрать search_text у всех товаров (название, описание, артикул — без SEO-фраз).'
 
     def add_arguments(self, parser):
         parser.add_argument(

@@ -135,6 +135,63 @@
       });
   }
 
+  function saveAdminNote(block) {
+    var btn = block.querySelector('.user-admin-note__save');
+    var input = block.querySelector('.user-admin-note__input');
+    var status = block.querySelector('.user-admin-note__status');
+    var url = btn && btn.getAttribute('data-note-url');
+    if (!url || !input) return;
+
+    block.classList.add('is-saving');
+    if (status) {
+      status.hidden = true;
+      status.textContent = '';
+      status.classList.remove('is-ok', 'is-error');
+    }
+
+    fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken'),
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ note: input.value || '' }),
+    })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          return { ok: response.ok && data && data.ok, data: data || {} };
+        });
+      })
+      .then(function (result) {
+        if (!result.ok) {
+          if (status) {
+            status.hidden = false;
+            status.textContent = (result.data && result.data.error) || 'Не удалось сохранить';
+            status.classList.add('is-error');
+          }
+          return;
+        }
+        if (typeof result.data.note === 'string') input.value = result.data.note;
+        if (status) {
+          status.hidden = false;
+          status.textContent = 'Сохранено';
+          status.classList.add('is-ok');
+        }
+      })
+      .catch(function () {
+        if (status) {
+          status.hidden = false;
+          status.textContent = 'Не удалось сохранить';
+          status.classList.add('is-error');
+        }
+      })
+      .finally(function () {
+        block.classList.remove('is-saving');
+      });
+  }
+
   document.addEventListener('click', function (event) {
     var expandBtn = event.target.closest('.inbox-row-expand');
     if (expandBtn) {
@@ -144,6 +201,14 @@
         // При каждом раскрытии строки все вложенные блоки снова свёрнуты
         collapseUserFolds(detail);
       }
+    }
+
+    var noteBtn = event.target.closest('.user-admin-note__save');
+    if (noteBtn) {
+      event.preventDefault();
+      var noteBlock = noteBtn.closest('.user-admin-note');
+      if (noteBlock && !noteBlock.classList.contains('is-saving')) saveAdminNote(noteBlock);
+      return;
     }
 
     var saveBtn = event.target.closest('.user-review-btn--save');

@@ -84,6 +84,16 @@ class SiteSettings(models.Model):
             'Дальше окно открывается только по нажатию на слоган.'
         ),
     )
+    ddos_rate_limit_hits = models.PositiveIntegerField(
+        'DDoS: хитов',
+        default=15,
+        help_text='Сколько запросов с одного IP за окно времени — и IP блокируется на 1 час.',
+    )
+    ddos_rate_window_seconds = models.PositiveIntegerField(
+        'DDoS: секунд',
+        default=10,
+        help_text='Окно времени в секундах для подсчёта хитов.',
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

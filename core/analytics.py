@@ -20,6 +20,40 @@ FREEZE_MINUTES = 5
 RATE_WINDOW_SECONDS = 10
 RATE_LIMIT_HITS = 15
 BLOCK_DURATION = timedelta(hours=1)
+_MIN_RATE_HITS = 5
+_MAX_RATE_HITS = 500
+_MIN_RATE_WINDOW = 3
+_MAX_RATE_WINDOW = 300
+
+
+def get_ddos_rate_limits() -> tuple[int, int]:
+    """Актуальные пороги DDoS из настроек сайта (хиты, секунды)."""
+    try:
+        from core.models import SiteSettings
+
+        settings = SiteSettings.load()
+        hits = int(getattr(settings, 'ddos_rate_limit_hits', None) or RATE_LIMIT_HITS)
+        window = int(getattr(settings, 'ddos_rate_window_seconds', None) or RATE_WINDOW_SECONDS)
+    except Exception:
+        logger.exception('Не удалось прочитать DDoS-пороги из настроек')
+        return RATE_LIMIT_HITS, RATE_WINDOW_SECONDS
+
+    hits = max(_MIN_RATE_HITS, min(_MAX_RATE_HITS, hits))
+    window = max(_MIN_RATE_WINDOW, min(_MAX_RATE_WINDOW, window))
+    return hits, window
+
+
+def save_ddos_rate_limits(hits: int, window_seconds: int) -> tuple[int, int]:
+    """Сохраняет пороги DDoS. Возвращает нормализованные значения."""
+    from core.models import SiteSettings
+
+    hits = max(_MIN_RATE_HITS, min(_MAX_RATE_HITS, int(hits)))
+    window_seconds = max(_MIN_RATE_WINDOW, min(_MAX_RATE_WINDOW, int(window_seconds)))
+    settings = SiteSettings.load()
+    settings.ddos_rate_limit_hits = hits
+    settings.ddos_rate_window_seconds = window_seconds
+    settings.save(update_fields=['ddos_rate_limit_hits', 'ddos_rate_window_seconds', 'updated_at'])
+    return hits, window_seconds
 
 _BOT_MARKERS = (
     'bot',
@@ -145,12 +179,13 @@ def _register_rate_hit_and_maybe_block(ip: str) -> bool:
     """Регистрирует хит. Возвращает True, если IP нужно заблокировать."""
     from core.models import IPRateHit
 
+    limit_hits, window_seconds = get_ddos_rate_limits()
     now = timezone.now()
-    cutoff = now - timedelta(seconds=RATE_WINDOW_SECONDS)
+    cutoff = now - timedelta(seconds=window_seconds)
     IPRateHit.objects.filter(hit_at__lt=now - timedelta(minutes=5)).delete()
     IPRateHit.objects.create(ip_address=ip)
     hits = IPRateHit.objects.filter(ip_address=ip, hit_at__gte=cutoff).count()
-    if hits >= RATE_LIMIT_HITS:
+    if hits >= limit_hits:
         _block_ip(ip)
         return True
     return False

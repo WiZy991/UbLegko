@@ -352,7 +352,10 @@
           <input
             type="search"
             name="q"
-            placeholder="Например: Amol"
+            placeholder="Например: для пола"
+            data-placeholder-prefix="Например: "
+            data-placeholder-prefix-mobile="Напр.: "
+            data-placeholder-hints="для пола|для стекол|для кухни|тряпка|пятна|для стен|швабра"
             value="{{ request.GET.q }}"
             data-search-input
             autocomplete="off"
@@ -621,6 +624,17 @@
       </div>
     </div>
   </div>
+
+  <button
+    type="button"
+    class="scroll-top"
+    data-scroll-top
+    hidden
+    aria-label="Наверх"
+    title="Наверх"
+  >
+    <span aria-hidden="true">↑</span>
+  </button>
 
   <script>window.ublegkoStainHelpPrefixes={{ stain_help_prefixes_json|safe }};</script>
   <script src="{% static 'js/main.js' %}?v=20260904pricespaces2"></script>

@@ -170,7 +170,7 @@ class SimpleGroupAdmin(DjangoGroupAdmin):
             cells = [
                 _td(user_admin.expand_toggle(user)),
                 _td(username),
-                _td(escape(user.first_name or '')),
+                _td(user_admin.name_with_note_col(user)),
                 _td(user_admin.phone_col(user)),
                 _td(user_admin.orders_year_count(user)),
                 _td(user_admin.orders_year_sum(user)),

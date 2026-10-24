@@ -5,7 +5,12 @@
     <div class="catalog-sheet__clip">
       <aside class="sidebar" id="sidebar">
         <div class="sidebar__body">
-          <p class="sidebar__title">Категории</p>
+          <a
+            class="sidebar__title sidebar__title--link"
+            href="{% url 'catalog:home' %}"
+            data-catalog-nav
+            title="Весь каталог"
+          >Каталог</a>
           {% if scroll_spy_categories %}
             {% for category in categories %}
               <a
@@ -40,7 +45,7 @@
     id="menu-toggle"
     aria-expanded="true"
     aria-controls="catalog-sheet"
-    aria-label="Категории"
+    aria-label="Каталог"
     title="Потяните вниз"
     data-menu-toggle
   >

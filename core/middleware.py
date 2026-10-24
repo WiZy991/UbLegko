@@ -28,7 +28,7 @@ class BlockedUserMiddleware:
 
 
 class IPBlockMiddleware:
-    """Блокирует IP, превысившие DDoS-порог (15 запросов за 10 сек → 1 час)."""
+    """Блокирует IP, превысившие DDoS-порог (порог задаётся в настройках / статистике)."""
 
     def __init__(self, get_response):
         self.get_response = get_response

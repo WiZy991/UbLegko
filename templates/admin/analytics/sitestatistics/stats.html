@@ -51,6 +51,40 @@
       color: #667;
       font-size: 13px;
     }
+    .product-stats__ddos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 16px;
+      align-items: end;
+      margin: 0 0 18px;
+      padding: 12px 14px;
+      border: 1px solid #d9e2ea;
+      border-radius: 10px;
+      background: #f7fafc;
+    }
+    .product-stats__ddos-title {
+      flex: 1 1 100%;
+      margin: 0;
+      font-size: 13px;
+      font-weight: 700;
+      color: #234;
+    }
+    .product-stats__ddos-hint {
+      flex: 1 1 100%;
+      margin: -4px 0 0;
+      font-size: 12px;
+      color: #667;
+    }
+    .product-stats__ddos label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+    .product-stats__ddos input[type="number"] {
+      width: 88px;
+      padding: 4px 8px;
+    }
     .product-stats__cards {
       display: flex;
       flex-wrap: wrap;
@@ -276,6 +310,28 @@
     Даты и периоды — по {{ stats_timezone_label }}.
     Заход — один IP в течение 5 минут (фриз-тайм). Столбец «Хитов» — сколько запросов было за эти 5 минут.
   </p>
+
+  <form method="post" class="product-stats__ddos" action="?{{ request.GET.urlencode }}">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="save_ddos_limits">
+    <p class="product-stats__ddos-title">Защита от роботов (блокировка IP)</p>
+    <p class="product-stats__ddos-hint">
+      Если с одного IP приходит столько запросов за указанное время — сайт блокирует IP на 1 час.
+      Сейчас: {{ ddos_rate_limit_hits }} хитов за {{ ddos_rate_window_seconds }} сек.
+      Если ловит обычных людей — увеличьте хиты или секунды.
+    </p>
+    <div>
+      <label for="id_ddos_hits">Хитов</label>
+      <input id="id_ddos_hits" type="number" name="ddos_rate_limit_hits" min="5" max="500" step="1" value="{{ ddos_rate_limit_hits }}" required>
+    </div>
+    <div>
+      <label for="id_ddos_seconds">Секунд</label>
+      <input id="id_ddos_seconds" type="number" name="ddos_rate_window_seconds" min="3" max="300" step="1" value="{{ ddos_rate_window_seconds }}" required>
+    </div>
+    <div>
+      <button type="submit" class="default" style="margin:0;">Сохранить порог</button>
+    </div>
+  </form>
 
   <div class="product-stats__periods" role="group" aria-label="Период">
     {% for item in period_choices %}

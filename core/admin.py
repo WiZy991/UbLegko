@@ -16,7 +16,17 @@ class SiteSettingsAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Бренд', {'fields': ('brand_name', 'slogan', 'tagline', 'company_name')}),
         ('Контакты', {'fields': ('phone', 'email', 'order_email', 'city', 'address', 'full_address')}),
-        ('Прочее', {'fields': ('working_hours', 'inn', 'ogrn', 'max_channel_url')}),
+        ('Прочее', {'fields': ('working_hours', 'inn', 'ogrn', 'max_channel_url', 'stain_help_auto_modal')}),
+        (
+            'Защита от роботов (DDoS)',
+            {
+                'fields': ('ddos_rate_limit_hits', 'ddos_rate_window_seconds'),
+                'description': (
+                    'Если с одного IP приходит столько хитов за указанное число секунд — '
+                    'IP блокируется на 1 час. Можно менять и на странице «Статистика по сайту».'
+                ),
+            },
+        ),
     )
 
     def has_add_permission(self, request):

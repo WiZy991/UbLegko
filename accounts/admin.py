@@ -23,6 +23,7 @@ from core.formatting import format_rubles
 
 from .admin_filters import AccessRoleFilter, ManagedGroupFilter
 from .admin_groups import SimpleGroupAdmin
+from .admin_notes import format_name_with_admin_note, get_admin_note_for_user, name_with_admin_note_html
 from .forms_roles import UserRoleAdminForm, UserRoleCreationForm
 from .models import SITE_ACTIVITY_DAYS, DeliveryAddress, Profile
 from .roles import (
@@ -47,6 +48,7 @@ class ProfileInline(admin.StackedInline):
     model = Profile
     can_delete = False
     extra = 0
+    fields = ('phone', 'admin_note', 'last_site_visit_at', 'is_blocked')
     readonly_fields = ('last_site_visit_at',)
 
 
@@ -120,7 +122,7 @@ class UserAdmin(DjangoUserAdmin):
     list_display = (
         'expand_toggle',
         'username',
-        'first_name',
+        'name_with_note_col',
         'phone_col',
         'orders_year_count',
         'orders_year_sum',
@@ -130,7 +132,14 @@ class UserAdmin(DjangoUserAdmin):
         'membership_col',
     )
     list_filter = (AccessRoleFilter, 'is_active', ManagedGroupFilter)
-    search_fields = ('username', 'email', 'first_name', 'last_name', 'profile__phone')
+    search_fields = (
+        'username',
+        'email',
+        'first_name',
+        'last_name',
+        'profile__phone',
+        'profile__admin_note',
+    )
     actions = (set_role_admin, set_role_staff, set_role_user)
     filter_horizontal = ()
     ordering = (
@@ -282,6 +291,11 @@ class UserAdmin(DjangoUserAdmin):
                 name='auth_user_set_membership',
             ),
             path(
+                '<path:object_id>/admin-note/',
+                self.admin_site.admin_view(self.save_admin_note_view),
+                name='auth_user_admin_note',
+            ),
+            path(
                 '<path:object_id>/review/<int:review_id>/save/',
                 self.admin_site.admin_view(self.save_review_view),
                 name='auth_user_review_save',
@@ -377,6 +391,34 @@ class UserAdmin(DjangoUserAdmin):
             'role_locked': membership_now != '',
         })
 
+    def save_admin_note_view(self, request, object_id):
+        if request.method != 'POST':
+            return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
+        if not self._can_manage_users(request):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return JsonResponse({'ok': False, 'error': 'Bad JSON'}, status=400)
+
+        note = str(payload.get('note') or '').strip()
+        if len(note) > 200:
+            return JsonResponse({'ok': False, 'error': 'Не больше 200 символов'}, status=400)
+
+        user = User.objects.filter(pk=object_id).first()
+        if not user:
+            return JsonResponse({'ok': False, 'error': 'Not found'}, status=404)
+
+        profile, _ = Profile.objects.get_or_create(user=user)
+        profile.admin_note = note
+        profile.save(update_fields=['admin_note'])
+        return JsonResponse({
+            'ok': True,
+            'note': note,
+            'display_name': format_name_with_admin_note(user.first_name or '', note),
+        })
+
     def save_review_view(self, request, object_id, review_id):
         if request.method != 'POST':
             return JsonResponse({'ok': False, 'error': 'POST only'}, status=405)
@@ -444,6 +486,11 @@ class UserAdmin(DjangoUserAdmin):
             '</button>',
             obj.pk,
         )
+
+    @admin.display(description='Имя', ordering='first_name')
+    def name_with_note_col(self, obj):
+        note = get_admin_note_for_user(obj)
+        return mark_safe(name_with_admin_note_html(obj.first_name or '', note))
 
     @admin.display(description='Телефон', ordering='profile__phone')
     def phone_col(self, obj):
@@ -552,6 +599,21 @@ class UserAdmin(DjangoUserAdmin):
             ),
         ]
 
+        note = (profile.admin_note or '').strip() if profile else ''
+        note_url = reverse('admin:auth_user_admin_note', args=[obj.pk])
+        note_block = (
+            '<div class="inbox-row-detail__block inbox-row-detail__block--wide user-admin-note">'
+            '<span class="inbox-row-detail__label">Кто это '
+            '<span class="user-admin-note__hint">(только для вас, клиент не видит)</span></span>'
+            f'<textarea class="user-admin-note__input" maxlength="200" rows="2">'
+            f'{escape(note)}</textarea>'
+            '<div class="user-admin-note__actions">'
+            f'<button type="button" class="user-admin-note__save" data-note-url="{escape(note_url)}">'
+            'Сохранить</button>'
+            '<span class="user-admin-note__status" hidden></span>'
+            '</div></div>'
+        )
+
         addresses_html = self._addresses_section(addresses)
         favorites_html = self._favorites_section(favorites)
         reviews_html = self._reviews_section(reviews)
@@ -561,6 +623,7 @@ class UserAdmin(DjangoUserAdmin):
             '<div class="inbox-row-detail__inner user-row-detail">'
             '<div class="inbox-row-detail__grid">'
             + ''.join(blocks)
+            + note_block
             + '</div>'
             + addresses_html
             + favorites_html

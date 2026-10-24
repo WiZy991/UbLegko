@@ -867,6 +867,57 @@ select {
 
 .search-form input::placeholder {
   color: #8a939b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scroll-top {
+  position: fixed;
+  right: 18px;
+  bottom: 22px;
+  z-index: 80;
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 999px;
+  background: #0f6f86;
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 8px 22px rgba(15, 111, 134, 0.35);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.scroll-top.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.scroll-top:hover,
+.scroll-top:focus-visible {
+  background: #0c5c70;
+}
+
+.scroll-top:focus-visible {
+  outline: 3px solid rgba(15, 111, 134, 0.4);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .scroll-top {
+    right: 12px;
+    bottom: 16px;
+    width: 42px;
+    height: 42px;
+    font-size: 1.2rem;
+  }
 }
 
 .search-suggest {
@@ -1043,6 +1094,23 @@ select {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
+}
+
+a.sidebar__title--link {
+  display: block;
+  border-left: 3px solid transparent;
+  color: #0f1720;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+a.sidebar__title--link:hover,
+a.sidebar__title--link:focus-visible {
+  background: rgba(0, 183, 232, 0.12);
+  border-left-color: var(--cyan);
+  color: #0f6f86;
 }
 
 .sidebar a {
@@ -3603,12 +3671,37 @@ select.form-input {
     display: contents;
   }
 
-  .sidebar__title {
+  .sidebar__title:not(.sidebar__title--link) {
     display: none !important;
   }
 
+  a.sidebar__title--link {
+    display: inline-block !important;
+    width: auto !important;
+    max-width: 100%;
+    margin: 0 10px 8px 0;
+    padding: 4px 0 !important;
+    border: 0 !important;
+    border-left: 0 !important;
+    border-radius: 0;
+    background: transparent !important;
+    color: #0f6f86 !important;
+    font-size: 0.9rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  a.sidebar__title--link:hover,
+  a.sidebar__title--link:focus-visible {
+    background: transparent !important;
+    color: #0c5c70 !important;
+  }
+
   /* Как раньше: обычные подчёркнутые ссылки */
-  .sidebar a {
+  .sidebar a:not(.sidebar__title--link) {
     display: inline !important;
     width: auto !important;
     max-width: 100%;

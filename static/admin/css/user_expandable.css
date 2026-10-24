@@ -96,6 +96,78 @@
   font-size: 13px;
 }
 
+.user-admin-note {
+  margin-top: 4px;
+}
+
+.user-admin-note__hint {
+  font-weight: 500;
+  color: #889;
+  font-size: 11px;
+}
+
+.user-admin-note__input {
+  width: 100%;
+  max-width: 520px;
+  min-height: 52px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid #c5d5de;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.35;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.user-admin-note__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.user-admin-note__save {
+  padding: 5px 12px;
+  border: 1px solid #00acd7;
+  border-radius: 6px;
+  background: #00acd7;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.user-admin-note__save:hover {
+  background: #0090b5;
+  border-color: #0090b5;
+}
+
+.user-admin-note__status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.user-admin-note__status.is-ok {
+  color: #1b5e20;
+}
+
+.user-admin-note__status.is-error {
+  color: #b71c1c;
+}
+
+.user-admin-note.is-saving .user-admin-note__input,
+.user-admin-note.is-saving .user-admin-note__save {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.admin-user-note {
+  color: #556;
+  font-weight: 500;
+}
+
 .user-row-detail .user-fold__muted {
   color: #667;
   font-size: 12px;

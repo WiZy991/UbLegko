@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from core.analytics import active_blocked_ips
+from core.analytics import active_blocked_ips, get_ddos_rate_limits
 from core.models import ProductPageView, SiteVisit
 
 logger = logging.getLogger(__name__)
@@ -343,6 +343,7 @@ def build_site_stats_context(request, *, default_period='today'):
     total_site_visits = site_qs.count()
     device_summary = _device_summary(site_qs)
     chart_granularity = chart['granularity']
+    ddos_hits, ddos_window = get_ddos_rate_limits()
 
     return {
         'date_from': date_from.isoformat(),
@@ -362,4 +363,6 @@ def build_site_stats_context(request, *, default_period='today'):
         'has_visits': bool(visit_rows),
         'visits_truncated': total_site_visits > len(visit_rows),
         'device_summary': device_summary,
+        'ddos_rate_limit_hits': ddos_hits,
+        'ddos_rate_window_seconds': ddos_window,
     }, None

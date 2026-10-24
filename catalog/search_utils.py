@@ -33,6 +33,17 @@ _LATIN_TO_RU = [
 _SEARCH_FIELD = 'search_text'
 
 
+def _normalize_search_blob(text: str) -> str:
+    """Пробелы вместо пунктуации; края с пробелами — чтобы искать целые слова."""
+    text = (text or '').casefold().replace('ё', 'е')
+    # буквы/цифры/дефис оставляем, остальное — разделители слов
+    text = re.sub(r'[^\w\-]+', ' ', text, flags=re.UNICODE)
+    text = re.sub(r'\s+', ' ', text).strip()
+    if not text:
+        return ''
+    return f' {text} '
+
+
 def build_product_search_text(
     *,
     name: str = '',
@@ -40,26 +51,22 @@ def build_product_search_text(
     sku: str = '',
     country: str = '',
     short_description: str = '',  # совместимость со старыми вызовами
-    category_name: str = '',
+    category_name: str = '',  # совместимость; в индекс не входит
 ) -> str:
-    """Нормализованный текст для поиска без учёта регистра (SQLite + кириллица)."""
-    from catalog.seo_keywords import product_seo_search_extras
-
+    """
+    Нормализованный текст для поиска (название, описание, артикул, страна).
+    SEO-фразы сюда не кладём — иначе запросы вроде «для пола» находят весь каталог.
+    """
     parts = (name, description, sku, country, short_description)
-    base = ' '.join(p.strip() for p in parts if p and p.strip()).casefold()
-    seo_extra = product_seo_search_extras(category_name).strip()
-    if seo_extra:
-        base = f'{base} {seo_extra}'.strip() if base else seo_extra
+    base = ' '.join(p.strip() for p in parts if p and p.strip())
     if not base:
         return ''
-    # Дубли без пробелов вокруг «-» и без дефисов: sr-100 / sr100
-    extras = []
-    compact = re.sub(r'\s*-\s*', '-', base)
-    mashed = re.sub(r'[\s\-]+', '', base)
-    for extra in (compact, mashed):
-        if extra and extra not in base and extra not in extras:
-            extras.append(extra)
-    return ' '.join([base, *extras]) if extras else base
+    blob = _normalize_search_blob(base)
+    # Дополнительно склеенный вариант без дефисов/пробелов (sr-100 → sr100)
+    mashed = re.sub(r'[\s\-]+', '', blob).strip()
+    if mashed and f' {mashed} ' not in blob:
+        blob = f'{blob}{mashed} '
+    return blob
 
 
 def _transliterate_ru_to_en(text: str) -> str:
@@ -175,34 +182,43 @@ def stem_variants(word: str) -> list[str]:
 
 
 def name_prefix_q(variants: list[str]) -> Q:
-    """Совпадение с началом названия или началом слова в названии."""
+    """Совпадение с началом названия или началом слова (по search_text с пробелами по краям)."""
     filt = Q()
     for v in variants:
-        fold = v.casefold()
+        fold = v.casefold().replace('ё', 'е')
         if not fold:
             continue
-        filt |= Q(**{f'{_SEARCH_FIELD}__startswith': fold})
+        # целое слово или префикс слова после разделителя
         filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {fold}'})
-        filt |= Q(**{f'{_SEARCH_FIELD}__contains': f'({fold}'})
-        filt |= Q(**{f'{_SEARCH_FIELD}__contains': f'-{fold}'})
     return filt
 
 
 def _term_in_text_q(term: str) -> Q:
-    """Термин в названии или описании (с вариантами раскладки и окончаний)."""
+    """
+    Термин как целое слово (не кусок «ополаскиватель» для «пола»).
+    Укороченные основы (от 6 букв) — префикс слова: пятновыводител → пятновыводитель.
+    """
     filt = Q()
     for variant in query_variants(term):
-        for stem in stem_variants(variant):
-            fold = stem.casefold()
+        stems = stem_variants(variant)
+        if not stems:
+            continue
+        full = stems[0].casefold().replace('ё', 'е')
+        if full:
+            # только целое слово
+            filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {full} '})
+        for stem in stems[1:]:
+            fold = stem.casefold().replace('ё', 'е')
             if fold:
-                filt |= Q(**{f'{_SEARCH_FIELD}__contains': fold})
+                # префикс слова после пробела
+                filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {fold}'})
     return filt
 
 
 def text_search_q(q: str) -> Q:
     """
     Поиск по названию и описанию.
-    Несколько слов — каждое должно встретиться хотя бы в одном из полей.
+    Несколько слов — каждое должно встретиться как целое слово.
     """
     tokens = query_tokens(q)
     if not tokens:
@@ -218,29 +234,15 @@ def text_search_q(q: str) -> Q:
 
 
 def description_search_q(q: str) -> Q:
-    """Вхождение запроса в описании или других полях (для подсказок)."""
-    tokens = query_tokens(q) or ([q.strip()] if q.strip() else [])
-    if not tokens:
-        return Q()
-    combined = Q()
-    for index, token in enumerate(tokens):
-        token_q = Q()
-        for variant in query_variants(token):
-            for stem in stem_variants(variant):
-                fold = stem.casefold()
-                if fold:
-                    token_q |= Q(**{f'{_SEARCH_FIELD}__contains': fold})
-        if index == 0:
-            combined = token_q
-        else:
-            combined &= token_q
-    return combined
+    """Вхождение запроса в тексте товара (для подсказок) — те же правила, что у поиска."""
+    return text_search_q(q)
 
 
 def filter_products_by_query(qs, q: str, *, prefix_only: bool = False):
     """
-    Фильтр товаров по запросу.
-    prefix_only=True — подсказки: префикс названия или совпадение в описании.
+    Фильтр товаров по запросу (только реальный текст товара: имя, описание, артикул).
+    Несколько слов — каждое слово должно встретиться в тексте.
+    prefix_only=True — подсказки: префикс названия или совпадение в тексте.
     """
     q = (q or '').strip()
     variants = query_variants(q)
@@ -248,9 +250,9 @@ def filter_products_by_query(qs, q: str, *, prefix_only: bool = False):
         return qs.none() if prefix_only else qs
 
     if prefix_only:
-        return qs.filter(name_prefix_q(variants) | description_search_q(q))
+        return qs.filter(name_prefix_q(variants) | description_search_q(q)).distinct()
 
-    return qs.filter(name_prefix_q(variants) | text_search_q(q))
+    return qs.filter(text_search_q(q)).distinct()
 
 
 def rank_prefix_first(products, q: str):
