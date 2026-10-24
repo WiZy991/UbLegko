@@ -126,6 +126,15 @@
               height="80"
             >
           {% endif %}
+          {% if product.is_new %}
+            <img
+              class="badge-promo-img badge-new-img badge-promo-img--detail"
+              src="{% static 'img/badge-novinka.png' %}?v=1"
+              alt="Новинка"
+              width="80"
+              height="80"
+            >
+          {% endif %}
           {% if product.old_price %}
             <span style="color:var(--text-muted);text-decoration:line-through;">{{ product.old_price|rubles }}</span>
           {% endif %}

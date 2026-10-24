@@ -466,7 +466,7 @@
     }
 
     if (row) {
-      ['name', 'category', 'price', 'old_price', 'status', 'recommendation_codes', 'is_visible'].forEach(function (key) {
+      ['name', 'category', 'price', 'old_price', 'status', 'recommendation_codes', 'is_visible', 'is_new'].forEach(function (key) {
         var value = readListField(row, key);
         if (value !== null) payload[key] = value;
       });

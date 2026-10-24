@@ -94,6 +94,22 @@
           height="14"
         >
       {% endif %}
+      {% if product.is_new %}
+        <img
+          class="badge-promo-img badge-new-img badge-promo-img--desktop"
+          src="{% static 'img/badge-novinka.png' %}?v=1"
+          alt="Новинка"
+          width="56"
+          height="56"
+        >
+        <img
+          class="badge-promo-img badge-new-img badge-promo-img--mobile"
+          src="{% static 'img/badge-novinka-mobile.png' %}?v=1"
+          alt="Новинка"
+          width="58"
+          height="14"
+        >
+      {% endif %}
       {% if product.reviews_count %}
         <span class="rating product-card__rating">★ {{ product.rating|floatformat:1 }}&nbsp;<span class="rating__count">({{ product.reviews_count }})</span></span>
       {% endif %}

@@ -383,6 +383,7 @@ class ProductAdmin(admin.ModelAdmin):
         'recommendation_codes',
         'row_save',
         'is_visible',
+        'is_new',
         'has_main_photo',
     )
     # name в list_editable — нельзя держать в list_display_links
@@ -393,6 +394,7 @@ class ProductAdmin(admin.ModelAdmin):
         'category',
         'status',
         'is_promo',
+        'is_new',
         'is_visible',
         'is_featured',
         'country',
@@ -405,6 +407,7 @@ class ProductAdmin(admin.ModelAdmin):
         'status',
         'recommendation_codes',
         'is_visible',
+        'is_new',
     )
     list_select_related = ('category',)
     list_per_page = 50
@@ -437,10 +440,12 @@ class ProductAdmin(admin.ModelAdmin):
                 'recommendation_codes',
                 'image',
                 'is_visible',
+                'is_new',
             ),
             'description': (
                 'Слаг создаётся сам из названия. '
                 'Если указать «Старую цену» — товар станет акцией (бэйдж на сайте). '
+                '«Новинка» — синий лейбл на карточках и странице товара. '
                 '«Рекомендация» — номера групп через запятую (1 или 1,3,5).'
             ),
         }),
@@ -921,6 +926,11 @@ class ProductAdmin(admin.ModelAdmin):
             raw = payload.get('is_visible')
             product.is_visible = str(raw).lower() in {'1', 'true', 'yes', 'on'}
             changed_fields.append('is_visible')
+
+        if 'is_new' in payload:
+            raw = payload.get('is_new')
+            product.is_new = str(raw).lower() in {'1', 'true', 'yes', 'on'}
+            changed_fields.append('is_new')
 
         if 'is_featured' in payload:
             raw = payload.get('is_featured')

@@ -4011,7 +4011,7 @@ select.form-input {
     display: block !important;
     width: auto !important;
     height: 14px !important;
-    max-width: 50px;
+    max-width: 64px;
     max-height: 14px;
     flex: 0 0 auto;
     margin: 0 0 0 2px !important;

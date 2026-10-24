@@ -173,6 +173,7 @@ class Product(models.Model):
         default=Status.IN_STOCK,
     )
     is_promo = models.BooleanField('Акция', default=False)
+    is_new = models.BooleanField('Новинка', default=False)
     is_visible = models.BooleanField('Показывать в каталоге', default=True)
     is_featured = models.BooleanField('Популярный', default=False)
     recommendation_codes = models.CharField(
