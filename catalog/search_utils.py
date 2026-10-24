@@ -51,13 +51,13 @@ def build_product_search_text(
     sku: str = '',
     country: str = '',
     short_description: str = '',  # совместимость со старыми вызовами
-    category_name: str = '',  # совместимость; в индекс не входит
+    category_name: str = '',
 ) -> str:
     """
-    Нормализованный текст для поиска (название, описание, артикул, страна).
+    Нормализованный текст для поиска (название, описание, артикул, страна, категория).
     SEO-фразы сюда не кладём — иначе запросы вроде «для пола» находят весь каталог.
     """
-    parts = (name, description, sku, country, short_description)
+    parts = (name, description, sku, country, short_description, category_name)
     base = ' '.join(p.strip() for p in parts if p and p.strip())
     if not base:
         return ''
@@ -193,26 +193,96 @@ def name_prefix_q(variants: list[str]) -> Q:
     return filt
 
 
+def _term_forms(term: str) -> list[tuple[str, bool]]:
+    """Список (форма, prefix_ok) для проверки вхождения в текст."""
+    items: list[tuple[str, bool]] = []
+    seen: set[tuple[str, bool]] = set()
+
+    def add(form: str, prefix_ok: bool) -> None:
+        form = (form or '').casefold().replace('ё', 'е')
+        if len(form) < 2:
+            return
+        key = (form, prefix_ok)
+        if key in seen:
+            return
+        seen.add(key)
+        items.append(key)
+
+    # Формы «пол» — чтобы «для пола» находило «для полов» / «напольных»
+    fold0 = (term or '').casefold().replace('ё', 'е')
+    if fold0 in {'пол', 'пола', 'полу', 'полы', 'полов', 'полом', 'поле'} or (
+        fold0.startswith('пол') and len(fold0) <= 5
+    ):
+        for form in ('пол', 'пола', 'полу', 'полы', 'полов', 'полом', 'поле'):
+            add(form, False)
+        add('напольн', True)
+
+    for variant in query_variants(term):
+        stems = stem_variants(variant)
+        if not stems:
+            continue
+        add(stems[0], False)
+        for stem in stems[1:]:
+            add(stem, len(stem) >= 4)
+    return items
+
+
 def _term_in_text_q(term: str) -> Q:
     """
     Термин как целое слово (не кусок «ополаскиватель» для «пола»).
     Укороченные основы (от 6 букв) — префикс слова: пятновыводител → пятновыводитель.
     """
     filt = Q()
-    for variant in query_variants(term):
-        stems = stem_variants(variant)
-        if not stems:
-            continue
-        full = stems[0].casefold().replace('ё', 'е')
-        if full:
-            # только целое слово
-            filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {full} '})
-        for stem in stems[1:]:
-            fold = stem.casefold().replace('ё', 'е')
-            if fold:
-                # префикс слова после пробела
-                filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {fold}'})
+    for form, prefix_ok in _term_forms(term):
+        filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {form} '})
+        if prefix_ok:
+            filt |= Q(**{f'{_SEARCH_FIELD}__contains': f' {form}'})
     return filt
+
+
+def _term_in_blob(term: str, blob: str) -> bool:
+    for form, prefix_ok in _term_forms(term):
+        if f' {form} ' in blob:
+            return True
+        if prefix_ok and f' {form}' in blob:
+            return True
+    return False
+
+
+def product_real_search_blob(product) -> str:
+    """Только реальные поля товара — без SEO из старого search_text."""
+    category_name = ''
+    category = getattr(product, 'category', None)
+    if category is not None:
+        category_name = getattr(category, 'name', '') or ''
+    return build_product_search_text(
+        name=getattr(product, 'name', '') or '',
+        description=getattr(product, 'description', '') or '',
+        sku=getattr(product, 'sku', '') or '',
+        country=getattr(product, 'country', '') or '',
+        category_name=category_name,
+    )
+
+
+def product_matches_query(product, q: str) -> bool:
+    """Строгая проверка: слова запроса есть в названии/описании/категории."""
+    q = (q or '').strip()
+    if not q:
+        return True
+    blob = product_real_search_blob(product)
+    if not blob.strip():
+        return False
+    tokens = query_tokens(q)
+    if not tokens:
+        variants = query_variants(q)
+        if not variants:
+            return False
+        tokens = [variants[0]]
+    # Точная фраза
+    phrase = _normalize_search_blob(q)
+    if phrase and phrase in blob:
+        return True
+    return all(_term_in_blob(token, blob) for token in tokens)
 
 
 def text_search_q(q: str) -> Q:
@@ -240,19 +310,28 @@ def description_search_q(q: str) -> Q:
 
 def filter_products_by_query(qs, q: str, *, prefix_only: bool = False):
     """
-    Фильтр товаров по запросу (только реальный текст товара: имя, описание, артикул).
-    Несколько слов — каждое слово должно встретиться в тексте.
-    prefix_only=True — подсказки: префикс названия или совпадение в тексте.
+    Фильтр товаров по запросу (название, описание, артикул, категория).
+    После отбора по search_text всегда перепроверяем реальные поля —
+    чтобы старый SEO-мусор в индексе не засорял выдачу.
     """
     q = (q or '').strip()
     variants = query_variants(q)
     if not variants:
         return qs.none() if prefix_only else qs
 
+    # Подсказки — по префиксу/индексу без жёсткой перепроверки (иначе «Alf» не найдёт Alfa).
     if prefix_only:
         return qs.filter(name_prefix_q(variants) | description_search_q(q)).distinct()
 
-    return qs.filter(text_search_q(q)).distinct()
+    candidates = qs.filter(text_search_q(q)).distinct()
+    matching_ids = [
+        product.pk
+        for product in candidates.select_related('category').iterator(chunk_size=200)
+        if product_matches_query(product, q)
+    ]
+    if not matching_ids:
+        return qs.none()
+    return qs.filter(pk__in=matching_ids)
 
 
 def rank_prefix_first(products, q: str):

@@ -152,3 +152,20 @@ class SearchRelevanceTests(TestCase):
         qs = Product.objects.filter(is_visible=True)
         found = list(filter_products_by_query(qs, 'для пола'))
         self.assertNotIn(rinse, found)
+
+    def test_stale_seo_search_text_ignored(self):
+        """Даже если в search_text остался SEO-мусор — смотрим реальные поля."""
+        cat = Category.objects.create(name='Авто', slug='auto-cat')
+        junk = Product.objects.create(
+            name='Автошампунь',
+            category=cat,
+            price='200.00',
+            description='Для мойки кузова',
+        )
+        Product.objects.filter(pk=junk.pk).update(
+            search_text=' автошампунь купить средство для пола приморский край '
+        )
+        qs = Product.objects.filter(is_visible=True)
+        found = list(filter_products_by_query(qs, 'для пола'))
+        self.assertIn(self.floor, found)
+        self.assertNotIn(junk, found)
