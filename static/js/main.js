@@ -1817,10 +1817,10 @@
       }
 
       function shouldPause() {
+        // Пауза только при вводе текста или скрытой вкладке — при фокусе печать продолжается
         return (
           paused ||
           document.hidden ||
-          document.activeElement === input ||
           Boolean(input.value && input.value.trim())
         );
       }
@@ -1885,8 +1885,6 @@
         if (!shouldPause() && !animTimer) schedule(tick, 200);
       }
 
-      input.addEventListener("focus", onPause);
-      input.addEventListener("blur", onResume);
       input.addEventListener("input", function () {
         if (input.value && input.value.trim()) onPause();
         else onResume();
