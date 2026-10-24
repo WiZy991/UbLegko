@@ -4060,12 +4060,6 @@ select.form-input {
     height: 14px;
   }
 
-  .product-card__meta--price .badge-new-img.badge-promo-img--mobile {
-    height: 28px !important;
-    max-height: 28px;
-    width: auto !important;
-    max-width: 150px;
-  }
 
   .product-card__buy {
     margin: 0;
