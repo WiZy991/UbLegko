@@ -1921,11 +1921,21 @@ a.sidebar__title--link:focus-visible {
 .product-card__meta--price {
   align-items: center;
   justify-content: flex-start;
-  flex-wrap: nowrap;
-  gap: 8px;
-  min-height: 56px;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+  min-height: 44px;
   margin-top: auto;
   flex-shrink: 0;
+}
+
+.product-card__badges {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .product-card__actions {
@@ -1934,7 +1944,7 @@ a.sidebar__title--link:focus-visible {
 }
 
 .product-card__rating {
-  margin-left: 0;
+  margin-left: auto;
   align-self: center;
 }
 
@@ -1980,6 +1990,17 @@ a.sidebar__title--link:focus-visible {
 
 .product-card__meta--price .badge-promo-img {
   align-self: center;
+}
+
+.product-card__meta--price .badge-promo-img--desktop {
+  width: 40px;
+  height: 40px;
+}
+
+/* Два лейбла рядом — чуть компактнее, чтобы влезали с рейтингом */
+.product-card__badges:has(.badge-new-img):has(.badge-promo-img:not(.badge-new-img)) .badge-promo-img--desktop {
+  width: 34px;
+  height: 34px;
 }
 
 .badge-promo {
@@ -3933,9 +3954,9 @@ select.form-input {
   .product-card__meta--price {
     grid-area: price;
     display: flex;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 6px;
+    gap: 4px 6px;
     margin-top: 4px;
     min-height: 0;
     min-width: 0;
@@ -3943,6 +3964,14 @@ select.form-input {
     overflow: visible;
     padding-right: 0;
     align-self: center;
+  }
+
+  .product-card__meta--price .product-card__rating {
+    margin-left: 0;
+  }
+
+  .product-card__meta--price .product-card__badges {
+    gap: 3px;
   }
 
   .product-card__meta--status {
