@@ -1508,15 +1508,40 @@
     }
   }
 
-  async function loadCatalog(url, push) {
+  function resetCatalogToPageTop({ behavior = "auto" } = {}) {
+    categorySpyLockUntil = Date.now() + 1200;
+    quietSheetSync(900);
+    window.scrollTo({ top: 0, behavior });
+    if (location.hash) {
+      const url = new URL(window.location.href);
+      url.hash = "";
+      history.replaceState(
+        { catalogAjax: true },
+        "",
+        `${url.pathname}${url.search}`
+      );
+    }
+    document.querySelectorAll("[data-scroll-spy-link].is-active").forEach((link) => {
+      link.classList.remove("is-active");
+    });
+    const homeLink = document.querySelector("[data-scroll-spy-home]");
+    if (homeLink) homeLink.classList.add("is-active");
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      setCatalogNavOpen(true, { animate: false });
+    }
+    settleSheetAfterScroll(900);
+  }
+
+  async function loadCatalog(url, push, options = {}) {
     const root = document.querySelector("[data-catalog-root]");
     if (!root) {
       window.location.href = url;
       return;
     }
-    const preferCategoryId = getActiveCatalogCategoryId();
+    const preferCategoryId = options.scrollToTop ? null : getActiveCatalogCategoryId();
     const prevScrollY = window.scrollY;
     const prevPath = window.location.pathname;
+    const forceTop = Boolean(options.scrollToTop);
     try {
       if (catalogAbort) catalogAbort.abort();
       catalogAbort = new AbortController();
@@ -1540,7 +1565,8 @@
       const nextPanel = next.querySelector("[data-catalog-sheet]");
       const nextToggle = next.querySelector("[data-menu-toggle], #menu-toggle");
       if (isMobile && nextPanel) {
-        const wantOpen = enteredCategoryPage ? true : prevScrollY <= SHEET_OPEN_TOP_PX;
+        const wantOpen =
+          forceTop || enteredCategoryPage ? true : prevScrollY <= SHEET_OPEN_TOP_PX;
         nextPanel.classList.toggle("is-open", wantOpen);
         if (nextToggle) nextToggle.setAttribute("aria-expanded", wantOpen ? "true" : "false");
         if (!wantOpen) {
@@ -1568,17 +1594,18 @@
         window.__ublegkoRefreshCatalogNav();
       }
 
-      if (enteredCategoryPage) {
-        categorySpyLockUntil = Date.now() + 900;
-        window.scrollTo({ top: 0, behavior: "auto" });
-        quietSheetSync(900);
-        setCatalogNavOpen(true, { animate: false });
+      if (forceTop || enteredCategoryPage) {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            resetCatalogToPageTop({ behavior: "auto" });
+          })
+        );
       } else {
         restoreScrollAfterCatalogFilter(preferCategoryId, prevScrollY);
       }
 
       initCategoryScrollSpy({ skipHashScroll: true });
-      if (preferCategoryId && document.getElementById(preferCategoryId)) {
+      if (!forceTop && preferCategoryId && document.getElementById(preferCategoryId)) {
         document.querySelectorAll("[data-scroll-spy-link]").forEach((link) => {
           link.classList.toggle(
             "is-active",
@@ -1609,6 +1636,23 @@
     }
     if (!document.querySelector("[data-catalog-root]")) return;
     event.preventDefault();
+
+    // «Каталог» — всегда в самый верх страницы, не к активной категории
+    if (link.hasAttribute("data-catalog-home")) {
+      const homeUrl = new URL(link.href, window.location.origin);
+      const sameCatalog =
+        homeUrl.pathname === window.location.pathname &&
+        homeUrl.search === window.location.search;
+      if (sameCatalog) {
+        link.blur();
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        resetCatalogToPageTop({ behavior: reduceMotion ? "auto" : "smooth" });
+        return;
+      }
+      loadCatalog(link.href, true, { scrollToTop: true });
+      return;
+    }
+
     loadCatalog(link.href, true);
   });
 
