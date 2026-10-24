@@ -26,7 +26,9 @@
           </section>
         {% empty %}
           <div class="empty-state">
-            {% if filters.promo %}
+            {% if filters.new %}
+              Новинки не найдены
+            {% elif filters.promo %}
               Акционные товары не найдены
             {% elif filters.in_stock %}
               Товары в наличии не найдены
@@ -41,7 +43,9 @@
             {% include "includes/product_card.html" %}
           {% empty %}
             <div class="empty-state">
-              {% if filters.promo %}
+              {% if filters.new %}
+                Новинки не найдены
+              {% elif filters.promo %}
                 Акционные товары не найдены
               {% else %}
                 Товары не найдены

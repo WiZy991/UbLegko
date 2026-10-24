@@ -24,7 +24,11 @@
           {% include "includes/product_card.html" %}
         {% empty %}
           <div class="empty-state">
-            {% if filters.promo and filters.in_stock %}
+            {% if filters.new and filters.in_stock %}
+              В категории «{{ current_category.name }}» нет новинок в наличии
+            {% elif filters.new %}
+              В категории «{{ current_category.name }}» нет новинок
+            {% elif filters.promo and filters.in_stock %}
               В категории «{{ current_category.name }}» нет акционных товаров в наличии
             {% elif filters.promo %}
               В категории «{{ current_category.name }}» нет акционных товаров

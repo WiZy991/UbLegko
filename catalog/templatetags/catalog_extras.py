@@ -6,7 +6,7 @@ from core.formatting import format_grouped_number, format_rubles
 
 register = template.Library()
 
-_FILTER_KEYS = ('in_stock', 'promo', 'price', 'sort', 'q', 'page')
+_FILTER_KEYS = ('in_stock', 'promo', 'new', 'price', 'sort', 'q', 'page')
 
 
 @register.simple_tag(takes_context=True)
