@@ -193,6 +193,15 @@ def name_prefix_q(variants: list[str]) -> Q:
     return filt
 
 
+# От 3 букв — ищем как начало слова («мою»→моющего, «душ»→душевой).
+# Короче — только целое слово, иначе слишком много шума.
+_PREFIX_MIN_LEN = 3
+# Короткие служебные/корни: префикс даёт лишнее (пол→полотенце).
+_NO_AUTO_PREFIX = frozenset({
+    'для', 'или', 'при', 'без', 'под', 'над', 'пол', 'все', 'это', 'как', 'чем',
+})
+
+
 def _term_forms(term: str) -> list[tuple[str, bool]]:
     """Список (форма, prefix_ok) для проверки вхождения в текст."""
     items: list[tuple[str, bool]] = []
@@ -221,7 +230,12 @@ def _term_forms(term: str) -> list[tuple[str, bool]]:
         stems = stem_variants(variant)
         if not stems:
             continue
-        add(stems[0], False)
+        full = stems[0]
+        fold = full.casefold().replace('ё', 'е')
+        add(full, False)
+        # Недописанное слово: «для душ» → душевой / душевых
+        if len(fold) >= _PREFIX_MIN_LEN and fold not in _NO_AUTO_PREFIX:
+            add(full, True)
         for stem in stems[1:]:
             add(stem, len(stem) >= 4)
     return items
@@ -229,8 +243,8 @@ def _term_forms(term: str) -> list[tuple[str, bool]]:
 
 def _term_in_text_q(term: str) -> Q:
     """
-    Термин как целое слово (не кусок «ополаскиватель» для «пола»).
-    Укороченные основы (от 6 букв) — префикс слова: пятновыводител → пятновыводитель.
+    Термин как целое слово или (от 3 букв) как начало слова.
+    «мою» → моющего; «душ» → душевой; «пола» не внутри «ополаскиватель».
     """
     filt = Q()
     for form, prefix_ok in _term_forms(term):

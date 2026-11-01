@@ -169,3 +169,43 @@ class SearchRelevanceTests(TestCase):
         found = list(filter_products_by_query(qs, 'для пола'))
         self.assertIn(self.floor, found)
         self.assertNotIn(junk, found)
+
+    def test_partial_word_moyu_finds_moyushchego(self):
+        """«для мою» — недописанное «моющего», как в подсказках."""
+        cat = Category.objects.create(name='Клининг', slug='clean-cat')
+        shampoo = Product.objects.create(
+            name='Экстракт шампунь',
+            category=cat,
+            price='100.00',
+            description='Для моющего пылесоса и ковров',
+        )
+        other = Product.objects.create(
+            name='Мыло',
+            category=cat,
+            price='50.00',
+            description='Для рук',
+        )
+        qs = Product.objects.filter(is_visible=True)
+        found = list(filter_products_by_query(qs, 'для мою'))
+        self.assertIn(shampoo, found)
+        self.assertNotIn(other, found)
+
+    def test_partial_word_dush_finds_dushevoy(self):
+        """«для душ» находит «душевой» / «душевых»."""
+        cat = Category.objects.create(name='Ванная', slug='bath-cat')
+        gel = Product.objects.create(
+            name='Гель для душа',
+            category=cat,
+            price='80.00',
+            description='Средство для душевых кабин',
+        )
+        floor = Product.objects.create(
+            name='Для пола',
+            category=cat,
+            price='90.00',
+            description='Моющее для пола',
+        )
+        qs = Product.objects.filter(is_visible=True)
+        found = list(filter_products_by_query(qs, 'для душ'))
+        self.assertIn(gel, found)
+        self.assertNotIn(floor, found)
