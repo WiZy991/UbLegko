@@ -1,8 +1,25 @@
 (function () {
   'use strict';
 
-  if (typeof gsap === 'undefined') return;
+  function whenGsap(cb) {
+    if (typeof window.gsap !== 'undefined') {
+      cb();
+      return;
+    }
+    var tries = 0;
+    var timer = window.setInterval(function () {
+      tries += 1;
+      if (typeof window.gsap !== 'undefined') {
+        window.clearInterval(timer);
+        cb();
+      } else if (tries > 60) {
+        window.clearInterval(timer);
+      }
+    }, 50);
+  }
 
+  whenGsap(function () {
+  var gsap = window.gsap;
   var EASE = 'power2.easeOut';
   var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
@@ -239,4 +256,5 @@
   } else {
     init();
   }
+  }); // whenGsap
 })();
