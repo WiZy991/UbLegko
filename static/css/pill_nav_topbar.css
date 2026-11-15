@@ -69,14 +69,34 @@
   max-width: none;
 }
 
-/* Сброс старых hover для pill-кнопок с анимацией */
-.topbar .ub-pill.pill-link:hover,
-.topbar .ub-pill.pill-link--button:hover,
-.topbar .ub-pill.auth-link:hover,
-.topbar .ub-pill.city-selector__toggle:hover,
-.topbar .city-selector.is-open .ub-pill.city-selector__toggle:hover,
-.topbar .ub-pill--slogan:hover,
-.account-bar .ub-pill--slogan:hover {
+/* Fallback: синий hover без GSAP (если JS/CDN не поднялись) */
+html:not(.js-pill-gsap) .topbar .ub-pill.pill-link:hover,
+html:not(.js-pill-gsap) .topbar .ub-pill.pill-link--button:hover,
+html:not(.js-pill-gsap) .topbar .ub-pill.auth-link:hover,
+html:not(.js-pill-gsap) .topbar .ub-pill.city-selector__toggle:hover,
+html:not(.js-pill-gsap) .topbar .city-selector.is-open .ub-pill.city-selector__toggle:hover,
+html:not(.js-pill-gsap) .topbar .ub-pill--slogan:hover,
+html:not(.js-pill-gsap) .account-bar .ub-pill--slogan:hover,
+html:not(.js-pill-gsap) .topbar .ub-pill--cart-icon:hover,
+html:not(.js-pill-gsap) .topbar .topbar__cart:hover .ub-pill--cart-icon {
+  background: var(--ub-pill-fill, #00acd7) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+html:not(.js-pill-gsap) .topbar .ub-pill:hover .ub-pill__label,
+html:not(.js-pill-gsap) .account-bar .ub-pill:hover .ub-pill__label {
+  color: #fff !important;
+}
+
+/* Со GSAP: фон белый, синюю заливку делает круг */
+html.js-pill-gsap .topbar .ub-pill.pill-link:hover,
+html.js-pill-gsap .topbar .ub-pill.pill-link--button:hover,
+html.js-pill-gsap .topbar .ub-pill.auth-link:hover,
+html.js-pill-gsap .topbar .ub-pill.city-selector__toggle:hover,
+html.js-pill-gsap .topbar .city-selector.is-open .ub-pill.city-selector__toggle:hover,
+html.js-pill-gsap .topbar .ub-pill--slogan:hover,
+html.js-pill-gsap .account-bar .ub-pill--slogan:hover {
   background: #fff;
   color: #111;
   border-color: transparent;
