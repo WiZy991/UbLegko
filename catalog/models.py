@@ -125,6 +125,12 @@ class Product(models.Model):
         verbose_name='Категория',
     )
     description = models.TextField('Описание', blank=True)
+    price_tag_description = models.TextField(
+        'Описание для цены',
+        blank=True,
+        default='',
+        help_text='Текст для цены. На сайте посетителям не показывается.',
+    )
     unit = models.CharField('Ед. измерения', max_length=50, blank=True, default='')
     country = models.CharField('Страна производитель', max_length=100, blank=True)
     sku = models.CharField('Код товара', max_length=100, blank=True, db_index=True)
@@ -174,6 +180,7 @@ class Product(models.Model):
     )
     is_promo = models.BooleanField('Акция', default=False)
     is_new = models.BooleanField('Новинка', default=False)
+    is_hit = models.BooleanField('Хит продаж', default=False)
     is_visible = models.BooleanField('Показывать в каталоге', default=True)
     is_featured = models.BooleanField('Популярный', default=False)
     recommendation_codes = models.CharField(

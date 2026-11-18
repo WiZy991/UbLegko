@@ -1,3 +1,17 @@
+/* Скачать / залить базу — одна группа справа, тот же зелёный, что у «Добавить» */
+.model-product .product-db-tools {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.model-product .product-db-tools .btn {
+  float: none !important;
+  white-space: nowrap;
+}
+
 /* Поиск всегда строкой ниже фильтров: поле + «Найти» рядом */
 .admin-search-group {
   display: flex;

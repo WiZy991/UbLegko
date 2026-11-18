@@ -1722,6 +1722,51 @@ a.sidebar__title--link:focus-visible {
   margin-left: 0;
 }
 
+.badge-hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  background: #ffd000;
+  color: #3a2a00;
+  font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+}
+
+.badge-hit--desktop,
+.badge-hit--detail {
+  width: 40px;
+  height: 40px;
+  font-size: 9px;
+  clip-path: polygon(
+    50% 0%, 61% 8%, 74% 3%, 80% 16%, 94% 18%, 90% 32%,
+    100% 44%, 92% 56%, 98% 70%, 84% 74%, 80% 88%, 66% 84%,
+    54% 98%, 42% 88%, 28% 94%, 22% 80%, 8% 76%, 12% 62%,
+    0% 50%, 10% 36%, 4% 22%, 18% 18%, 24% 6%, 38% 10%
+  );
+}
+
+.badge-hit--detail {
+  width: 72px;
+  height: 72px;
+  font-size: 14px;
+}
+
+.badge-hit--mobile {
+  display: none;
+  height: 14px;
+  padding: 0 6px;
+  font-size: 8px;
+  border-radius: 2px;
+  clip-path: none;
+}
+
 .fav-heart {
   display: inline-flex !important;
   align-items: center;
@@ -3210,9 +3255,12 @@ select.form-input {
 .site-footer__banner-title {
   margin: 0;
   text-align: center;
-  font-weight: 800;
+  font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
+  font-weight: 900;
   letter-spacing: 0.06em;
   font-size: clamp(1rem, 2.4vw, 1.35rem);
+  line-height: 1.05;
+  white-space: nowrap;
   text-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
   padding-inline: 12px;
 }
@@ -4054,8 +4102,21 @@ select.form-input {
     flex: 0 0 auto;
   }
 
-  .product-card__meta--price .badge-promo-img--desktop {
+  .product-card__meta--price .badge-promo-img--desktop,
+  .product-card__meta--price .badge-hit--desktop {
     display: none !important;
+  }
+
+  .product-card__meta--price .badge-hit--mobile {
+    display: inline-flex !important;
+    width: auto;
+    height: 14px !important;
+    max-height: 14px;
+    margin: 0 0 0 2px;
+    padding: 0 5px;
+    font-size: 8px;
+    align-self: center;
+    clip-path: none;
   }
 
   .product-card__meta--price .badge-promo-img--mobile {
@@ -4578,6 +4639,14 @@ select.form-input {
     grid-template-columns: minmax(56px, 0.7fr) 1fr minmax(56px, 0.7fr);
     min-height: 52px;
     padding-block: 10px;
+  }
+
+  .site-footer__banner-title {
+    font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    font-size: clamp(0.72rem, calc((100vw - 150px) / 15), 1.15rem);
+    white-space: nowrap;
   }
 
   .site-footer__stars {

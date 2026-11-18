@@ -78,8 +78,12 @@
       {% if product.unit %}
         <span class="product-card__unit" title="Ед. измерения">Ед.: {{ product.unit }}</span>
       {% endif %}
-      {% if product.is_promo or product.is_new %}
+      {% if product.is_promo or product.is_new or product.is_hit %}
         <span class="product-card__badges">
+          {% if product.is_hit %}
+            <span class="badge-hit badge-hit--desktop" title="Хит продаж">Хит</span>
+            <span class="badge-hit badge-hit--mobile" title="Хит продаж">Хит</span>
+          {% endif %}
           {% if product.is_promo %}
             <img
               class="badge-promo-img badge-promo-img--desktop"

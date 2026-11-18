@@ -341,6 +341,13 @@ def build_site_stats_context(request, *, default_period='today'):
     chart = build_chart_data(date_from, date_to, site_qs, product_qs, tz)
     visit_rows = _fetch_visit_rows(site_qs)
     total_site_visits = site_qs.count()
+    online_since = timezone.now() - timedelta(minutes=5)
+    online_now = (
+        SiteVisit.objects.filter(last_hit_at__gte=online_since)
+        .values('visitor_key')
+        .distinct()
+        .count()
+    )
     device_summary = _device_summary(site_qs)
     chart_granularity = chart['granularity']
     ddos_hits, ddos_window = get_ddos_rate_limits()
@@ -352,6 +359,7 @@ def build_site_stats_context(request, *, default_period='today'):
         'period_choices': stats_period_choices(today),
         'stats_timezone_label': 'Владивосток (UTC+10)',
         'total_site_visits': total_site_visits,
+        'online_now': online_now,
         'total_product_views': product_qs.count(),
         'rows': rows,
         'has_rows': bool(rows),

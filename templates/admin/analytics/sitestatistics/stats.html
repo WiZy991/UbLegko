@@ -109,6 +109,11 @@
       font-weight: 700;
       line-height: 1.2;
     }
+    .product-stats__card-hint {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #667;
+    }
     .product-stats__chart-wrap {
       margin-bottom: 24px;
       padding: 16px 16px 8px;
@@ -365,6 +370,11 @@
     <div class="product-stats__card">
       <div class="product-stats__card-label">Просмотров карточек</div>
       <div class="product-stats__card-value">{{ total_product_views }}</div>
+    </div>
+    <div class="product-stats__card">
+      <div class="product-stats__card-label">Сейчас на сайте</div>
+      <div class="product-stats__card-value">{{ online_now }}</div>
+      <div class="product-stats__card-hint">одновременно, последние 5 минут</div>
     </div>
   </div>
 

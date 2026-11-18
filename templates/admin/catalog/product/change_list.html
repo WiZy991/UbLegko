@@ -1,11 +1,19 @@
 {% extends "admin/change_list.html" %}
 {% load static admin_list %}
 
+{% block object-tools %}
+  <div class="product-db-tools">
+    <a class="btn btn-success" href="{% url 'admin:catalog_product_export_database' %}">Скачать базу Excel</a>
+    <a class="btn btn-success" href="{% url 'admin:catalog_product_import' %}">Залить базу Excel</a>
+    {{ block.super }}
+  </div>
+{% endblock %}
+
 {% block extrahead %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=32">
+  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=34">
   <script defer src="{% static 'admin/js/price_input_format.js' %}?v=2"></script>
-  <script defer src="{% static 'admin/js/product_expandable.js' %}?v=20"></script>
+  <script defer src="{% static 'admin/js/product_expandable.js' %}?v=21"></script>
   <script>
     window.UBLEGKO_PRODUCT_SEARCH_SUGGEST = "{{ product_search_suggest_url|default:''|escapejs }}";
   </script>

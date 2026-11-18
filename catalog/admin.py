@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from decimal import Decimal, InvalidOperation
+from urllib.parse import quote
 
 from django import forms
 from django.contrib import admin, messages
@@ -14,7 +15,7 @@ from django.contrib.admin.templatetags.admin_list import (
     result_hidden_fields,
 )
 from django.db.models import Count, Q
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import path, reverse
 from django.utils.html import escape, format_html, format_html_join, mark_safe
@@ -40,6 +41,13 @@ HEADER_ALIASES = {
         'description',
         'описание',
         'описание товара',
+    },
+    'price_tag_description': {
+        'price_tag_description',
+        'описание для цены',
+        'описание для ценника',
+        'ценник',
+        'текст ценника',
     },
     # Только для импорта старых прайсов — в модель не пишется
     'short_description': {
@@ -97,6 +105,17 @@ HEADER_ALIASES = {
     },
     'status': {'status', 'статус'},
     'is_promo': {'is_promo', 'акция', 'promo'},
+    'is_new': {'is_new', 'новинка'},
+    'is_hit': {'is_hit', 'хит продаж', 'хит'},
+    'is_visible': {'is_visible', 'показывать в каталоге', 'в каталоге'},
+    'is_featured': {'is_featured', 'популярный'},
+    'recommendation_codes': {'recommendation_codes', 'рекомендация', 'рекомендации'},
+    'slug': {'slug', 'слаг'},
+    'id': {'id', 'pk'},
+    'seo_title': {'seo_title', 'seo title'},
+    'seo_description': {'seo_description', 'seo description'},
+    'rating': {'rating', 'рейтинг'},
+    'reviews_count': {'reviews_count', 'число оценок', 'оценок'},
 }
 
 
@@ -384,6 +403,7 @@ class ProductAdmin(admin.ModelAdmin):
         'row_save',
         'is_visible',
         'is_new',
+        'is_hit',
         'has_main_photo',
     )
     # name в list_editable — нельзя держать в list_display_links
@@ -395,6 +415,7 @@ class ProductAdmin(admin.ModelAdmin):
         'status',
         'is_promo',
         'is_new',
+        'is_hit',
         'is_visible',
         'is_featured',
         'country',
@@ -408,10 +429,15 @@ class ProductAdmin(admin.ModelAdmin):
         'recommendation_codes',
         'is_visible',
         'is_new',
+        'is_hit',
     )
     list_select_related = ('category',)
-    list_per_page = 50
-    search_fields = ('name', 'sku', 'barcode', 'description', 'country', 'recommendation_codes')
+    # Один длинный список: листать по алфавиту, без страниц.
+    list_per_page = 100000
+    search_fields = (
+        'name', 'sku', 'barcode', 'description', 'price_tag_description',
+        'country', 'recommendation_codes',
+    )
     autocomplete_fields = ['category']
     inlines = [ProductImageInline]
     change_list_template = 'admin/catalog/product/change_list.html'
@@ -432,7 +458,10 @@ class ProductAdmin(admin.ModelAdmin):
                 'name',
                 'category',
                 'description',
+                'price_tag_description',
                 'sku',
+                'barcode',
+                'unit',
                 'country',
                 'price',
                 'old_price',
@@ -441,11 +470,13 @@ class ProductAdmin(admin.ModelAdmin):
                 'image',
                 'is_visible',
                 'is_new',
+                'is_hit',
             ),
             'description': (
                 'Слаг создаётся сам из названия. '
                 'Если указать «Старую цену» — товар станет акцией (бэйдж на сайте). '
-                '«Новинка» — синий лейбл на карточках и странице товара. '
+                '«Новинка» — синий лейбл, «Хит продаж» — жёлтый. '
+                '«Описание для цены» на сайте не показывается. '
                 '«Рекомендация» — номера групп через запятую (1 или 1,3,5).'
             ),
         }),
@@ -681,6 +712,11 @@ class ProductAdmin(admin.ModelAdmin):
             'data-quick-field="description">{}</textarea>'
             '</div>'
             '<div class="product-row-detail__block">'
+            '<span class="product-row-detail__label">Описание для цены</span>'
+            '<textarea class="vLargeTextField product-row-detail__input product-row-detail__textarea" '
+            'data-quick-field="price_tag_description">{}</textarea>'
+            '</div>'
+            '<div class="product-row-detail__block">'
             '<span class="product-row-detail__label">Фото</span>'
             '{}'
             '</div>'
@@ -704,6 +740,7 @@ class ProductAdmin(admin.ModelAdmin):
             obj.reviews_count,
             obj.created_at.strftime('%d.%m.%Y %H:%M') if obj.created_at else '—',
             obj.description or '',
+            obj.price_tag_description or '',
             self.photos_html(obj),
             obj.pk,
             quick_update_url,
@@ -742,6 +779,11 @@ class ProductAdmin(admin.ModelAdmin):
                 'import/',
                 self.admin_site.admin_view(self.import_view),
                 name='catalog_product_import',
+            ),
+            path(
+                'export-database/',
+                self.admin_site.admin_view(self.export_database_view),
+                name='catalog_product_export_database',
             ),
         ]
         return custom + urls
@@ -846,7 +888,7 @@ class ProductAdmin(admin.ModelAdmin):
         changed_fields = []
         text_fields = (
             'name', 'sku', 'barcode', 'slug', 'unit', 'country',
-            'description', 'recommendation_codes',
+            'description', 'price_tag_description', 'recommendation_codes',
         )
         for field in text_fields:
             if field in payload:
@@ -931,6 +973,11 @@ class ProductAdmin(admin.ModelAdmin):
             raw = payload.get('is_new')
             product.is_new = str(raw).lower() in {'1', 'true', 'yes', 'on'}
             changed_fields.append('is_new')
+
+        if 'is_hit' in payload:
+            raw = payload.get('is_hit')
+            product.is_hit = str(raw).lower() in {'1', 'true', 'yes', 'on'}
+            changed_fields.append('is_hit')
 
         if 'is_featured' in payload:
             raw = payload.get('is_featured')
@@ -1079,6 +1126,26 @@ class ProductAdmin(admin.ModelAdmin):
 
         return JsonResponse({'ok': False, 'error': 'Unknown action'}, status=400)
 
+    def export_database_view(self, request):
+        """Полная база товаров в Excel, без картинок — для бэкапа и обратной загрузки."""
+        if not (self.has_view_permission(request) or self.has_change_permission(request)):
+            return JsonResponse({'ok': False, 'error': 'Forbidden'}, status=403)
+        from .export_database import build_products_database_xlsx, products_database_filename
+
+        payload = build_products_database_xlsx()
+        filename = products_database_filename()
+        encoded = quote(filename, safe='')
+        response = HttpResponse(
+            payload,
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        )
+        response['Content-Disposition'] = (
+            f"attachment; filename=\"products-database.xlsx\"; filename*=UTF-8''{encoded}"
+        )
+        response['Content-Length'] = str(len(payload))
+        response['Cache-Control'] = 'no-store'
+        return response
+
     def import_view(self, request):
         if request.method == 'POST' and request.FILES.get('file'):
             uploaded = request.FILES['file']
@@ -1160,31 +1227,64 @@ class ProductAdmin(admin.ModelAdmin):
         if not is_promo and old_price and old_price > price:
             is_promo = True
 
-        return {
+        data = {
             'name': name,
             'category': category,
             'price': price,
             'old_price': old_price,
-            'description': description,
-            'unit': (row.get('unit') or '').strip(),
-            'country': (row.get('country') or '').strip(),
-            'sku': '',
-            'barcode': '',
             'status': status,
             'is_promo': is_promo,
-            'is_visible': True,
         }
+        # Столбец есть в файле — пишем значение, даже пустое.
+        # Нет столбца — поле товара не трогаем (старые прайсы без штрихкода).
+        clear_blanks = set()
+        if 'description' in row or 'short_description' in row:
+            data['description'] = description
+            clear_blanks.add('description')
+        text_from_file = (
+            'price_tag_description', 'unit', 'country', 'sku', 'barcode',
+            'slug', 'recommendation_codes', 'seo_title', 'seo_description',
+        )
+        for key in text_from_file:
+            if key in row:
+                data[key] = str(row.get(key) or '').strip()
+                clear_blanks.add(key)
+        for flag in ('is_new', 'is_hit', 'is_visible', 'is_featured'):
+            if flag in row:
+                data[flag] = str(row.get(flag) or '').strip().lower() in {
+                    '1', 'true', 'yes', 'да', 'y', 'on',
+                }
+        if 'id' in row and str(row.get('id') or '').strip():
+            try:
+                data['id'] = int(float(str(row.get('id')).strip().replace(',', '.')))
+            except (TypeError, ValueError):
+                pass
+        if 'rating' in row and str(row.get('rating') or '').strip():
+            try:
+                data['rating'] = Decimal(str(row.get('rating')).replace(',', '.'))
+            except (InvalidOperation, TypeError, ValueError):
+                pass
+        if 'reviews_count' in row and str(row.get('reviews_count') or '').strip():
+            try:
+                data['reviews_count'] = int(float(str(row.get('reviews_count')).replace(',', '.')))
+            except (TypeError, ValueError):
+                pass
+        data['_clear_blanks'] = clear_blanks
+        return data
 
     def _upsert_product(self, data):
+        clear_blanks = data.pop('_clear_blanks', set())
+        pk = data.pop('id', None)
         product = None
-        if data.get('sku'):
+        if pk:
+            product = Product.objects.filter(pk=pk).first()
+        if product is None and data.get('sku'):
             product = Product.objects.filter(sku=data['sku']).first()
-        if not product:
+        if product is None:
             product = Product.objects.filter(name=data['name']).first()
         if product:
             for key, value in data.items():
-                # Пустые код/штрихкод/ед. не затирают уже заполненные значения
-                if key in {'sku', 'barcode', 'unit'} and value == '':
+                if key in {'sku', 'barcode', 'unit'} and value == '' and key not in clear_blanks:
                     continue
                 setattr(product, key, value)
             product.save()

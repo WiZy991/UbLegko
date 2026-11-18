@@ -125,7 +125,7 @@ class SiteVisit(models.Model):
     path = models.CharField('Страница', max_length=300, blank=True)
     hit_count = models.PositiveIntegerField('Хитов за 5 мин', default=1)
     visited_at = models.DateTimeField('Начало захода', auto_now_add=True, db_index=True)
-    last_hit_at = models.DateTimeField('Последний хит', auto_now_add=True)
+    last_hit_at = models.DateTimeField('Последний хит', auto_now_add=True, db_index=True)
 
     class Meta:
         verbose_name = 'Заход на сайт'
