@@ -105,7 +105,7 @@ select {
   align-items: center;
   justify-content: center;
   padding-inline: 12px;
-  /* место под абсолютный tagline — колонка по ширине заголовка, звёзды не двигаем */
+  /* место под absolute-tagline на десктопе; на мобиле сбрасывается */
   padding-bottom: 2.1em;
   margin-top: -4px;
 }
@@ -197,41 +197,27 @@ select {
 }
 
 .brand-banner__tagline {
-  /* absolute: не раздвигает grid/звёзды; кегль от ширины экрана минус запас под звёзды */
-  --brand-stars-reserve: 11.5rem; /* ~ место под каждую сторону со звёздами */
+  /* ширина = заголовок + 4 буквы слева + 4 справа; звёзды не двигаем */
   position: absolute;
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
   margin: 0;
   font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
-  /* ~55 символов: размер ≈ (viewport − 2×запас) / 36 */
-  font-size: clamp(0.88rem, calc((100vw - (2 * var(--brand-stars-reserve))) / 36), 1.35rem);
+  /* тот же clamp, что у заголовка × 0.387:
+     строка шире «УБИРАЕМСЯ ЛЕГКО» на 4 буквы слева и 4 справа */
+  font-size: calc(0.387 * clamp(1.7rem, 4.2vw, 2.75rem));
   font-weight: 900;
-  letter-spacing: 0.01em;
+  letter-spacing: 0;
   line-height: 1.15;
   opacity: 0.98;
   display: block;
   white-space: nowrap;
   width: max-content;
-  max-width: calc(100vw - (2 * var(--brand-stars-reserve)));
-  overflow: hidden;
-  text-overflow: clip;
+  max-width: none;
+  overflow: visible;
   pointer-events: none;
   z-index: 0;
-}
-
-@media (max-width: 1280px) and (min-width: 901px) {
-  .brand-banner__tagline {
-    --brand-stars-reserve: 10rem;
-  }
-}
-
-@media (max-width: 1100px) and (min-width: 901px) {
-  .brand-banner__tagline {
-    --brand-stars-reserve: 9rem;
-    font-size: clamp(0.85rem, calc((100vw - (2 * var(--brand-stars-reserve))) / 38), 1.15rem);
-  }
 }
 
 /* City selector */
@@ -4163,9 +4149,9 @@ select.form-input {
     display: block;
     position: relative;
     min-height: 0;
-    padding: 18px 10px 18px;
+    padding: 14px 12px 14px;
     grid-template-columns: none;
-    overflow: visible;
+    overflow: hidden;
   }
 
   .brand-banner__content {
@@ -4173,8 +4159,10 @@ select.form-input {
     z-index: 2;
     width: 100%;
     max-width: none;
-    padding: 4px 8px 2.2em;
-    margin-top: -2px;
+    box-sizing: border-box;
+    padding: 2px 28px; /* боковой зазор от звёзд */
+    margin-top: 0;
+    padding-bottom: 2px;
   }
 
   .brand-banner__title {
@@ -4183,30 +4171,33 @@ select.form-input {
     font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
     white-space: nowrap;
     text-align: center;
-    font-size: clamp(1.55rem, 7.8vw, 2.35rem);
+    font-size: clamp(1.2rem, 6.5vw, 2rem);
     font-weight: 900;
-    letter-spacing: 0.04em;
-    line-height: 1.12;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
   }
 
   .brand-banner__tagline {
-    position: absolute;
-    left: 50%;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: auto;
-    max-width: calc(100% - 72px); /* отступ от боковых звёзд на мобиле */
-    margin: 0;
+    /* обычный поток — без absolute, без налезания на заголовок */
+    position: static;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    margin: 4px 0 0;
     font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
     text-align: center;
-    font-size: clamp(0.82rem, 3.2vw, 1.05rem);
+    font-size: clamp(0.72rem, 3.1vw, 0.95rem);
     font-weight: 900;
-    line-height: 1.3;
+    line-height: 1.25;
     white-space: normal;
     overflow: visible;
+    pointer-events: auto;
+    z-index: auto;
   }
 
-  /* Mobile: both star fields over the whole banner */
+  /* Mobile: звёзды фоном, текст сверху */
   .brand-stars {
     position: absolute !important;
     top: 0 !important;
@@ -4216,7 +4207,7 @@ select.form-input {
     width: 100% !important;
     height: 100% !important;
     margin: 0 !important;
-    z-index: 1;
+    z-index: 0;
     pointer-events: none;
   }
 
@@ -4563,26 +4554,30 @@ select.form-input {
 
   .brand-banner {
     min-height: 0;
-    padding: 16px 8px 16px;
+    padding: 12px 8px 12px;
   }
 
   .brand-banner__content {
-    padding: 2px 6px 2.1em;
-    margin-top: -2px;
+    padding: 2px 22px;
+    margin-top: 0;
   }
 
   .brand-banner__title {
     font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
-    font-size: clamp(1.5rem, 8vw, 2.2rem);
+    font-size: clamp(1.1rem, 6.2vw, 1.75rem);
     font-weight: 900;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.015em;
   }
 
   .brand-banner__tagline {
+    position: static;
+    transform: none;
     font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
-    font-size: clamp(0.92rem, 4vw, 1.1rem);
+    font-size: clamp(0.7rem, 3.4vw, 0.9rem);
     font-weight: 900;
+    margin-top: 4px;
     white-space: normal;
+    max-width: 100%;
   }
 
   .topbar__inner {
