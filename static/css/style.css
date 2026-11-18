@@ -4145,51 +4145,56 @@ select.form-input {
     box-shadow: 0 2px 12px rgba(15, 30, 40, 0.12);
   }
 
+  /* Текст в центре, звёзды отдельным слоем по периметру шапки. */
   .brand-banner {
     display: block;
     position: relative;
-    min-height: 0;
-    padding: 14px 12px 14px;
-    grid-template-columns: none;
+    min-height: 124px;
+    padding: 40px 16px 34px;
     overflow: hidden;
   }
 
   .brand-banner__content {
     position: relative;
-    z-index: 2;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     width: 100%;
-    max-width: none;
+    max-width: 100%;
     box-sizing: border-box;
-    padding: 2px 28px; /* боковой зазор от звёзд */
-    margin-top: 0;
-    padding-bottom: 2px;
+    padding: 0;
+    margin: 0;
   }
 
   .brand-banner__title {
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     margin: 0;
     font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
     white-space: nowrap;
     text-align: center;
-    font-size: clamp(1.2rem, 6.5vw, 2rem);
+    /* слоган = этот размер × 0.387 и влезает между колонками звёзд */
+    font-size: clamp(0.95rem, calc((100vw - 68px) / 14.2), 2rem);
     font-weight: 900;
-    letter-spacing: 0.02em;
-    line-height: 1.1;
+    letter-spacing: 0.04em;
+    line-height: 1.05;
   }
 
   .brand-banner__tagline {
-    /* обычный поток — без absolute, без налезания на заголовок */
     position: static;
     left: auto;
     bottom: auto;
     transform: none;
-    width: 100%;
-    max-width: 100%;
+    width: max-content;
+    max-width: calc(100vw - 68px);
     margin: 4px 0 0;
     font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
     text-align: center;
-    font-size: clamp(0.72rem, 3.1vw, 0.95rem);
+    /* тот же коэффициент, что на десктопе; на узком экране не мельче 12px — тогда перенос */
+    font-size: max(0.75rem, calc(0.387 * clamp(0.95rem, (100vw - 68px) / 14.2, 2rem)));
     font-weight: 900;
+    letter-spacing: 0;
     line-height: 1.25;
     white-space: normal;
     overflow: visible;
@@ -4197,90 +4202,76 @@ select.form-input {
     z-index: auto;
   }
 
-  /* Mobile: звёзды фоном, текст сверху */
   .brand-stars {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    margin: 0 !important;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
     z-index: 0;
+    overflow: hidden;
     pointer-events: none;
   }
 
   .brand-stars--left,
   .brand-stars--right {
-    display: block !important;
+    display: block;
   }
 
   .brand-stars--left .brand-stars__item,
   .brand-stars--right .brand-stars__item {
-    position: absolute !important;
-    opacity: 1;
-    display: block !important;
+    transform: none;
   }
-
-  /* Stars around letters; clear of title + tagline body text */
-  .brand-stars--left .brand-stars__item:nth-child(1)  { left: 3%;  top: 6px; }
-  .brand-stars--left .brand-stars__item:nth-child(2)  { left: 14%; top: 2px; }
-  /* над «Е» в УБИРАЕМСЯ */
-  .brand-stars--left .brand-stars__item:nth-child(3)  { left: 30%; top: 3px; }
-  .brand-stars--left .brand-stars__item:nth-child(4)  { left: 50%; top: 4px; transform: translateX(-50%); }
-  .brand-stars--left .brand-stars__item:nth-child(5)  { left: 2%;  top: 30%; }
-  .brand-stars--left .brand-stars__item:nth-child(6)  { left: 2%;  top: 55%; }
-  .brand-stars--left .brand-stars__item:nth-child(7)  { left: 3%;  top: 74%; }
-  .brand-stars--left .brand-stars__item:nth-child(8)  { left: 20%; bottom: 10px; top: auto; }
-  .brand-stars--left .brand-stars__item:nth-child(9)  { left: 8%;  bottom: 4px; top: auto; }
-  .brand-stars--left .brand-stars__item:nth-child(10) { left: 4%;  top: 18%; }
-  .brand-stars--left .brand-stars__item:nth-child(11) { left: 16%; bottom: 3px; top: auto; }
-  .brand-stars--left .brand-stars__item:nth-child(12) { left: 10%; bottom: 14px; top: auto; }
-  /* между заголовком и слоганом */
-  .brand-stars--left .brand-stars__item:nth-child(13) { left: 10%; top: 40%; display: block !important; }
-  .brand-stars--left .brand-stars__item:nth-child(14) { left: 22%; top: 43%; display: block !important; }
-  .brand-stars--left .brand-stars__item:nth-child(15) { left: 34%; top: 41%; display: block !important; }
-  .brand-stars--left .brand-stars__item:nth-child(16) { left: 46%; top: 44%; display: block !important; }
-  /* под нижней строкой слогана */
-  .brand-stars--left .brand-stars__item:nth-child(17) { left: 30%; bottom: 6px; top: auto; display: block !important; }
-  .brand-stars--left .brand-stars__item:nth-child(18) { left: 42%; bottom: 3px; top: auto; display: block !important; }
-
-  .brand-stars--right .brand-stars__item:nth-child(1)  { left: auto; right: 3%;  top: 7px; }
-  .brand-stars--right .brand-stars__item:nth-child(2)  { left: auto; right: 14%; top: 2px; }
-  .brand-stars--right .brand-stars__item:nth-child(3)  { left: auto; right: 26%; top: 9px; }
-  .brand-stars--right .brand-stars__item:nth-child(4)  { left: auto; right: 38%; top: 3px; }
-  .brand-stars--right .brand-stars__item:nth-child(5)  { left: auto; right: 2%;  top: 32%; }
-  .brand-stars--right .brand-stars__item:nth-child(6)  { left: auto; right: 2%;  top: 56%; }
-  .brand-stars--right .brand-stars__item:nth-child(7)  { left: auto; right: 3%;  top: 74%; }
-  .brand-stars--right .brand-stars__item:nth-child(8)  { left: auto; right: 20%; bottom: 10px; top: auto; }
-  .brand-stars--right .brand-stars__item:nth-child(9)  { left: auto; right: 8%;  bottom: 4px; top: auto; }
-  .brand-stars--right .brand-stars__item:nth-child(10) { left: auto; right: 4%;  top: 20%; }
-  .brand-stars--right .brand-stars__item:nth-child(11) { left: auto; right: 16%; bottom: 3px; top: auto; }
-  .brand-stars--right .brand-stars__item:nth-child(12) { left: auto; right: 10%; bottom: 14px; top: auto; }
-  /* между заголовком и слоганом */
-  .brand-stars--right .brand-stars__item:nth-child(13) { left: auto; right: 10%; top: 40%; display: block !important; }
-  .brand-stars--right .brand-stars__item:nth-child(14) { left: auto; right: 22%; top: 43%; display: block !important; }
-  .brand-stars--right .brand-stars__item:nth-child(15) { left: auto; right: 34%; top: 41%; display: block !important; }
-  .brand-stars--right .brand-stars__item:nth-child(16) { left: auto; right: 8%;  top: 45%; display: block !important; }
-  /* под нижней строкой слогана */
-  .brand-stars--right .brand-stars__item:nth-child(17) { left: auto; right: 30%; bottom: 6px; top: auto; display: block !important; }
-  .brand-stars--right .brand-stars__item:nth-child(18) { left: auto; right: 42%; bottom: 3px; top: auto; display: block !important; }
 
   .brand-stars__item--extra {
-    display: block !important;
+    display: block;
   }
 
-  .brand-stars--left .brand-stars__item--lg,
-  .brand-stars--right .brand-stars__item--lg { font-size: 1.15rem; }
-  .brand-stars--left .brand-stars__item--md,
-  .brand-stars--right .brand-stars__item--md { font-size: 0.95rem; }
-  .brand-stars--left .brand-stars__item--sm,
-  .brand-stars--right .brand-stars__item--sm { font-size: 0.8rem; }
-  .brand-stars--left .brand-stars__item--xs,
-  .brand-stars--right .brand-stars__item--xs { font-size: 0.68rem; }
-  .brand-stars--left .brand-stars__item--tiny,
-  .brand-stars--right .brand-stars__item--tiny { font-size: 0.58rem; }
+  /* Неровная россыпь только в полях вокруг текста: сверху/снизу любые x, по бокам только узкий край. */
+  .brand-stars--left .brand-stars__item:nth-child(1)  { left: 4%;  right: auto; top: 4px;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(2)  { left: 18%; right: auto; top: 18px; bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(3)  { left: 1px; right: auto; top: 34%;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(4)  { left: 33%; right: auto; top: 7px;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(5)  { left: 8px; right: auto; top: 62%;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(6)  { left: 9%;  right: auto; top: auto; bottom: 6px; }
+  .brand-stars--left .brand-stars__item:nth-child(7)  { left: 47%; right: auto; top: 22px; bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(8)  { left: 2px; right: auto; top: 20%;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(9)  { left: 61%; right: auto; top: 11px; bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(10) { left: 5px; right: auto; top: auto; bottom: 18px; }
+  .brand-stars--left .brand-stars__item:nth-child(11) { left: 26%; right: auto; top: auto; bottom: 3px; }
+  .brand-stars--left .brand-stars__item:nth-child(12) { left: 3px; right: auto; top: 78%;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(13) { left: 55%; right: auto; top: auto; bottom: 16px; }
+  .brand-stars--left .brand-stars__item:nth-child(14) { left: 12%; right: auto; top: 28px; bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(15) { left: 7px; right: auto; top: 48%;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(16) { left: 39%; right: auto; top: auto; bottom: 10px; }
+  .brand-stars--left .brand-stars__item:nth-child(17) { left: 74%; right: auto; top: 2px;  bottom: auto; }
+  .brand-stars--left .brand-stars__item:nth-child(18) { left: 1px; right: auto; top: 90%;  bottom: auto; }
+
+  .brand-stars--right .brand-stars__item:nth-child(1)  { left: auto; right: 8%;  top: 14px; bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(2)  { left: auto; right: 22%; top: 3px;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(3)  { left: auto; right: 2px; top: 29%;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(4)  { left: auto; right: 41%; top: 20px; bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(5)  { left: auto; right: 9px; top: 70%;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(6)  { left: auto; right: 14%; top: auto; bottom: 12px; }
+  .brand-stars--right .brand-stars__item:nth-child(7)  { left: auto; right: 36%; top: auto; bottom: 2px; }
+  .brand-stars--right .brand-stars__item:nth-child(8)  { left: auto; right: 1px; top: 50%;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(9)  { left: auto; right: 53%; top: 9px;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(10) { left: auto; right: 6px; top: auto; bottom: 22px; }
+  .brand-stars--right .brand-stars__item:nth-child(11) { left: auto; right: 15%; top: 26px; bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(12) { left: auto; right: 4px; top: 84%;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(13) { left: auto; right: 48%; top: auto; bottom: 8px; }
+  .brand-stars--right .brand-stars__item:nth-child(14) { left: auto; right: 7%;  top: auto; bottom: 15px; }
+  .brand-stars--right .brand-stars__item:nth-child(15) { left: auto; right: 7px; top: 16%;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(16) { left: auto; right: 30%; top: auto; bottom: 20px; }
+  .brand-stars--right .brand-stars__item:nth-child(17) { left: auto; right: 3%;  top: 8px;  bottom: auto; }
+  .brand-stars--right .brand-stars__item:nth-child(18) { left: auto; right: 5px; top: 58%;  bottom: auto; }
+
+  .brand-stars__item--lg { font-size: 1rem; }
+  .brand-stars__item--md { font-size: 0.78rem; }
+  .brand-stars__item--sm { font-size: 0.62rem; }
+  .brand-stars__item--xs { font-size: 0.5rem; }
+  .brand-stars__item--tiny { font-size: 0.42rem; }
 
   .search-row {
     padding: 8px 0;
@@ -4550,34 +4541,6 @@ select.form-input {
   :root {
     --page-pad: 16px;
     --header-sticky-height: 92px;
-  }
-
-  .brand-banner {
-    min-height: 0;
-    padding: 12px 8px 12px;
-  }
-
-  .brand-banner__content {
-    padding: 2px 22px;
-    margin-top: 0;
-  }
-
-  .brand-banner__title {
-    font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
-    font-size: clamp(1.1rem, 6.2vw, 1.75rem);
-    font-weight: 900;
-    letter-spacing: 0.015em;
-  }
-
-  .brand-banner__tagline {
-    position: static;
-    transform: none;
-    font-family: "Arial Black", "Arial Bold", Arial, sans-serif;
-    font-size: clamp(0.7rem, 3.4vw, 0.9rem);
-    font-weight: 900;
-    margin-top: 4px;
-    white-space: normal;
-    max-width: 100%;
   }
 
   .topbar__inner {
