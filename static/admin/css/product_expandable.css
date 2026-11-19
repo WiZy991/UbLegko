@@ -898,62 +898,36 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     max-width: none;
   }
 
+  /* Та же вёрстка, что на компьютере: сетка полей, описания на всю ширину, фото рядом */
   .product-row-detail__inner {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: flex-start;
-    gap: 12px;
-    width: max-content;
-    min-width: max-content;
+    display: block;
+    width: 100%;
+    min-width: 860px;
     max-width: none;
     box-sizing: border-box;
-    padding: 12px;
   }
 
   .product-row-detail__grid {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: nowrap;
-    gap: 12px;
-    width: max-content;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    width: 100%;
     max-width: none;
-    margin: 0;
   }
 
-  .product-row-detail__grid > div,
   .product-row-detail__block {
-    flex: 0 0 200px;
-    width: 200px;
-    min-width: 200px;
-    max-width: 200px;
-    margin: 0;
-  }
-
-  .product-row-detail__block:has(.product-row-detail__textarea) {
-    flex-basis: 280px;
-    width: 280px;
-    min-width: 280px;
-    max-width: 280px;
-  }
-
-  .product-row-detail__block:has(.product-row-detail__gallery) {
-    flex: 0 0 auto;
-    width: auto;
+    display: block;
+    width: 100%;
     min-width: 0;
     max-width: none;
+    flex: none;
   }
 
   .product-row-detail__actions {
-    flex: 0 0 auto;
+    display: flex;
     flex-direction: row;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 8px;
-    width: auto;
-    min-width: 0;
+    flex-wrap: wrap;
+    width: 100%;
     max-width: none;
-    margin: 0;
   }
 
   .product-row-detail__actions .button,
@@ -965,10 +939,10 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   }
 
   .product-row-detail__photos-row {
-    flex-wrap: nowrap;
-    gap: 8px;
-    width: max-content;
-    max-width: none;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: 100%;
+    max-width: calc(8 * 140px + 7 * 12px);
   }
 
   .product-row-detail__photos-row > .product-row-detail__photo {
