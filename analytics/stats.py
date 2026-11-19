@@ -341,7 +341,7 @@ def build_site_stats_context(request, *, default_period='today'):
     chart = build_chart_data(date_from, date_to, site_qs, product_qs, tz)
     visit_rows = _fetch_visit_rows(site_qs)
     total_site_visits = site_qs.count()
-    online_since = timezone.now() - timedelta(minutes=5)
+    online_since = timezone.now() - timedelta(seconds=3)
     online_now = (
         SiteVisit.objects.filter(last_hit_at__gte=online_since)
         .values('visitor_key')

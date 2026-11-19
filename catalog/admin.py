@@ -446,12 +446,62 @@ class ProductAdmin(admin.ModelAdmin):
         js = ('admin/js/price_input_format.js',)
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
+        if db_field.name == 'category' and getattr(request, '_product_admin_list', False):
+            return self.formfield_for_foreignkey(db_field, request, **kwargs)
         if db_field.name in {'price', 'old_price'}:
             return db_field.formfield(
                 form_class=GroupedDecimalField,
                 **kwargs,
             )
+        if db_field.name in {'description', 'price_tag_description'}:
+            kwargs['widget'] = forms.Textarea(attrs={
+                'rows': 8,
+                'class': 'vLargeTextField product-admin-textarea',
+            })
         return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        # В длинном списке обычный select: autocomplete/select2 на каждой строке
+        # раздувает страницу и инициализируется сотни раз.
+        if db_field.name == 'category' and getattr(request, '_product_admin_list', False):
+            kwargs['widget'] = forms.Select(attrs={'class': 'product-category-select'})
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_changelist_form(self, request, **kwargs):
+        labels = self._category_labels(request)
+
+        class ProductChangeListForm(forms.ModelForm):
+            def __init__(self, *args, **form_kwargs):
+                super().__init__(*args, **form_kwargs)
+                field = self.fields.get('category')
+                if field is None:
+                    return
+                pk = getattr(self.instance, 'category_id', None)
+                if pk:
+                    field.choices = [(pk, labels.get(pk) or str(pk))]
+                else:
+                    field.choices = [('', '---------')]
+
+        kwargs['form'] = ProductChangeListForm
+        return super().get_changelist_form(request, **kwargs)
+
+    def _category_labels(self, request):
+        labels = getattr(request, '_product_category_labels', None)
+        if labels is None:
+            self._category_choices(request)
+            labels = request._product_category_labels
+        return labels
+
+    def _category_choices(self, request):
+        cached = getattr(request, '_product_category_choices', None)
+        if cached is None:
+            cached = list(
+                Category.objects.order_by('sort_order', 'name').values_list('pk', 'name')
+            )
+            request._product_category_choices = cached
+            request._product_category_labels = dict(cached)
+        return cached
+
     fieldsets = (
         ('Основная информация', {
             'fields': (
@@ -476,7 +526,7 @@ class ProductAdmin(admin.ModelAdmin):
                 'Слаг создаётся сам из названия. '
                 'Если указать «Старую цену» — товар станет акцией (бэйдж на сайте). '
                 '«Новинка» — синий лейбл, «Хит продаж» — жёлтый. '
-                '«Описание для цены» на сайте не показывается. '
+                '«Описание для ценника» на сайте не показывается. '
                 '«Рекомендация» — номера групп через запятую (1 или 1,3,5).'
             ),
         }),
@@ -492,7 +542,16 @@ class ProductAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         # Галерею не prefetch'им на весь список — фото подгружаются при раскрытии строки
-        return super().get_queryset(request).select_related('category')
+        qs = super().get_queryset(request).select_related('category')
+        if getattr(request, '_product_admin_list', False):
+            qs = qs.defer(
+                'description',
+                'price_tag_description',
+                'search_text',
+                'seo_title',
+                'seo_description',
+            )
+        return qs
 
     def get_ordering(self, request):
         sort = request.GET.get('sort')
@@ -527,10 +586,14 @@ class ProductAdmin(admin.ModelAdmin):
         return qs, False
 
     def changelist_view(self, request, extra_context=None):
+        request._product_admin_list = True
         extra_context = extra_context or {}
         extra_context['product_search_suggest_url'] = reverse(
             'admin:catalog_product_search_suggest'
         )
+        extra_context['product_category_choices'] = [
+            [pk, name] for pk, name in self._category_choices(request)
+        ]
         response = super().changelist_view(request, extra_context=extra_context)
         if not hasattr(response, 'context_data'):
             return response
@@ -707,14 +770,14 @@ class ProductAdmin(admin.ModelAdmin):
             '<div><span class="product-row-detail__label">Создан</span> {}</div>'
             '</div>'
             '<div class="product-row-detail__block">'
-            '<span class="product-row-detail__label">Описание</span>'
-            '<textarea class="vLargeTextField product-row-detail__input product-row-detail__textarea" '
-            'data-quick-field="description">{}</textarea>'
+            '<span class="product-row-detail__label">Описание товара</span>'
+            '<textarea class="vLargeTextField product-admin-textarea product-row-detail__input product-row-detail__textarea" '
+            'rows="8" data-quick-field="description">{}</textarea>'
             '</div>'
             '<div class="product-row-detail__block">'
-            '<span class="product-row-detail__label">Описание для цены</span>'
-            '<textarea class="vLargeTextField product-row-detail__input product-row-detail__textarea" '
-            'data-quick-field="price_tag_description">{}</textarea>'
+            '<span class="product-row-detail__label">Описание для ценника</span>'
+            '<textarea class="vLargeTextField product-admin-textarea product-row-detail__input product-row-detail__textarea" '
+            'rows="8" data-quick-field="price_tag_description">{}</textarea>'
             '</div>'
             '<div class="product-row-detail__block">'
             '<span class="product-row-detail__label">Фото</span>'

@@ -3,6 +3,69 @@
 
   var baselines = {};
 
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function categoryChoices() {
+    var node = document.getElementById('product-category-choices');
+    if (!node) return [];
+    try {
+      return JSON.parse(node.textContent);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  function fillCategorySelect(select) {
+    if (!select || select.getAttribute('data-category-filled') === '1') return;
+    var current = String(select.value || '');
+    var choices = categoryChoices();
+    var html = '';
+    var seen = false;
+    for (var i = 0; i < choices.length; i++) {
+      var id = String(choices[i][0]);
+      if (id === current) seen = true;
+      html +=
+        '<option value="' +
+        escapeHtml(id) +
+        '"' +
+        (id === current ? ' selected' : '') +
+        '>' +
+        escapeHtml(choices[i][1]) +
+        '</option>';
+    }
+    if (current && !seen) {
+      var currentLabel = select.options.length ? select.options[0].text : current;
+      html =
+        '<option value="' +
+        escapeHtml(current) +
+        '" selected>' +
+        escapeHtml(currentLabel) +
+        '</option>' +
+        html;
+    }
+    select.innerHTML = html;
+    select.setAttribute('data-category-filled', '1');
+  }
+
+  document.addEventListener(
+    'mousedown',
+    function (event) {
+      var select = event.target.closest && event.target.closest('select.product-category-select');
+      if (select) fillCategorySelect(select);
+    },
+    true
+  );
+  document.addEventListener('focusin', function (event) {
+    var select = event.target.closest && event.target.closest('select.product-category-select');
+    if (select) fillCategorySelect(select);
+  });
+
   function getCookie(name) {
     var matches = document.cookie.match(
       new RegExp('(?:^|; )' + name.replace(/([.$?*|{}()[\]\\/+^])/g, '\\$1') + '=([^;]*)')

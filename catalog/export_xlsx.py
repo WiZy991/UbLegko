@@ -24,11 +24,13 @@ COL_WIDTHS = {
     'C': 18,   # Название
     'D': 105,  # Описание
     'E': 10,
-    'F': 12,
-    'G': 10,
-    'H': 14,
+    'F': 12,   # Акция
+    'G': 12,   # Новинка
+    'H': 14,   # Хит продаж
+    'I': 10,
+    'J': 14,
 }
-NUM_COLS = 8
+NUM_COLS = 10
 ROW_HEIGHT_MIN = 22
 ROW_HEIGHT_MIN_WITH_PHOTO = 52
 ROW_HEIGHT_MAX = 280
@@ -88,15 +90,26 @@ def _row_height_for_content(
     return max(min_h, min(ROW_HEIGHT_MAX, height))
 
 
-def _badge_akciya_path() -> Path | None:
+def _badge_file(filename: str) -> Path | None:
     candidates = [
-        Path(settings.BASE_DIR) / 'static' / 'img' / 'badge-akciya.png',
-        Path(settings.STATIC_ROOT) / 'img' / 'badge-akciya.png' if settings.STATIC_ROOT else None,
+        Path(settings.BASE_DIR) / 'static' / 'img' / filename,
+        Path(settings.STATIC_ROOT) / 'img' / filename if settings.STATIC_ROOT else None,
     ]
     for path in candidates:
         if path and path.is_file():
             return path
     return None
+
+
+def _badge_cache(filename: str) -> tuple[bytes, int, int] | None:
+    path = _badge_file(filename)
+    if not path:
+        return None
+    result = _thumb_bytes(path, BADGE_THUMB)
+    if not result:
+        return None
+    buf, iw, ih = result
+    return buf.getvalue(), iw, ih
 
 
 def _product_image_path(product: Product) -> Path | None:
@@ -219,7 +232,9 @@ def _write_product_row(
     wrap: Alignment,
     center: Alignment,
     image_buffers: list[BytesIO],
-    badge_cache: tuple[bytes, int, int] | None,
+    badge_promo: tuple[bytes, int, int] | None,
+    badge_new: tuple[bytes, int, int] | None,
+    badge_hit: tuple[bytes, int, int] | None,
 ) -> None:
     is_promo = bool(product.is_promo or (product.old_price and product.old_price > 0))
     path = _product_image_path(product)
@@ -243,35 +258,44 @@ def _write_product_row(
                 img_h=ih,
             )
 
-    if is_promo and badge_cache:
-        raw, iw, ih = badge_cache
-        buf = BytesIO(raw)
-        image_buffers.append(buf)
-        _add_image_centered_in_cell(
-            ws,
-            buf,
-            col_idx=6,
-            row_idx=row_idx,
-            col_width_excel=COL_WIDTHS['F'],
-            row_height_pt=row_height,
-            img_w=iw,
-            img_h=ih,
-        )
-
     values = [
         '',
         product.sku or '',
         name,
         description,
         _price_or_status(product),
-        '',
+        '' if (is_promo and badge_promo) else ('Да' if is_promo else ''),
+        '' if (product.is_new and badge_new) else ('Да' if product.is_new else ''),
+        '' if (product.is_hit and badge_hit) else ('Да' if product.is_hit else ''),
         float(product.rating) if product.rating is not None else '',
         product.country or '',
     ]
     for col, value in enumerate(values, start=1):
         cell = ws.cell(row_idx, col, value)
         cell.border = thin
-        cell.alignment = center if col in (1, 2, 5, 6, 7, 8) else wrap
+        cell.alignment = center if col in (1, 2, 5, 6, 7, 8, 9, 10) else wrap
+
+    flags = (
+        (6, 'F', is_promo, badge_promo),
+        (7, 'G', bool(product.is_new), badge_new),
+        (8, 'H', bool(product.is_hit), badge_hit),
+    )
+    for col_idx, letter, active, cache in flags:
+        if not active or not cache:
+            continue
+        raw, iw, ih = cache
+        buf = BytesIO(raw)
+        image_buffers.append(buf)
+        _add_image_centered_in_cell(
+            ws,
+            buf,
+            col_idx=col_idx,
+            row_idx=row_idx,
+            col_width_excel=COL_WIDTHS[letter],
+            row_height_pt=row_height,
+            img_w=iw,
+            img_h=ih,
+        )
 
     ws.row_dimensions[row_idx].height = row_height
 
@@ -295,6 +319,8 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
         'Описание',
         'Цена / статус',
         'Акция',
+        'Новинка',
+        'Хит продаж',
         'Рейтинг',
         'Страна',
     ]
@@ -323,13 +349,9 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
     ws.freeze_panes = 'A2'
 
     image_buffers: list[BytesIO] = []
-    badge_path = _badge_akciya_path()
-    badge_cache: tuple[bytes, int, int] | None = None
-    if badge_path:
-        badge_result = _thumb_bytes(badge_path, BADGE_THUMB)
-        if badge_result:
-            buf, iw, ih = badge_result
-            badge_cache = (buf.getvalue(), iw, ih)
+    badge_promo = _badge_cache('badge-akciya.png')
+    badge_new = _badge_cache('badge-novinka.png')
+    badge_hit = _badge_cache('badge-hit.png')
     row_idx = 2
 
     for category_key, group in groupby(
@@ -356,7 +378,9 @@ def build_catalog_xlsx(*, site_origin: str = '') -> bytes:
                 wrap=wrap,
                 center=center,
                 image_buffers=image_buffers,
-                badge_cache=badge_cache,
+                badge_promo=badge_promo,
+                badge_new=badge_new,
+                badge_hit=badge_hit,
             )
             row_idx += 1
 
