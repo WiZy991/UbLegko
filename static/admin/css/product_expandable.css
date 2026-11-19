@@ -135,8 +135,9 @@
   display: none !important;
 }
 
+/* Страница не ездит целиком — скролл только у .results */
 body.model-product.change-list {
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 .model-product #changelist,
@@ -147,14 +148,16 @@ body.model-product.change-list {
 }
 
 .model-product #changelist .results {
-  overflow-x: hidden !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
 }
 
 #result_list {
   table-layout: fixed;
   width: 100% !important;
-  max-width: 100% !important;
-  min-width: 0 !important;
+  max-width: none;
+  min-width: 0;
 }
 
 #result_list th,
@@ -165,6 +168,26 @@ body.model-product.change-list {
   min-width: 0;
   overflow: hidden;
   white-space: normal !important;
+}
+
+/* Галочка и ▼ не сжимать и не обрезать */
+#result_list th.action-checkbox-column,
+#result_list td.action-checkbox,
+#result_list .action-checkbox {
+  width: 40px !important;
+  min-width: 40px !important;
+  max-width: 40px !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
+}
+
+#result_list th.column-expand_toggle,
+#result_list td.field-expand_toggle {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  overflow: visible !important;
+  white-space: nowrap !important;
 }
 
 #result_list th {
@@ -239,7 +262,6 @@ body.model-product.change-list {
 }
 
 #result_list .field-expand_toggle {
-  width: 44px;
   text-align: center;
   vertical-align: middle;
 }
@@ -734,55 +756,121 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   color: #fff;
 }
 
-/* Узкий экран: таблица остаётся в ширине окна, без горизонтального скролла */
-@media (max-width: 1100px) {
+/* Телефон: таблицу можно двигать в стороны, ▼ не уезжает */
+@media (max-width: 900px) {
+  html:has(body.model-product.change-list),
+  body.model-product.change-list,
+  body.model-product.change-list .wrapper,
+  body.model-product.change-list .app-wrapper,
+  body.model-product.change-list .app-main,
+  body.model-product.change-list #content,
+  body.model-product.change-list #content-main,
+  body.model-product.change-list #changelist,
+  body.model-product.change-list #changelist-form,
+  body.model-product.change-list .card,
+  body.model-product.change-list .card-body {
+    overflow-x: visible !important;
+  }
+
+  .model-product #changelist .results,
+  body.model-product #changelist .results {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
+  }
+
+  #result_list {
+    table-layout: auto !important;
+    width: max-content !important;
+    min-width: 980px !important;
+    max-width: none !important;
+  }
+
   #result_list th.column-old_price,
   #result_list td.field-old_price,
   #result_list th.column-recommendation_codes,
   #result_list td.field-recommendation_codes,
   #result_list th.column-has_main_photo,
-  #result_list td.field-has_main_photo {
-    display: none !important;
+  #result_list td.field-has_main_photo,
+  #result_list th.column-is_visible,
+  #result_list td.field-is_visible,
+  #result_list th.column-is_new,
+  #result_list td.field-is_new,
+  #result_list th.column-is_hit,
+  #result_list td.field-is_hit {
+    display: table-cell !important;
   }
-}
 
-@media (max-width: 900px) {
-  #changelist .results,
-  .app-main .results {
-    overflow-x: hidden !important;
+  /* Галочка и ▼ — sticky слева, чтобы раскрытие не уезжало */
+  #result_list th.action-checkbox-column,
+  #result_list td.action-checkbox,
+  #result_list .action-checkbox {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    background: #fff;
+    box-shadow: 1px 0 0 #dbe5eb;
   }
 
-  #result_list {
-    table-layout: fixed !important;
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
+  #result_list th.column-expand_toggle,
+  #result_list td.field-expand_toggle {
+    position: sticky;
+    left: 40px;
+    z-index: 4;
+    background: #fff;
+    box-shadow: 2px 0 6px rgba(15, 28, 36, 0.08);
+  }
+
+  html[data-bs-theme="dark"] #result_list th.action-checkbox-column,
+  html[data-bs-theme="dark"] #result_list td.action-checkbox,
+  html[data-bs-theme="dark"] #result_list th.column-expand_toggle,
+  html[data-bs-theme="dark"] #result_list td.field-expand_toggle {
+    background: #1e2a32;
   }
 
   #result_list th.column-name,
   #result_list td.field-name,
-  #result_list .field-name,
+  #result_list .field-name {
+    min-width: 160px !important;
+    max-width: 220px !important;
+    width: 200px !important;
+    white-space: normal;
+  }
+
   #result_list .field-name input {
     min-width: 0 !important;
     max-width: 100% !important;
     width: 100% !important;
-    white-space: normal;
   }
 
   #result_list .field-price,
-  #result_list .field-price input,
+  #result_list .field-price input {
+    min-width: 72px !important;
+    width: 88px !important;
+  }
+
   #result_list .field-category,
   #result_list .field-category select,
-  #result_list .field-category .select2-container,
+  #result_list .field-category .select2-container {
+    min-width: 120px !important;
+    width: 140px !important;
+    max-width: 160px !important;
+  }
+
   #result_list .field-status,
   #result_list .field-status select {
-    width: 100% !important;
-    min-width: 0 !important;
-    max-width: 100% !important;
+    min-width: 100px !important;
+    width: 120px !important;
   }
 
   #result_list .field-row_save {
     width: 84px;
+    min-width: 84px;
   }
 
   #result_list .product-row-save {
@@ -792,16 +880,30 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     font-size: 11px;
   }
 
+  .product-row-expand {
+    width: 44px !important;
+    height: 44px !important;
+    pointer-events: auto !important;
+    touch-action: manipulation;
+    position: relative;
+    z-index: 5;
+  }
+
   .product-row-detail td {
     position: sticky;
     left: 0;
     z-index: 2;
+    overflow: visible !important;
     background: #f4f8fb;
+    box-sizing: border-box;
   }
 
   .product-row-detail__inner {
-    max-width: 100%;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
     box-sizing: border-box;
+    padding-left: 12px;
+    padding-right: 12px;
   }
 
   .product-row-detail__actions {
@@ -819,7 +921,7 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
 
   .product-row-detail__photos-row {
     gap: 8px;
-    max-width: calc(8 * 140px + 7 * 8px);
+    max-width: 100%;
   }
 
   .product-row-detail__photos-row > .product-row-detail__photo {
@@ -839,18 +941,8 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
 }
 
 @media (max-width: 600px) {
-  #result_list th.column-is_visible,
-  #result_list td.field-is_visible {
-    display: none !important;
-  }
-
-  #result_list th.column-name,
-  #result_list td.field-name,
-  #result_list .field-name,
-  #result_list .field-name input {
-    min-width: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
+  #result_list {
+    min-width: 980px !important;
   }
 }
 
