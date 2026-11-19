@@ -2,8 +2,9 @@ from datetime import timedelta
 
 from django.contrib import admin, messages
 from django.db.models import Count, Max
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
-from django.urls import reverse
+from django.urls import path, reverse
 from django.utils import timezone
 
 from core.analytics import (
@@ -14,7 +15,7 @@ from core.analytics import (
 )
 
 from .models import SearchStatistics, SiteStatistics
-from .stats import build_site_stats_context
+from .stats import build_site_stats_context, count_online_now
 
 
 @admin.register(SiteStatistics)
@@ -32,6 +33,23 @@ class SiteStatisticsAdmin(admin.ModelAdmin):
 
     def has_view_permission(self, request, obj=None):
         return request.user.is_staff
+
+    def get_urls(self):
+        custom = [
+            path(
+                'online/',
+                self.admin_site.admin_view(self.online_now_view),
+                name='analytics_sitestatistics_online',
+            ),
+        ]
+        return custom + super().get_urls()
+
+    def online_now_view(self, request):
+        if request.method != 'GET':
+            return JsonResponse({'ok': False}, status=405)
+        if not request.user.is_staff:
+            return JsonResponse({'ok': False}, status=403)
+        return JsonResponse({'ok': True, 'online_now': count_online_now()})
 
     def changelist_view(self, request, extra_context=None):
         if request.method == 'POST':

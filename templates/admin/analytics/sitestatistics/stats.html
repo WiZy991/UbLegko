@@ -373,7 +373,7 @@
     </div>
     <div class="product-stats__card">
       <div class="product-stats__card-label">Сейчас на сайте</div>
-      <div class="product-stats__card-value">{{ online_now }}</div>
+      <div class="product-stats__card-value" id="site-online-now" data-online-url="{% url 'admin:analytics_sitestatistics_online' %}">{{ online_now }}</div>
     </div>
   </div>
 
@@ -581,6 +581,31 @@
       },
     },
   });
+  });
+</script>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var node = document.getElementById('site-online-now');
+    if (!node) return;
+    var url = node.getAttribute('data-online-url');
+    if (!url) return;
+
+    function tick() {
+      if (document.hidden) return;
+      fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}, credentials: 'same-origin'})
+        .then(function (response) { return response.ok ? response.json() : null; })
+        .then(function (data) {
+          if (!data || !data.ok || data.online_now == null) return;
+          var next = String(data.online_now);
+          if (node.textContent !== next) node.textContent = next;
+        })
+        .catch(function () {});
+    }
+
+    window.setInterval(tick, 1000);
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) tick();
+    });
   });
 </script>
 {% endblock %}

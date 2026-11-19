@@ -20,6 +20,19 @@ from core.models import ProductPageView, SiteVisit
 
 logger = logging.getLogger(__name__)
 
+ONLINE_WINDOW = timedelta(seconds=3)
+
+
+def count_online_now() -> int:
+    """Сколько разных посетителей открывали витрину в последние секунды."""
+    online_since = timezone.now() - ONLINE_WINDOW
+    return (
+        SiteVisit.objects.filter(last_hit_at__gte=online_since)
+        .values('visitor_key')
+        .distinct()
+        .count()
+    )
+
 # days=None — особый период (не «N дней до сегодня»)
 STATS_PERIODS = (
     ('yesterday', 'Вчера', None),
@@ -341,13 +354,7 @@ def build_site_stats_context(request, *, default_period='today'):
     chart = build_chart_data(date_from, date_to, site_qs, product_qs, tz)
     visit_rows = _fetch_visit_rows(site_qs)
     total_site_visits = site_qs.count()
-    online_since = timezone.now() - timedelta(seconds=3)
-    online_now = (
-        SiteVisit.objects.filter(last_hit_at__gte=online_since)
-        .values('visitor_key')
-        .distinct()
-        .count()
-    )
+    online_now = count_online_now()
     device_summary = _device_summary(site_qs)
     chart_granularity = chart['granularity']
     ddos_hits, ddos_window = get_ddos_rate_limits()
