@@ -305,6 +305,13 @@
       background: #e8f6fb;
       border-color: #00acd7;
     }
+    .product-stats__blocked {
+      margin: 0 0 18px;
+      padding: 12px 14px;
+      border: 1px solid #e3b4b4;
+      border-radius: 10px;
+      background: #fff6f6;
+    }
   </style>
 {% endblock %}
 
@@ -321,13 +328,15 @@
     <input type="hidden" name="action" value="save_ddos_limits">
     <p class="product-stats__ddos-title">Защита от роботов (блокировка IP)</p>
     <p class="product-stats__ddos-hint">
-      Если с одного IP приходит столько запросов за указанное время — сайт блокирует IP на 1 час.
+      Хит — это заход на сайт, не переход между страницами.
+      Человек открыл сайт и смотрит товары — это один хит.
+      Много отдельных заходов с одного IP за окно времени — блокировка на 1 час.
       Сейчас: {{ ddos_rate_limit_hits }} хитов за {{ ddos_rate_window_seconds }} сек.
       Если ловит обычных людей — увеличьте хиты или секунды.
     </p>
     <div>
       <label for="id_ddos_hits">Хитов</label>
-      <input id="id_ddos_hits" type="number" name="ddos_rate_limit_hits" min="5" max="500" step="1" value="{{ ddos_rate_limit_hits }}" required>
+      <input id="id_ddos_hits" type="number" name="ddos_rate_limit_hits" min="2" max="500" step="1" value="{{ ddos_rate_limit_hits }}" required>
     </div>
     <div>
       <label for="id_ddos_seconds">Секунд</label>
@@ -337,6 +346,45 @@
       <button type="submit" class="default" style="margin:0;">Сохранить порог</button>
     </div>
   </form>
+
+  <div class="product-stats__blocked">
+    <p class="product-stats__ddos-title">Сейчас заблокированы</p>
+    {% if has_blocked_ips %}
+    <div class="results" style="overflow-x:auto;">
+      <table style="width:100%;">
+        <thead>
+          <tr>
+            <th>IP</th>
+            <th>Город</th>
+            <th>Устройство</th>
+            <th>До</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for block in blocked_ip_rows %}
+          <tr>
+            <td class="product-stats__visitor-ip">{{ block.ip_address }}</td>
+            <td>{{ block.geo_place|default:"—" }}</td>
+            <td>{{ block.device|default:"—" }}</td>
+            <td>{{ block.blocked_until|date:"d.m.Y H:i" }}</td>
+            <td>
+              <form method="post" class="product-stats__ip-unblock-form" action="?{{ request.GET.urlencode }}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="unblock_ip">
+                <input type="hidden" name="ip_address" value="{{ block.ip_address }}">
+                <button type="submit" class="product-stats__ip-unblock">Разблокировать</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="product-stats__ddos-hint" style="margin:0;">Сейчас никто не заблокирован.</p>
+    {% endif %}
+  </div>
 
   <div class="product-stats__periods" role="group" aria-label="Период">
     {% for item in period_choices %}
@@ -507,8 +555,6 @@
       {% endif %}
     </div>
   </details>
-</div>
-
 <script>
   document.addEventListener('DOMContentLoaded', function () {
   var chartData = {{ chart_data_json|safe }};
@@ -608,4 +654,5 @@
     });
   });
 </script>
+</div>
 {% endblock %}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import datetime, time, timedelta
+from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
@@ -20,7 +21,7 @@ FREEZE_MINUTES = 5
 RATE_WINDOW_SECONDS = 10
 RATE_LIMIT_HITS = 15
 BLOCK_DURATION = timedelta(hours=1)
-_MIN_RATE_HITS = 5
+_MIN_RATE_HITS = 2
 _MAX_RATE_HITS = 500
 _MIN_RATE_WINDOW = 3
 _MAX_RATE_WINDOW = 300
@@ -86,13 +87,63 @@ def _is_staff_user(request) -> bool:
     )
 
 
-def _should_rate_limit_request(request) -> bool:
+def _is_uncounted_path(request) -> bool:
     path = (request.path or '/').split('?', 1)[0]
-    if path == '/presence/':
-        return False
+    bare = path.rstrip('/') or '/'
+    if bare == '/presence':
+        return True
     if path.startswith('/static/') or path.startswith('/media/'):
-        return False
+        return True
     if path in {'/favicon.ico', '/robots.txt'}:
+        return True
+    if bare.endswith('/inbox-counts'):
+        return True
+    if path.startswith('/admin/') and bare.endswith('/online'):
+        return True
+    return False
+
+
+def _is_page_subrequest(request) -> bool:
+    """Картинки, скрипты и fetch со страницы — не заход."""
+    dest = (request.headers.get('Sec-Fetch-Dest') or '').lower()
+    mode = (request.headers.get('Sec-Fetch-Mode') or '').lower()
+    if dest in {'empty', 'script', 'style', 'image', 'font', 'manifest'}:
+        return True
+    if mode in {'cors', 'no-cors', 'websocket'}:
+        return True
+    return False
+
+
+def _is_browsing_request(request) -> bool:
+    """Человек уже на сайте и открыл другую страницу. Это не новый заход."""
+    from django.conf import settings
+
+    if not request.COOKIES.get(settings.SESSION_COOKIE_NAME):
+        return False
+    site = (request.headers.get('Sec-Fetch-Site') or '').lower()
+    if site == 'same-origin':
+        return True
+    referer = request.META.get('HTTP_REFERER') or ''
+    if not referer:
+        return False
+    host = (request.get_host() or '').split(':')[0].lower()
+    ref_host = (urlparse(referer).hostname or '').lower()
+    return bool(host and ref_host == host)
+
+
+def _should_rate_limit_request(request) -> bool:
+    """Хит — только новый заход на сайт, не прогулка по страницам.
+
+    Повторные заходы с одного IP без сессии (бот, DDoS) считаются каждый.
+    Переходы по товарам у того, кто уже открыл сайт, не считаются.
+    """
+    if _is_staff_user(request):
+        return False
+    if _is_uncounted_path(request):
+        return False
+    if _is_page_subrequest(request):
+        return False
+    if _is_browsing_request(request):
         return False
     return True
 
@@ -103,7 +154,7 @@ def should_track_site_visit(request) -> bool:
     path = (request.path or '/').split('?', 1)[0]
     if path.startswith('/admin/'):
         return False
-    if not _should_rate_limit_request(request):
+    if _is_uncounted_path(request) or _is_page_subrequest(request):
         return False
     if (request.headers.get('X-Requested-With') or '').lower() == 'xmlhttprequest':
         return False
@@ -114,13 +165,16 @@ def should_track_site_visit(request) -> bool:
 
 
 def client_ip_for_request(request) -> str | None:
+    """IP клиента. X-Real-IP от nginx важнее начала X-Forwarded-For: его можно подделать."""
     candidates = []
+    xri = (request.META.get('HTTP_X_REAL_IP') or '').strip()
+    if xri:
+        candidates.append(xri)
     xff = request.META.get('HTTP_X_FORWARDED_FOR')
     if xff:
-        candidates.append(xff.split(',')[0].strip())
-    xri = request.META.get('HTTP_X_REAL_IP')
-    if xri:
-        candidates.append(xri.strip())
+        parts = [part.strip() for part in xff.split(',') if part.strip()]
+        if parts:
+            candidates.append(parts[-1])
     candidates.append((request.META.get('REMOTE_ADDR') or '').strip())
 
     for raw in candidates:
@@ -152,6 +206,45 @@ def active_blocked_ips() -> set[str]:
     return set(
         BlockedIP.objects.filter(blocked_until__gt=now).values_list('ip_address', flat=True)
     )
+
+
+def active_blocked_ip_rows() -> list[dict]:
+    """Все действующие блокировки, даже если IP нет в таблице заходов."""
+    from core.models import BlockedIP, SiteVisit
+
+    now = timezone.now()
+    blocks = list(BlockedIP.objects.filter(blocked_until__gt=now).order_by('-created_at'))
+    if not blocks:
+        return []
+
+    geo_by_ip: dict[str, dict] = {}
+    visits = (
+        SiteVisit.objects.filter(ip_address__in=[block.ip_address for block in blocks])
+        .order_by('-visited_at')
+        .values('ip_address', 'geo_country', 'geo_city', 'device')
+    )
+    for row in visits:
+        ip = row.get('ip_address')
+        if ip and ip not in geo_by_ip:
+            geo_by_ip[ip] = row
+
+    rows = []
+    for block in blocks:
+        geo = geo_by_ip.get(block.ip_address) or {}
+        country = (geo.get('geo_country') or '').strip()
+        city = (geo.get('geo_city') or '').strip()
+        if country and city:
+            place = f'{country}, {city}'
+        else:
+            place = country or city
+        rows.append({
+            'ip_address': block.ip_address,
+            'blocked_until': block.blocked_until,
+            'created_at': block.created_at,
+            'geo_place': place,
+            'device': geo.get('device') or '',
+        })
+    return rows
 
 
 def unblock_ip(ip: str) -> bool:
