@@ -162,7 +162,8 @@ body.model-product.change-list {
 
 #result_list.has-user-widths {
   width: max-content !important;
-  min-width: 100%;
+  min-width: max-content !important;
+  max-width: none !important;
 }
 
 #result_list th,

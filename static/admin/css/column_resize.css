@@ -34,10 +34,10 @@ body.product-col-dragging {
   user-select: none;
 }
 
-#result_list.has-user-widths {
+body.change-list #changelist #result_list.has-user-widths {
   table-layout: fixed !important;
   width: max-content !important;
-  min-width: 100%;
+  min-width: max-content !important;
   max-width: none !important;
 }
 

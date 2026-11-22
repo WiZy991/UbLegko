@@ -75,16 +75,64 @@
     return list;
   }
 
-  function syncTableWidth(table) {
+  function columnSelectors(key) {
+    if (key === 'action-checkbox') {
+      return [
+        '#result_list.has-user-widths th.action-checkbox-column',
+        '#result_list.has-user-widths td.action-checkbox',
+        '#result_list.has-user-widths .action-checkbox',
+      ];
+    }
+    if (key.indexOf('column-') !== 0) return [];
+    var field = 'field-' + key.slice('column-'.length);
+    return [
+      '#result_list.has-user-widths th.' + key,
+      '#result_list.has-user-widths td.' + field,
+      '#result_list.has-user-widths .' + field,
+    ];
+  }
+
+  function writeWidthStyle(table, widths) {
     var sum = 0;
-    Array.prototype.forEach.call(table.querySelectorAll('colgroup col'), function (col) {
-      sum += parseFloat(col.style.width) || 0;
+    Object.keys(widths).forEach(function (key) {
+      sum += widths[key] || 0;
+    });
+    var css = 'body.change-list #changelist #result_list.has-user-widths{table-layout:fixed !important;width:' +
+      sum + 'px !important;min-width:' + sum + 'px !important;max-width:none !important;}';
+    Object.keys(widths).forEach(function (key) {
+      var px = widths[key];
+      columnSelectors(key).forEach(function (selector) {
+        css += selector + '{width:' + px + 'px !important;min-width:' + px + 'px !important;max-width:' + px + 'px !important;}';
+      });
+    });
+    var style = document.getElementById('ublegko-col-widths');
+    if (!style) {
+      style = document.createElement('style');
+      style.id = 'ublegko-col-widths';
+      document.head.appendChild(style);
+    }
+    style.textContent = css;
+    table.classList.add('has-user-widths');
+  }
+
+  function syncTableWidth(table) {
+    var headers = table.querySelectorAll('thead th');
+    var cols = table.querySelectorAll('colgroup col');
+    var widths = {};
+    var sum = 0;
+    Array.prototype.forEach.call(headers, function (th, index) {
+      var key = columnKey(th);
+      var width = cols[index] ? parseFloat(cols[index].style.width) || 0 : 0;
+      if (!width) width = Math.round(th.getBoundingClientRect().width);
+      if (key && width) widths[key] = Math.round(width);
+      sum += width || 0;
     });
     if (sum > 0) {
       var px = Math.ceil(sum) + 'px';
       table.style.setProperty('width', px, 'important');
       table.style.setProperty('min-width', px, 'important');
       table.style.setProperty('max-width', 'none', 'important');
+      writeWidthStyle(table, widths);
     }
   }
 
@@ -131,15 +179,20 @@
     saveColumns(stored);
   }
 
+  function applySaved(table) {
+    var saved = loadColumns();
+    if (!Object.keys(saved).length) return;
+    lockAllColumns(table, saved);
+  }
+
   function init() {
     var table = document.getElementById('result_list');
-    if (!table || table.getAttribute('data-col-resize') === '1') return;
+    if (!table) return;
     var headers = table.querySelectorAll('thead th');
     if (!headers.length) return;
+    applySaved(table);
+    if (table.getAttribute('data-col-resize') === '1') return;
     table.setAttribute('data-col-resize', '1');
-
-    var saved = loadColumns();
-    if (Object.keys(saved).length) lockAllColumns(table, saved);
 
     Array.prototype.forEach.call(headers, function (th) {
       if (!canResize(th)) return;
@@ -154,8 +207,7 @@
         event.stopPropagation();
         if (table.getAttribute('data-cols-locked') !== '1') lockAllColumns(table, loadColumns());
         var startX = event.clientX;
-        var col = table.querySelectorAll('colgroup col')[th.cellIndex];
-        var startW = col && parseFloat(col.style.width) ? parseFloat(col.style.width) : th.getBoundingClientRect().width;
+        var startW = th.getBoundingClientRect().width;
         var latest = startW;
         document.body.classList.add('product-col-dragging');
 
@@ -186,4 +238,5 @@
   } else {
     init();
   }
+  window.addEventListener('load', init);
 })();
