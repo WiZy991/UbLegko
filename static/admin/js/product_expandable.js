@@ -1011,15 +1011,66 @@
     return table.querySelectorAll('.' + key + ', .' + field);
   }
 
+  function ensureCols(table) {
+    var group = table.querySelector('colgroup');
+    var count = table.querySelectorAll('thead th').length;
+    if (!group) {
+      group = document.createElement('colgroup');
+      table.insertBefore(group, table.firstChild);
+    }
+    while (group.children.length < count) group.appendChild(document.createElement('col'));
+    return group;
+  }
+
+  function cellsInColumn(table, index) {
+    var list = [];
+    Array.prototype.forEach.call(table.rows, function (row) {
+      var cell = row.cells[index];
+      if (cell && cell.colSpan === 1) list.push(cell);
+    });
+    return list;
+  }
+
+  function syncTableWidth(table) {
+    var cols = table.querySelectorAll('colgroup col');
+    var sum = 0;
+    Array.prototype.forEach.call(cols, function (col) {
+      sum += parseFloat(col.style.width) || 0;
+    });
+    if (sum > 0) {
+      var px = Math.ceil(sum) + 'px';
+      table.style.setProperty('width', px, 'important');
+      table.style.setProperty('min-width', px, 'important');
+    }
+  }
+
   function paintColumnWidth(table, th, px) {
-    var width = Math.max(56, Math.round(px)) + 'px';
-    columnCells(table, th).forEach(function (cell) {
-      if (cell.colSpan > 1) return;
-      cell.style.setProperty('width', width, 'important');
-      cell.style.setProperty('min-width', width, 'important');
-      cell.style.setProperty('max-width', width, 'important');
+    var width = Math.max(48, Math.round(px));
+    var cols = ensureCols(table);
+    var col = cols.children[th.cellIndex];
+    if (col) col.style.width = width + 'px';
+    cellsInColumn(table, th.cellIndex).forEach(function (cell) {
+      var value = width + 'px';
+      cell.style.setProperty('width', value, 'important');
+      cell.style.setProperty('min-width', value, 'important');
+      cell.style.setProperty('max-width', value, 'important');
     });
     table.classList.add('has-user-widths');
+    syncTableWidth(table);
+  }
+
+  function lockAllColumns(table, overrides) {
+    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
+    var measured = headers.map(function (th) {
+      return Math.round(th.getBoundingClientRect().width);
+    });
+    headers.forEach(function (th, index) {
+      var key = columnKey(th);
+      var width = measured[index];
+      if (key && overrides && overrides[key]) width = overrides[key];
+      paintColumnWidth(table, th, width);
+    });
+    table.setAttribute('data-cols-locked', '1');
   }
 
   function applySavedFieldSizes(root) {
@@ -1039,10 +1090,10 @@
     if (!table || table.getAttribute('data-col-resize') === '1') return;
     table.setAttribute('data-col-resize', '1');
     var layout = loadLayout();
+    if (Object.keys(layout.columns).length) lockAllColumns(table, layout.columns);
     table.querySelectorAll('thead th').forEach(function (th) {
       var key = columnKey(th);
       if (!key) return;
-      if (layout.columns[key]) paintColumnWidth(table, th, layout.columns[key]);
       var handle = document.createElement('span');
       handle.className = 'product-col-resize';
       handle.title = 'Потяните, чтобы изменить ширину';
@@ -1051,8 +1102,10 @@
         if (event.button !== 0) return;
         event.preventDefault();
         event.stopPropagation();
+        if (table.getAttribute('data-cols-locked') !== '1') lockAllColumns(table, loadLayout().columns);
         var startX = event.clientX;
-        var startW = th.getBoundingClientRect().width;
+        var col = table.querySelectorAll('colgroup col')[th.cellIndex];
+        var startW = col ? parseFloat(col.style.width) : th.getBoundingClientRect().width;
         document.body.classList.add('product-col-dragging');
         handle.setPointerCapture(event.pointerId);
 

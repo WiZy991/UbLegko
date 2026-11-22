@@ -244,10 +244,16 @@ body.product-col-dragging {
 
 #result_list .field-category .related-widget-wrapper,
 #result_list .field-category select,
-#result_list .field-category .select2-container {
-  width: 250px !important;
-  min-width: 250px !important;
-  max-width: 270px !important;
+#result_list .field-category .select2-container,
+#result_list .field-status select,
+#result_list .field-price input,
+#result_list .field-old_price input,
+#result_list .field-name input,
+#result_list .field-recommendation_codes input {
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
 }
 
 #result_list .field-price,
@@ -928,18 +934,22 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     width: 100% !important;
   }
 
-  #result_list .field-price,
-  #result_list .field-price input {
+  #result_list .field-price {
     min-width: 72px !important;
     width: 88px !important;
   }
 
-  #result_list .field-category,
+  #result_list .field-price input {
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
   #result_list .field-category select,
   #result_list .field-category .select2-container {
-    min-width: 250px !important;
-    width: 250px !important;
-    max-width: 270px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
   }
 
   #result_list .field-status,
