@@ -8,7 +8,6 @@ from catalog.models import Product, ProductRecommendation
 from catalog.recommendations import (
     CHEMISTRY_CATEGORIES,
     _accessory_role,
-    _is_stop_product,
     pack_family_key,
     product_role,
 )
@@ -44,8 +43,6 @@ def _pick_accessories(products: list[Product]) -> dict[str, Product]:
         ),
     )
     for p in ordered:
-        if _is_stop_product(p):
-            continue
         role = _accessory_role(p)
         if not role or role == 'accessory_generic':
             continue
@@ -68,7 +65,7 @@ class Command(BaseCommand):
         to_create: list[ProductRecommendation] = []
 
         def queue(a: Product, b: Product, sort_order: int = 0) -> None:
-            if a.id == b.id or _is_stop_product(a) or _is_stop_product(b):
+            if a.id == b.id:
                 return
             key = (a.id, b.id)
             if key in existing:
@@ -89,8 +86,6 @@ class Command(BaseCommand):
         # 1) Фасовки одной линейки
         families: dict[str, list[Product]] = defaultdict(list)
         for p in products:
-            if _is_stop_product(p):
-                continue
             key = pack_family_key(p.name)
             if len(key) < 3:
                 continue
@@ -111,12 +106,12 @@ class Command(BaseCommand):
             lefts = [
                 p
                 for p in products
-                if left_sub.casefold() in p.name.casefold() and not _is_stop_product(p)
+                if left_sub.casefold() in p.name.casefold()
             ]
             rights = [
                 p
                 for p in products
-                if right_sub.casefold() in p.name.casefold() and not _is_stop_product(p)
+                if right_sub.casefold() in p.name.casefold()
             ]
             if not lefts or not rights:
                 continue
@@ -134,7 +129,7 @@ class Command(BaseCommand):
         if accessories:
             titles: dict[str, Product] = {}
             for p in products:
-                if _is_stop_product(p) or product_role(p) == 'accessory':
+                if product_role(p) == 'accessory':
                     continue
                 if not p.category_id or p.category.name not in CHEMISTRY_CATEGORIES:
                     continue
@@ -159,7 +154,6 @@ class Command(BaseCommand):
                 for p in products
                 if p.category_id
                 and p.category.name == 'Общая уборка'
-                and not _is_stop_product(p)
                 and product_role(p) != 'accessory'
             ][:12]
             for acc in accessories.values():

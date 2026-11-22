@@ -14,20 +14,6 @@ from .models import Product
 
 DEFAULT_LIMIT = None  # без ограничения: все товары с общей группой рекомендации
 
-STOP_WORDS = (
-    'бумага',
-    'офис',
-    'канц',
-    'принтер',
-    'картридж',
-    'скоба',
-    'скрепк',
-    'папка',
-    'тетрад',
-    'салфетки бумаж',
-    'бумажные неароматиз',
-)
-
 AFFINITY_GROUPS: dict[str, tuple[str, ...]] = {
     'descaler': (
         'ржавчин', 'известков', 'налёта', 'налета', 'накип', 'кальци',
@@ -137,11 +123,6 @@ def _text_blob(product: Product) -> str:
     return ' '.join(parts).casefold()
 
 
-def _is_stop_product(product: Product) -> bool:
-    blob = _text_blob(product)
-    return any(word in blob for word in STOP_WORDS)
-
-
 def _brand_token(name: str) -> str:
     name = (name or '').strip()
     if not name:
@@ -236,7 +217,7 @@ def _take_unique(
     if limit <= 0:
         return
     for p in candidates:
-        if p.id in seen or _is_stop_product(p):
+        if p.id in seen:
             continue
         seen.add(p.id)
         picked.append(p)
@@ -279,7 +260,7 @@ def products_by_recommendation_codes(
     own = codes
     candidates = qs if limit is None else qs[: max(limit * 4, 40)]
     for candidate in candidates:
-        if candidate.id in seen or _is_stop_product(candidate):
+        if candidate.id in seen:
             continue
         if not (own & candidate.get_recommendation_code_set()):
             continue
@@ -346,8 +327,6 @@ def _accessories_by_roles(roles: tuple[str, ...], exclude: set[int], limit: int)
 
     by_role: dict[str, list[Product]] = {r: [] for r in roles}
     for p in accessories:
-        if _is_stop_product(p):
-            continue
         role = _accessory_role(p)
         if role == 'accessory_generic':
             role = 'cloth'
