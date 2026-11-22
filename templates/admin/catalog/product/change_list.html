@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="{% static 'admin/css/column_resize.css' %}?v=3">
   {{ product_category_choices|json_script:"product-category-choices" }}
   <script defer src="{% static 'admin/js/price_input_format.js' %}?v=2"></script>
-  <script defer src="{% static 'admin/js/column_resize.js' %}?v=3"></script>
+  <script defer src="{% static 'admin/js/column_resize.js' %}?v=4"></script>
   <script defer src="{% static 'admin/js/product_expandable.js' %}?v=26"></script>
   <script>
     window.UBLEGKO_PRODUCT_SEARCH_SUGGEST = "{{ product_search_suggest_url|default:''|escapejs }}";
@@ -37,4 +37,5 @@
     {% result_list cl %}
   {% endif %}
   {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+  {% include "admin/includes/column_widths_apply.html" %}
 {% endblock %}

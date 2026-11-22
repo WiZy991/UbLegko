@@ -1,42 +1,162 @@
 <script>
 (function () {
-  var key = "{{ col_key|escapejs }}";
-  var raw = null;
-  try { raw = localStorage.getItem(key); } catch (e) {}
-  if (!raw && key.indexOf("model-product") !== -1) {
-    try {
-      var old = JSON.parse(localStorage.getItem("ublegko-product-admin-layout") || "{}");
-      if (old && old.columns) raw = JSON.stringify(old.columns);
-    } catch (e) {}
+  window.ublegkoColumnStorageKeyName = "{{ col_key|escapejs }}";
+
+  function bodyKey() {
+    var app = "";
+    var model = "";
+    if (!document.body) return "";
+    document.body.classList.forEach(function (name) {
+      if (!app && name.indexOf("app-") === 0) app = name;
+      if (!model && name.indexOf("model-") === 0) model = name;
+    });
+    return app ? "ublegko-cols:" + app + ":" + model : "";
   }
-  if (!raw) return;
-  var data;
-  try { data = JSON.parse(raw); } catch (e) { return; }
-  if (!data || typeof data !== "object") return;
-  var sum = 0;
-  var css = "";
-  Object.keys(data).forEach(function (name) {
-    var px = Math.round(Number(data[name]));
-    if (!px || px < 1) return;
-    sum += px;
-    var selectors = [];
-    if (name === "action-checkbox") {
-      selectors = ["th.action-checkbox-column", "td.action-checkbox"];
-    } else if (name.indexOf("column-") === 0) {
-      selectors = ["th." + name, "td.field-" + name.slice("column-".length)];
-    } else {
+
+  function readRaw(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+  }
+
+  window.ublegkoReadColumns = function () {
+    var names = [];
+    if (window.ublegkoColumnStorageKeyName) names.push(window.ublegkoColumnStorageKeyName);
+    var fromBody = bodyKey();
+    if (fromBody && names.indexOf(fromBody) === -1) names.push(fromBody);
+    for (var i = 0; i < names.length; i++) {
+      var raw = readRaw(names[i]);
+      if (!raw) continue;
+      try {
+        var data = JSON.parse(raw);
+        if (data && typeof data === "object" && Object.keys(data).length) return data;
+      } catch (e) {}
+    }
+    if ((window.ublegkoColumnStorageKeyName || "").indexOf("model-product") !== -1) {
+      try {
+        var old = JSON.parse(readRaw("ublegko-product-admin-layout") || "{}");
+        if (old && old.columns && typeof old.columns === "object") return old.columns;
+      } catch (e) {}
+    }
+    return {};
+  };
+
+  window.ublegkoWriteColumns = function (columns) {
+    var key = window.ublegkoColumnStorageKeyName || bodyKey();
+    if (!key) return;
+    try { localStorage.setItem(key, JSON.stringify(columns)); } catch (e) {}
+  };
+
+  window.ublegkoColumnKey = function (th) {
+    if (!th) return "";
+    if (th.classList.contains("action-checkbox-column")) return "action-checkbox";
+    var classes = (th.className || "").split(/\s+/);
+    for (var i = 0; i < classes.length; i++) {
+      if (classes[i].indexOf("column-") === 0) return classes[i];
+    }
+    return "";
+  };
+
+  function columnSelectors(key) {
+    if (key === "action-checkbox") {
+      return ["th.action-checkbox-column", "td.action-checkbox"];
+    }
+    if (key.indexOf("column-") !== 0) return [];
+    return ["th." + key, "td.field-" + key.slice("column-".length)];
+  }
+
+  window.ublegkoPaintColumns = function (table) {
+    var headers = table.querySelectorAll("thead th");
+    var pixels = window.ublegkoColPixels || [];
+    var sum = 0;
+    var locked = 0;
+    var css = "";
+    var group = table.querySelector("colgroup");
+    if (!group) {
+      group = document.createElement("colgroup");
+      table.insertBefore(group, table.firstChild);
+    }
+    while (group.children.length < headers.length) group.appendChild(document.createElement("col"));
+    Array.prototype.forEach.call(headers, function (th, index) {
+      var px = Math.round(pixels[index] || 0);
+      if (!px) return;
+      sum += px;
+      locked += 1;
+      group.children[index].style.width = px + "px";
+      th.style.setProperty("width", px + "px", "important");
+      th.style.setProperty("min-width", px + "px", "important");
+      th.style.setProperty("max-width", px + "px", "important");
+      columnSelectors(window.ublegkoColumnKey(th)).forEach(function (selector) {
+        css += "html body.change-list #result_list " + selector +
+          "{width:" + px + "px !important;min-width:" + px + "px !important;max-width:" + px + "px !important;}";
+      });
+    });
+    if (!sum) return;
+    var tableWidth = locked === headers.length ? sum + "px" : "max-content";
+    var tableCss = "html body.change-list #result_list{table-layout:fixed !important;width:" +
+      tableWidth + " !important;min-width:" + tableWidth + " !important;max-width:none !important;visibility:visible !important;}";
+    table.style.setProperty("table-layout", "fixed", "important");
+    table.style.setProperty("width", tableWidth, "important");
+    table.style.setProperty("min-width", tableWidth, "important");
+    table.style.setProperty("max-width", "none", "important");
+    table.style.setProperty("visibility", "visible", "important");
+    var style = document.getElementById("ublegko-col-widths");
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "ublegko-col-widths";
+      document.head.appendChild(style);
+    }
+    style.textContent = tableCss + css;
+  };
+
+  window.ublegkoApplySavedColumns = function (table) {
+    if (!table) return;
+    if (table.getAttribute("data-cols-applied") === "1") {
+      table.style.setProperty("visibility", "visible", "important");
       return;
     }
-    selectors.forEach(function (selector) {
-      css += "html body.change-list #changelist #result_list " + selector +
-        "{width:" + px + "px !important;min-width:" + px + "px !important;max-width:" + px + "px !important;}";
+    var saved = window.ublegkoReadColumns();
+    var headers = table.querySelectorAll("thead th");
+    void table.offsetWidth;
+    var pixels = [];
+    Array.prototype.forEach.call(headers, function (th, index) {
+      var key = window.ublegkoColumnKey(th);
+      var savedPx = key && saved[key] ? Math.round(Number(saved[key])) : 0;
+      var measured = Math.round(th.getBoundingClientRect().width);
+      pixels[index] = savedPx || (measured > 8 ? measured : 0);
     });
-  });
-  if (!sum) return;
-  css = "html body.change-list #changelist #result_list{table-layout:fixed !important;width:max-content !important;min-width:max-content !important;max-width:none !important;}" + css;
-  var style = document.createElement("style");
-  style.id = "ublegko-col-widths";
-  style.textContent = css;
-  document.head.appendChild(style);
+    window.ublegkoColPixels = pixels;
+    window.ublegkoPaintColumns(table);
+    table.setAttribute("data-cols-applied", "1");
+    table.style.setProperty("visibility", "visible", "important");
+    var hide = document.getElementById("ublegko-col-hide");
+    if (hide) hide.remove();
+  };
+
+  window.ublegkoSetColumnWidth = function (table, th, px) {
+    var headers = table.querySelectorAll("thead th");
+    if (!window.ublegkoColPixels) {
+      window.ublegkoColPixels = [];
+      Array.prototype.forEach.call(headers, function (header, index) {
+        window.ublegkoColPixels[index] = Math.round(header.getBoundingClientRect().width);
+      });
+    }
+    var key = window.ublegkoColumnKey(th);
+    var min = key === "action-checkbox" || key === "column-expand_toggle" ? 32 : 56;
+    window.ublegkoColPixels[th.cellIndex] = Math.max(min, Math.round(px));
+    window.ublegkoPaintColumns(table);
+    var stored = {};
+    Array.prototype.forEach.call(headers, function (header, index) {
+      var colKey = window.ublegkoColumnKey(header);
+      if (colKey && window.ublegkoColPixels[index]) stored[colKey] = window.ublegkoColPixels[index];
+    });
+    window.ublegkoWriteColumns(stored);
+  };
+
+  var savedNow = window.ublegkoReadColumns();
+  if (Object.keys(savedNow).length) {
+    var hide = document.createElement("style");
+    hide.id = "ublegko-col-hide";
+    hide.textContent = "html body.change-list #result_list{visibility:hidden !important;}";
+    document.head.appendChild(hide);
+  }
 })();
 </script>

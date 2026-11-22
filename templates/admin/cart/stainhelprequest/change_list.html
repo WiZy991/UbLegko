@@ -6,7 +6,7 @@
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=15">
   <link rel="stylesheet" href="{% static 'admin/css/column_resize.css' %}?v=3">
-  <script defer src="{% static 'admin/js/column_resize.js' %}?v=3"></script>
+  <script defer src="{% static 'admin/js/column_resize.js' %}?v=4"></script>
   <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=9"></script>
 {% endblock %}
 
@@ -45,4 +45,5 @@
     {% result_list cl %}
   {% endif %}
   {% if action_form and actions_on_bottom and cl.show_admin_actions %}{% admin_actions %}{% endif %}
+  {% include "admin/includes/column_widths_apply.html" %}
 {% endblock %}
