@@ -196,17 +196,20 @@ body.model-product.change-list {
   line-height: 1.2;
 }
 
+#result_list th.column-category,
 #result_list .field-category {
-  width: 14%;
-  white-space: normal;
+  width: 260px !important;
+  min-width: 260px !important;
+  max-width: 280px !important;
+  white-space: nowrap;
 }
 
 #result_list .field-category .related-widget-wrapper,
 #result_list .field-category select,
 #result_list .field-category .select2-container {
-  width: 100% !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
+  width: 250px !important;
+  min-width: 250px !important;
+  max-width: 270px !important;
 }
 
 #result_list .field-price,
@@ -246,8 +249,9 @@ body.model-product.change-list {
 
 #result_list th.column-name,
 #result_list .field-name {
-  width: 32%;
-  min-width: 240px;
+  width: 200px;
+  min-width: 168px;
+  max-width: 220px;
 }
 
 #result_list .field-name input {
@@ -879,7 +883,7 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   #result_list th.column-name,
   #result_list td.field-name,
   #result_list .field-name {
-    min-width: 160px !important;
+    min-width: 168px !important;
     max-width: 220px !important;
     width: 200px !important;
     white-space: normal;
@@ -900,9 +904,9 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   #result_list .field-category,
   #result_list .field-category select,
   #result_list .field-category .select2-container {
-    min-width: 120px !important;
-    width: 140px !important;
-    max-width: 160px !important;
+    min-width: 250px !important;
+    width: 250px !important;
+    max-width: 270px !important;
   }
 
   #result_list .field-status,
