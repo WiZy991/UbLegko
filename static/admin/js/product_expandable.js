@@ -966,10 +966,8 @@
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initBaselines);
-    document.addEventListener('DOMContentLoaded', initColumnResize);
   } else {
     initBaselines();
-    initColumnResize();
   }
 
   var LAYOUT_KEY = 'ublegko-product-admin-layout';
@@ -994,85 +992,6 @@
     } catch (error) {}
   }
 
-  function columnKey(th) {
-    if (!th || th.classList.contains('action-checkbox-column')) return '';
-    if (th.classList.contains('column-expand_toggle')) return '';
-    var classes = (th.className || '').split(/\s+/);
-    for (var i = 0; i < classes.length; i++) {
-      if (classes[i].indexOf('column-') === 0) return classes[i];
-    }
-    return '';
-  }
-
-  function columnCells(table, th) {
-    var key = columnKey(th);
-    if (!key) return [];
-    var field = key.replace(/^column-/, 'field-');
-    return table.querySelectorAll('.' + key + ', .' + field);
-  }
-
-  function ensureCols(table) {
-    var group = table.querySelector('colgroup');
-    var count = table.querySelectorAll('thead th').length;
-    if (!group) {
-      group = document.createElement('colgroup');
-      table.insertBefore(group, table.firstChild);
-    }
-    while (group.children.length < count) group.appendChild(document.createElement('col'));
-    return group;
-  }
-
-  function cellsInColumn(table, index) {
-    var list = [];
-    Array.prototype.forEach.call(table.rows, function (row) {
-      var cell = row.cells[index];
-      if (cell && cell.colSpan === 1) list.push(cell);
-    });
-    return list;
-  }
-
-  function syncTableWidth(table) {
-    var cols = table.querySelectorAll('colgroup col');
-    var sum = 0;
-    Array.prototype.forEach.call(cols, function (col) {
-      sum += parseFloat(col.style.width) || 0;
-    });
-    if (sum > 0) {
-      var px = Math.ceil(sum) + 'px';
-      table.style.setProperty('width', px, 'important');
-      table.style.setProperty('min-width', px, 'important');
-    }
-  }
-
-  function paintColumnWidth(table, th, px) {
-    var width = Math.max(48, Math.round(px));
-    var cols = ensureCols(table);
-    var col = cols.children[th.cellIndex];
-    if (col) col.style.width = width + 'px';
-    cellsInColumn(table, th.cellIndex).forEach(function (cell) {
-      var value = width + 'px';
-      cell.style.setProperty('width', value, 'important');
-      cell.style.setProperty('min-width', value, 'important');
-      cell.style.setProperty('max-width', value, 'important');
-    });
-    table.classList.add('has-user-widths');
-    syncTableWidth(table);
-  }
-
-  function lockAllColumns(table, overrides) {
-    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
-    var measured = headers.map(function (th) {
-      return Math.round(th.getBoundingClientRect().width);
-    });
-    headers.forEach(function (th, index) {
-      var key = columnKey(th);
-      var width = measured[index];
-      if (key && overrides && overrides[key]) width = overrides[key];
-      paintColumnWidth(table, th, width);
-    });
-    table.setAttribute('data-cols-locked', '1');
-  }
-
   function applySavedFieldSizes(root) {
     var layout = loadLayout();
     var scope = root || document;
@@ -1081,53 +1000,6 @@
       scope.querySelectorAll('.product-row-detail__textarea[data-quick-field="' + key + '"]').forEach(function (ta) {
         if (size.w) ta.style.setProperty('width', Math.max(160, size.w) + 'px', 'important');
         if (size.h) ta.style.setProperty('height', Math.max(72, size.h) + 'px', 'important');
-      });
-    });
-  }
-
-  function initColumnResize() {
-    var table = document.getElementById('result_list');
-    if (!table || table.getAttribute('data-col-resize') === '1') return;
-    table.setAttribute('data-col-resize', '1');
-    var layout = loadLayout();
-    if (Object.keys(layout.columns).length) lockAllColumns(table, layout.columns);
-    table.querySelectorAll('thead th').forEach(function (th) {
-      var key = columnKey(th);
-      if (!key) return;
-      var handle = document.createElement('span');
-      handle.className = 'product-col-resize';
-      handle.title = 'Потяните, чтобы изменить ширину';
-      th.appendChild(handle);
-      handle.addEventListener('pointerdown', function (event) {
-        if (event.button !== 0) return;
-        event.preventDefault();
-        event.stopPropagation();
-        if (table.getAttribute('data-cols-locked') !== '1') lockAllColumns(table, loadLayout().columns);
-        var startX = event.clientX;
-        var col = table.querySelectorAll('colgroup col')[th.cellIndex];
-        var startW = col ? parseFloat(col.style.width) : th.getBoundingClientRect().width;
-        document.body.classList.add('product-col-dragging');
-        handle.setPointerCapture(event.pointerId);
-
-        function move(ev) {
-          paintColumnWidth(table, th, startW + (ev.clientX - startX));
-        }
-
-        function up(ev) {
-          handle.removeEventListener('pointermove', move);
-          handle.removeEventListener('pointerup', up);
-          handle.removeEventListener('pointercancel', up);
-          document.body.classList.remove('product-col-dragging');
-          var next = Math.max(56, Math.round(startW + (ev.clientX - startX)));
-          paintColumnWidth(table, th, next);
-          var stored = loadLayout();
-          stored.columns[key] = next;
-          saveLayout(stored);
-        }
-
-        handle.addEventListener('pointermove', move);
-        handle.addEventListener('pointerup', up);
-        handle.addEventListener('pointercancel', up);
       });
     });
   }

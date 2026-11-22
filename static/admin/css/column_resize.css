@@ -1,0 +1,46 @@
+#result_list th {
+  position: relative;
+}
+
+.product-col-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 6;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.product-col-resize::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  right: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+}
+
+.product-col-resize:hover::after,
+body.product-col-dragging .product-col-resize::after {
+  background: #00acd7;
+}
+
+body.product-col-dragging {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+#result_list.has-user-widths {
+  table-layout: fixed !important;
+  width: max-content !important;
+  min-width: 100%;
+  max-width: none !important;
+}
+
+body.change-list #changelist .results {
+  overflow-x: auto;
+}
