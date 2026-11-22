@@ -140,6 +140,20 @@ class SiteVisit(models.Model):
         return f'{self.path or "/"} @ {self.visited_at:%Y-%m-%d %H:%M}'
 
 
+class SitePresence(models.Model):
+    """Открытая витрина. Телефон и компьютер считаются по отдельности."""
+
+    presence_key = models.CharField('Браузер', max_length=64, unique=True)
+    last_seen_at = models.DateTimeField('Последний сигнал', db_index=True)
+
+    class Meta:
+        verbose_name = 'Сейчас на сайте'
+        verbose_name_plural = 'Сейчас на сайте'
+
+    def __str__(self):
+        return f'{self.presence_key} @ {self.last_seen_at:%H:%M:%S}'
+
+
 class BlockedIP(models.Model):
     """Блокировка IP: на час при DDoS или вручную до снятия."""
 

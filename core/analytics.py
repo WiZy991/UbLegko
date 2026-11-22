@@ -348,25 +348,41 @@ def _touch_authenticated_user_visit(request, when) -> None:
     Profile.objects.filter(user_id=user.pk).update(last_site_visit_at=when)
 
 
+def presence_key_for_request(request) -> str:
+    """Один открытый браузер. Один аккаунт на телефоне и компьютере — это двое."""
+    if not request.session.session_key:
+        request.session.save()
+    if request.session.session_key:
+        return f's:{request.session.session_key}'[:64]
+    raw = '|'.join(
+        [
+            request.META.get('REMOTE_ADDR') or '',
+            request.META.get('HTTP_USER_AGENT') or '',
+        ]
+    )
+    return 'h:' + hashlib.sha256(raw.encode('utf-8', errors='ignore')).hexdigest()[:40]
+
+
 def touch_site_presence(request) -> None:
-    """Пока вкладка открыта, двигает последний хит. Счётчик заходов не увеличивает."""
+    """Пока вкладка витрины открыта, держит браузер в счётчике «сейчас на сайте»."""
     try:
         if _is_bot(request):
             return
-        from core.models import SiteVisit
+        from django.db import IntegrityError
 
-        key = visitor_key_for_request(request)
+        from core.models import SitePresence
+
+        key = presence_key_for_request(request)
         if not key:
             return
-        visit_id = (
-            SiteVisit.objects.filter(visitor_key=key)
-            .order_by('-last_hit_at')
-            .values_list('pk', flat=True)
-            .first()
-        )
-        if not visit_id:
-            return
-        SiteVisit.objects.filter(pk=visit_id).update(last_hit_at=timezone.now())
+        now = timezone.now()
+        updated = SitePresence.objects.filter(presence_key=key).update(last_seen_at=now)
+        if not updated:
+            try:
+                SitePresence.objects.create(presence_key=key, last_seen_at=now)
+            except IntegrityError:
+                SitePresence.objects.filter(presence_key=key).update(last_seen_at=now)
+        SitePresence.objects.filter(last_seen_at__lt=now - timedelta(minutes=2)).delete()
     except Exception:
         logger.exception('Не удалось обновить присутствие на сайте')
 

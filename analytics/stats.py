@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from core.analytics import active_blocked_ips, get_ddos_rate_limits
-from core.models import ProductPageView, SiteVisit
+from core.models import ProductPageView, SitePresence, SiteVisit
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +24,9 @@ ONLINE_WINDOW = timedelta(seconds=3)
 
 
 def count_online_now() -> int:
-    """Посетители с открытой витриной. После ухода пропадают через 3 секунды."""
+    """Открытые витрины. Телефон и компьютер считаются отдельно и пропадают через 3 секунды."""
     online_since = timezone.now() - ONLINE_WINDOW
-    return (
-        SiteVisit.objects.filter(last_hit_at__gte=online_since)
-        .values('visitor_key')
-        .distinct()
-        .count()
-    )
+    return SitePresence.objects.filter(last_seen_at__gte=online_since).count()
 
 # days=None — особый период (не «N дней до сегодня»)
 STATS_PERIODS = (
