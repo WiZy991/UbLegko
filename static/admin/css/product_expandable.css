@@ -901,37 +901,16 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     display: table-cell !important;
   }
 
-  /* Галочка и ▼ — sticky слева, чтобы раскрытие не уезжало */
+  /* Галочка и ▼ едут вместе с таблицей и прячутся, когда лист уходит вправо */
   #result_list th.action-checkbox-column,
   #result_list td.action-checkbox,
-  #result_list .action-checkbox {
-    position: sticky;
-    left: 0;
-    z-index: 4;
-    width: 32px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
-    background: #fff;
-    box-shadow: 1px 0 0 #dbe5eb;
-  }
-
+  #result_list .action-checkbox,
   #result_list th.column-expand_toggle,
   #result_list td.field-expand_toggle {
-    position: sticky;
-    left: 32px;
-    z-index: 4;
-    width: 40px !important;
-    min-width: 40px !important;
-    max-width: 40px !important;
-    background: #fff;
-    box-shadow: 2px 0 6px rgba(15, 28, 36, 0.08);
-  }
-
-  html[data-bs-theme="dark"] #result_list th.action-checkbox-column,
-  html[data-bs-theme="dark"] #result_list td.action-checkbox,
-  html[data-bs-theme="dark"] #result_list th.column-expand_toggle,
-  html[data-bs-theme="dark"] #result_list td.field-expand_toggle {
-    background: #1e2a32;
+    position: static !important;
+    left: auto !important;
+    z-index: auto !important;
+    box-shadow: none !important;
   }
 
   #result_list th.column-name,
@@ -986,8 +965,8 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     height: 36px !important;
     pointer-events: auto !important;
     touch-action: manipulation;
-    position: relative;
-    z-index: 5;
+    position: static;
+    z-index: auto;
   }
 
   .product-row-detail td {
