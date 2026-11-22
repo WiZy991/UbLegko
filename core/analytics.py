@@ -188,23 +188,25 @@ def client_ip_for_request(request) -> str | None:
     return None
 
 
+def _active_block_q():
+    from django.db.models import Q
+
+    return Q(is_manual=True) | Q(blocked_until__gt=timezone.now())
+
+
 def is_ip_blocked(ip: str | None) -> bool:
     if not ip:
         return False
     from core.models import BlockedIP
 
-    return BlockedIP.objects.filter(
-        ip_address=ip,
-        blocked_until__gt=timezone.now(),
-    ).exists()
+    return BlockedIP.objects.filter(ip_address=ip).filter(_active_block_q()).exists()
 
 
 def active_blocked_ips() -> set[str]:
     from core.models import BlockedIP
 
-    now = timezone.now()
     return set(
-        BlockedIP.objects.filter(blocked_until__gt=now).values_list('ip_address', flat=True)
+        BlockedIP.objects.filter(_active_block_q()).values_list('ip_address', flat=True)
     )
 
 
@@ -212,8 +214,7 @@ def active_blocked_ip_rows() -> list[dict]:
     """Все действующие блокировки, даже если IP нет в таблице заходов."""
     from core.models import BlockedIP, SiteVisit
 
-    now = timezone.now()
-    blocks = list(BlockedIP.objects.filter(blocked_until__gt=now).order_by('-created_at'))
+    blocks = list(BlockedIP.objects.filter(_active_block_q()).order_by('-created_at'))
     if not blocks:
         return []
 
@@ -241,10 +242,33 @@ def active_blocked_ip_rows() -> list[dict]:
             'ip_address': block.ip_address,
             'blocked_until': block.blocked_until,
             'created_at': block.created_at,
+            'is_manual': block.is_manual,
             'geo_place': place,
             'device': geo.get('device') or '',
         })
     return rows
+
+
+def block_ip_manual(ip: str) -> bool:
+    """Кладёт IP в чёрный список, пока его не снимут вручную."""
+    ip = (ip or '').strip()
+    if not ip:
+        return False
+    try:
+        validate_ipv46_address(ip)
+    except ValidationError:
+        return False
+    from core.models import BlockedIP
+
+    BlockedIP.objects.update_or_create(
+        ip_address=ip[:45],
+        defaults={
+            'blocked_until': timezone.now() + timedelta(days=365 * 100),
+            'is_manual': True,
+        },
+    )
+    logger.info('IP %s добавлен в чёрный список', ip)
+    return True
 
 
 def unblock_ip(ip: str) -> bool:
@@ -263,9 +287,15 @@ def unblock_ip(ip: str) -> bool:
 def _block_ip(ip: str) -> None:
     from core.models import BlockedIP
 
+    existing = BlockedIP.objects.filter(ip_address=ip).first()
+    if existing and existing.is_manual:
+        return
     BlockedIP.objects.update_or_create(
         ip_address=ip,
-        defaults={'blocked_until': timezone.now() + BLOCK_DURATION},
+        defaults={
+            'blocked_until': timezone.now() + BLOCK_DURATION,
+            'is_manual': False,
+        },
     )
     logger.warning('IP %s заблокирован на 1 час (DDoS-порог)', ip)
 
@@ -401,11 +431,10 @@ def record_site_visit(request) -> None:
                 )
 
             if open_visit is not None:
-                SiteVisit.objects.filter(pk=open_visit.pk).update(
-                    hit_count=F('hit_count') + 1,
-                    last_hit_at=now,
-                    path=path,
-                )
+                updates = {'last_hit_at': now}
+                if not _is_browsing_request(request):
+                    updates['hit_count'] = F('hit_count') + 1
+                SiteVisit.objects.filter(pk=open_visit.pk).update(**updates)
                 _touch_authenticated_user_visit(request, now)
                 return
 

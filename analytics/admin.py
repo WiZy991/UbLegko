@@ -9,12 +9,14 @@ from django.utils import timezone
 
 from core.analytics import (
     SEARCH_STATS_DAYS,
+    active_blocked_ip_rows,
+    block_ip_manual,
     prune_old_search_queries,
     save_ddos_rate_limits,
     unblock_ip,
 )
 
-from .models import SearchStatistics, SiteStatistics
+from .models import IPBlacklist, SearchStatistics, SiteStatistics
 from .stats import build_site_stats_context, count_online_now
 
 
@@ -66,11 +68,22 @@ class SiteStatisticsAdmin(admin.ModelAdmin):
                 ip = (request.POST.get('ip_address') or '').strip()
                 if ip:
                     if unblock_ip(ip):
-                        messages.success(request, f'IP {ip} разблокирован.')
+                        messages.success(request, f'IP {ip} убран из чёрного списка.')
                     else:
-                        messages.warning(request, f'IP {ip} не был в блокировке.')
+                        messages.warning(request, f'IP {ip} не был в чёрном списке.')
                 else:
-                    messages.error(request, 'Не указан IP для разблокировки.')
+                    messages.error(request, 'Не указан IP.')
+                return redirect(redirect_url)
+
+            if action == 'block_ip':
+                ip = (request.POST.get('ip_address') or '').strip()
+                if ip:
+                    if block_ip_manual(ip):
+                        messages.success(request, f'IP {ip} добавлен в чёрный список.')
+                    else:
+                        messages.error(request, f'Не удалось заблокировать IP {ip}.')
+                else:
+                    messages.error(request, 'Не указан IP.')
                 return redirect(redirect_url)
 
             if action == 'save_ddos_limits':
@@ -164,4 +177,52 @@ class SearchStatisticsAdmin(admin.ModelAdmin):
                 {'key': 'hits', 'label': 'По количеству (частые сверху)'},
             ],
         }
+        return render(request, self.change_list_template, context)
+
+
+@admin.register(IPBlacklist)
+class IPBlacklistAdmin(admin.ModelAdmin):
+    change_list_template = 'admin/analytics/ipblacklist/blacklist.html'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return request.user.is_staff
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def has_view_permission(self, request, obj=None):
+        return request.user.is_staff
+
+    def changelist_view(self, request, extra_context=None):
+        if request.method == 'POST':
+            if not request.user.is_staff:
+                return self.admin_site.login(request)
+            action = (request.POST.get('action') or '').strip()
+            if action == 'unblock_ip':
+                ip = (request.POST.get('ip_address') or '').strip()
+                if ip and unblock_ip(ip):
+                    messages.success(request, f'IP {ip} убран из чёрного списка.')
+                elif ip:
+                    messages.warning(request, f'IP {ip} не был в чёрном списке.')
+                else:
+                    messages.error(request, 'Не указан IP.')
+            return redirect(reverse('admin:analytics_ipblacklist_changelist'))
+
+        try:
+            rows = active_blocked_ip_rows()
+        except Exception:
+            rows = []
+        context = {
+            **self.admin_site.each_context(request),
+            'title': 'Чёрный список',
+            'opts': self.model._meta,
+            'cl': None,
+            'rows': rows,
+            'has_rows': bool(rows),
+        }
+        if extra_context:
+            context.update(extra_context)
         return render(request, self.change_list_template, context)

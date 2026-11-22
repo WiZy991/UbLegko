@@ -1,0 +1,82 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <style>
+    .ip-blacklist__empty {
+      margin: 12px 0 0;
+      color: #667;
+    }
+    .ip-blacklist__note {
+      margin: 0 0 16px;
+      color: #667;
+    }
+    .ip-blacklist__unblock {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border: 1px solid #c5d9e2;
+      border-radius: 6px;
+      background: #fff;
+      color: #123;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ip-blacklist__unblock:hover {
+      background: #e8f6fb;
+      border-color: #00acd7;
+    }
+    .ip-blacklist td,
+    .ip-blacklist th {
+      white-space: nowrap;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="ip-blacklist">
+  <h1 style="margin-bottom: 8px;">Чёрный список</h1>
+  <p class="ip-blacklist__note">
+    Сюда попадают IP, которые вы заблокировали в заходах на странице «По сайту»,
+    и те, кого сайт закрыл сам. Ручная блокировка держится, пока не нажмёте «Разблокировать».
+  </p>
+  {% if has_rows %}
+  <div class="results" style="overflow-x:auto;">
+    <table style="width:100%;">
+      <thead>
+        <tr>
+          <th>IP</th>
+          <th>Страна, город</th>
+          <th>Устройство</th>
+          <th>Как попал</th>
+          <th>Когда</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.ip_address }}</td>
+          <td>{{ row.geo_place|default:"—" }}</td>
+          <td>{{ row.device|default:"—" }}</td>
+          <td>{% if row.is_manual %}Вручную{% else %}Автоматом, до {{ row.blocked_until|date:"d.m.Y H:i" }}{% endif %}</td>
+          <td>{{ row.created_at|date:"d.m.Y H:i" }}</td>
+          <td>
+            <form method="post" style="margin:0;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="unblock_ip">
+              <input type="hidden" name="ip_address" value="{{ row.ip_address }}">
+              <button type="submit" class="ip-blacklist__unblock">Разблокировать</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="ip-blacklist__empty">Чёрный список пуст.</p>
+  {% endif %}
+</div>
+{% endblock %}

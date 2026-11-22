@@ -305,12 +305,22 @@
       background: #e8f6fb;
       border-color: #00acd7;
     }
-    .product-stats__blocked {
-      margin: 0 0 18px;
-      padding: 12px 14px;
-      border: 1px solid #e3b4b4;
-      border-radius: 10px;
-      background: #fff6f6;
+    .product-stats__ip-block {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border: 1px solid #e7b4b4;
+      border-radius: 6px;
+      background: #fff;
+      color: #9b2c2c;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.3;
+      cursor: pointer;
+    }
+    .product-stats__ip-block:hover {
+      background: #fff0f0;
+      border-color: #e74c3c;
     }
   </style>
 {% endblock %}
@@ -320,7 +330,7 @@
   <h1 style="margin-bottom: 8px;">Статистика по сайту</h1>
   <p style="margin: 0 0 16px; color:#667;">
     Даты и периоды — по {{ stats_timezone_label }}.
-    Заход — один IP в течение 5 минут (фриз-тайм). Столбец «Хитов» — сколько запросов было за эти 5 минут.
+    Заход — один IP в течение 5 минут. Столбец «Хитов» — сколько отдельных заходов, не переходов по товарам.
   </p>
 
   <form method="post" class="product-stats__ddos" action="?{{ request.GET.urlencode }}">
@@ -346,45 +356,6 @@
       <button type="submit" class="default" style="margin:0;">Сохранить порог</button>
     </div>
   </form>
-
-  <div class="product-stats__blocked">
-    <p class="product-stats__ddos-title">Сейчас заблокированы</p>
-    {% if has_blocked_ips %}
-    <div class="results" style="overflow-x:auto;">
-      <table style="width:100%;">
-        <thead>
-          <tr>
-            <th>IP</th>
-            <th>Город</th>
-            <th>Устройство</th>
-            <th>До</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for block in blocked_ip_rows %}
-          <tr>
-            <td class="product-stats__visitor-ip">{{ block.ip_address }}</td>
-            <td>{{ block.geo_place|default:"—" }}</td>
-            <td>{{ block.device|default:"—" }}</td>
-            <td>{{ block.blocked_until|date:"d.m.Y H:i" }}</td>
-            <td>
-              <form method="post" class="product-stats__ip-unblock-form" action="?{{ request.GET.urlencode }}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="unblock_ip">
-                <input type="hidden" name="ip_address" value="{{ block.ip_address }}">
-                <button type="submit" class="product-stats__ip-unblock">Разблокировать</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% else %}
-    <p class="product-stats__ddos-hint" style="margin:0;">Сейчас никто не заблокирован.</p>
-    {% endif %}
-  </div>
 
   <div class="product-stats__periods" role="group" aria-label="Период">
     {% for item in period_choices %}
@@ -465,7 +436,7 @@
               <th title="Зелёный — не заблокирован, красный — заблокирован за DDoS">Блок</th>
               <th>Страна, город</th>
               <th>Устройство</th>
-              <th title="Запросов за 5 минут с этого IP">Хитов</th>
+              <th title="Отдельные заходы с этого IP за 5 минут, без переходов по страницам">Хитов</th>
               <th>Страница входа</th>
             </tr>
           </thead>
@@ -488,6 +459,13 @@
                     <input type="hidden" name="action" value="unblock_ip">
                     <input type="hidden" name="ip_address" value="{{ visit.ip_address }}">
                     <button type="submit" class="product-stats__ip-unblock">Разблокировать</button>
+                  </form>
+                  {% else %}
+                  <form method="post" class="product-stats__ip-unblock-form" action="?{{ request.GET.urlencode }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="block_ip">
+                    <input type="hidden" name="ip_address" value="{{ visit.ip_address }}">
+                    <button type="submit" class="product-stats__ip-block">Заблокировать</button>
                   </form>
                   {% endif %}
                 </span>

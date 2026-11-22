@@ -141,10 +141,11 @@ class SiteVisit(models.Model):
 
 
 class BlockedIP(models.Model):
-    """Временная блокировка IP при DDoS-подобной активности."""
+    """Блокировка IP: на час при DDoS или вручную до снятия."""
 
     ip_address = models.GenericIPAddressField('IP', primary_key=True)
     blocked_until = models.DateTimeField('Заблокирован до', db_index=True)
+    is_manual = models.BooleanField('Вручную', default=False)
     created_at = models.DateTimeField('Когда', auto_now_add=True)
 
     class Meta:

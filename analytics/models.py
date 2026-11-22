@@ -1,4 +1,4 @@
-from core.models import ProductPageView, SearchQueryLog
+from core.models import BlockedIP, ProductPageView, SearchQueryLog
 
 
 class SiteStatistics(ProductPageView):
@@ -15,3 +15,11 @@ class SearchStatistics(SearchQueryLog):
         app_label = 'analytics'
         verbose_name = 'По поиску'
         verbose_name_plural = 'По поиску'
+
+
+class IPBlacklist(BlockedIP):
+    class Meta:
+        proxy = True
+        app_label = 'analytics'
+        verbose_name = 'Чёрный список'
+        verbose_name_plural = 'Чёрный список'

@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from core.analytics import active_blocked_ip_rows, active_blocked_ips, get_ddos_rate_limits
+from core.analytics import active_blocked_ips, get_ddos_rate_limits
 from core.models import ProductPageView, SiteVisit
 
 logger = logging.getLogger(__name__)
@@ -353,11 +353,6 @@ def build_site_stats_context(request, *, default_period='today'):
 
     chart = build_chart_data(date_from, date_to, site_qs, product_qs, tz)
     visit_rows = _fetch_visit_rows(site_qs)
-    try:
-        blocked_ip_rows = active_blocked_ip_rows()
-    except DatabaseError:
-        logger.exception('Не удалось загрузить заблокированные IP')
-        blocked_ip_rows = []
     total_site_visits = site_qs.count()
     online_now = count_online_now()
     device_summary = _device_summary(site_qs)
@@ -385,6 +380,4 @@ def build_site_stats_context(request, *, default_period='today'):
         'device_summary': device_summary,
         'ddos_rate_limit_hits': ddos_hits,
         'ddos_rate_window_seconds': ddos_window,
-        'blocked_ip_rows': blocked_ip_rows,
-        'has_blocked_ips': bool(blocked_ip_rows),
     }, None
