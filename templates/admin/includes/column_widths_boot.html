@@ -55,6 +55,11 @@
     return "";
   };
 
+  function columnMin(key) {
+    if (key === "action-checkbox" || key === "column-expand_toggle") return 32;
+    return 56;
+  }
+
   function columnSelectors(key) {
     if (key === "action-checkbox") {
       return ["th.action-checkbox-column", "td.action-checkbox"];
@@ -63,85 +68,101 @@
     return ["th." + key, "td.field-" + key.slice("column-".length)];
   }
 
+  function writeWidthStyle(css) {
+    var style = document.getElementById("ublegko-col-widths");
+    if (!css) {
+      if (style) style.textContent = "";
+      return;
+    }
+    if (!style) {
+      style = document.createElement("style");
+      style.id = "ublegko-col-widths";
+      document.head.appendChild(style);
+    }
+    style.textContent = css;
+  }
+
   window.ublegkoPaintColumns = function (table) {
     var headers = table.querySelectorAll("thead th");
     var pixels = window.ublegkoColPixels || [];
     var sum = 0;
-    var locked = 0;
     var css = "";
+    var ready = headers.length > 0;
+    Array.prototype.forEach.call(headers, function (th, index) {
+      var px = Math.round(pixels[index] || 0);
+      if (px < columnMin(window.ublegkoColumnKey(th))) ready = false;
+      sum += px;
+    });
+    if (!ready || !sum) return;
     var group = table.querySelector("colgroup");
     if (!group) {
       group = document.createElement("colgroup");
       table.insertBefore(group, table.firstChild);
     }
     while (group.children.length < headers.length) group.appendChild(document.createElement("col"));
+    while (group.children.length > headers.length) group.removeChild(group.lastChild);
     Array.prototype.forEach.call(headers, function (th, index) {
-      var px = Math.round(pixels[index] || 0);
-      if (!px) return;
-      sum += px;
-      locked += 1;
+      var px = Math.round(pixels[index]);
       group.children[index].style.width = px + "px";
       th.style.setProperty("width", px + "px", "important");
       th.style.setProperty("min-width", px + "px", "important");
       th.style.setProperty("max-width", px + "px", "important");
+      var clip = window.ublegkoColumnKey(th) === "action-checkbox" || window.ublegkoColumnKey(th) === "column-expand_toggle"
+        ? ""
+        : "overflow:hidden !important;text-overflow:ellipsis !important;";
       columnSelectors(window.ublegkoColumnKey(th)).forEach(function (selector) {
         css += "html body.change-list #result_list " + selector +
-          "{width:" + px + "px !important;min-width:" + px + "px !important;max-width:" + px + "px !important;}";
+          "{box-sizing:border-box !important;width:" + px + "px !important;min-width:" + px +
+          "px !important;max-width:" + px + "px !important;" + clip + "}";
       });
     });
-    if (!sum) return;
-    var tableWidth = locked === headers.length ? sum + "px" : "max-content";
     var tableCss = "html body.change-list #result_list{table-layout:fixed !important;width:" +
-      tableWidth + " !important;min-width:" + tableWidth + " !important;max-width:none !important;visibility:visible !important;}";
+      sum + "px !important;min-width:" + sum + "px !important;max-width:none !important;}";
     table.style.setProperty("table-layout", "fixed", "important");
-    table.style.setProperty("width", tableWidth, "important");
-    table.style.setProperty("min-width", tableWidth, "important");
+    table.style.setProperty("width", sum + "px", "important");
+    table.style.setProperty("min-width", sum + "px", "important");
     table.style.setProperty("max-width", "none", "important");
-    table.style.setProperty("visibility", "visible", "important");
-    var style = document.getElementById("ublegko-col-widths");
-    if (!style) {
-      style = document.createElement("style");
-      style.id = "ublegko-col-widths";
-      document.head.appendChild(style);
-    }
-    style.textContent = tableCss + css;
+    writeWidthStyle(tableCss + css);
   };
 
   window.ublegkoApplySavedColumns = function (table) {
     if (!table) return;
-    if (table.getAttribute("data-cols-applied") === "1") {
-      table.style.setProperty("visibility", "visible", "important");
-      return;
-    }
-    var saved = window.ublegkoReadColumns();
-    var headers = table.querySelectorAll("thead th");
-    void table.offsetWidth;
-    var pixels = [];
-    Array.prototype.forEach.call(headers, function (th, index) {
-      var key = window.ublegkoColumnKey(th);
-      var savedPx = key && saved[key] ? Math.round(Number(saved[key])) : 0;
-      var measured = Math.round(th.getBoundingClientRect().width);
-      pixels[index] = savedPx || (measured > 8 ? measured : 0);
-    });
-    window.ublegkoColPixels = pixels;
-    window.ublegkoPaintColumns(table);
-    table.setAttribute("data-cols-applied", "1");
-    table.style.setProperty("visibility", "visible", "important");
     var hide = document.getElementById("ublegko-col-hide");
     if (hide) hide.remove();
+    table.style.removeProperty("visibility");
+    if (table.getAttribute("data-cols-applied") === "1") return;
+    table.setAttribute("data-cols-applied", "1");
+    if (window.innerWidth <= 900) return;
+    var saved = window.ublegkoReadColumns();
+    var headers = table.querySelectorAll("thead th");
+    if (!headers.length || !Object.keys(saved).length) return;
+    var pixels = [];
+    var complete = true;
+    Array.prototype.forEach.call(headers, function (th, index) {
+      var key = window.ublegkoColumnKey(th);
+      var min = columnMin(key);
+      var savedPx = key && saved[key] ? Math.round(Number(saved[key])) : 0;
+      if (savedPx >= min) pixels[index] = savedPx;
+      else complete = false;
+    });
+    if (!complete) return;
+    window.ublegkoColPixels = pixels;
+    window.ublegkoPaintColumns(table);
   };
 
   window.ublegkoSetColumnWidth = function (table, th, px) {
+    if (window.innerWidth <= 900) return;
     var headers = table.querySelectorAll("thead th");
-    if (!window.ublegkoColPixels) {
+    if (!window.ublegkoColPixels || window.ublegkoColPixels.length !== headers.length) {
       window.ublegkoColPixels = [];
       Array.prototype.forEach.call(headers, function (header, index) {
-        window.ublegkoColPixels[index] = Math.round(header.getBoundingClientRect().width);
+        var key = window.ublegkoColumnKey(header);
+        var measured = Math.round(header.getBoundingClientRect().width);
+        window.ublegkoColPixels[index] = Math.max(columnMin(key), measured);
       });
     }
     var key = window.ublegkoColumnKey(th);
-    var min = key === "action-checkbox" || key === "column-expand_toggle" ? 32 : 56;
-    window.ublegkoColPixels[th.cellIndex] = Math.max(min, Math.round(px));
+    window.ublegkoColPixels[th.cellIndex] = Math.max(columnMin(key), Math.round(px));
     window.ublegkoPaintColumns(table);
     var stored = {};
     Array.prototype.forEach.call(headers, function (header, index) {
@@ -150,13 +171,5 @@
     });
     window.ublegkoWriteColumns(stored);
   };
-
-  var savedNow = window.ublegkoReadColumns();
-  if (Object.keys(savedNow).length) {
-    var hide = document.createElement("style");
-    hide.id = "ublegko-col-hide";
-    hide.textContent = "html body.change-list #result_list{visibility:hidden !important;}";
-    document.head.appendChild(hide);
-  }
 })();
 </script>
