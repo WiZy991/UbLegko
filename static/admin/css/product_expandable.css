@@ -160,6 +160,11 @@ body.model-product.change-list {
   min-width: 0;
 }
 
+#result_list.has-user-widths {
+  width: max-content !important;
+  min-width: 100%;
+}
+
 #result_list th,
 #result_list td,
 #result_list td.nowrap {
@@ -191,9 +196,42 @@ body.model-product.change-list {
 }
 
 #result_list th {
+  position: relative;
   white-space: normal;
   overflow-wrap: anywhere;
   line-height: 1.2;
+}
+
+.product-col-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 6;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.product-col-resize::after {
+  content: "";
+  position: absolute;
+  top: 15%;
+  bottom: 15%;
+  right: 3px;
+  width: 2px;
+  border-radius: 1px;
+  background: transparent;
+}
+
+.product-col-resize:hover::after,
+body.product-col-dragging .product-col-resize:hover::after {
+  background: #00acd7;
+}
+
+body.product-col-dragging {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 #result_list th.column-category,
@@ -510,8 +548,7 @@ body.model-product.change-list {
   margin-top: 2px;
 }
 
-.product-row-detail__textarea,
-.product-admin-textarea,
+.product-admin-textarea:not(.product-row-detail__textarea),
 .model-product textarea[name="description"],
 .model-product textarea[name="price_tag_description"] {
   width: 100% !important;
@@ -520,6 +557,17 @@ body.model-product.change-list {
   min-height: 160px;
   box-sizing: border-box;
   resize: vertical;
+}
+
+.product-row-detail__textarea {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 72px;
+  box-sizing: border-box;
+  resize: both;
+  overflow: auto;
 }
 
 .product-row-detail__textarea--short {
@@ -860,6 +908,9 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
     position: sticky;
     left: 0;
     z-index: 4;
+    width: 32px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
     background: #fff;
     box-shadow: 1px 0 0 #dbe5eb;
   }
@@ -867,8 +918,11 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   #result_list th.column-expand_toggle,
   #result_list td.field-expand_toggle {
     position: sticky;
-    left: 40px;
+    left: 32px;
     z-index: 4;
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
     background: #fff;
     box-shadow: 2px 0 6px rgba(15, 28, 36, 0.08);
   }
@@ -928,8 +982,8 @@ html[data-bs-theme="dark"] .product-row--expanded .product-row-expand {
   }
 
   .product-row-expand {
-    width: 44px !important;
-    height: 44px !important;
+    width: 36px !important;
+    height: 36px !important;
     pointer-events: auto !important;
     touch-action: manipulation;
     position: relative;

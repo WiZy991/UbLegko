@@ -5,7 +5,6 @@ from __future__ import annotations
 import hashlib
 import logging
 from datetime import datetime, time, timedelta
-from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_ipv46_address
@@ -114,36 +113,13 @@ def _is_page_subrequest(request) -> bool:
     return False
 
 
-def _is_browsing_request(request) -> bool:
-    """Человек уже на сайте и открыл другую страницу. Это не новый заход."""
-    from django.conf import settings
-
-    if not request.COOKIES.get(settings.SESSION_COOKIE_NAME):
-        return False
-    site = (request.headers.get('Sec-Fetch-Site') or '').lower()
-    if site == 'same-origin':
-        return True
-    referer = request.META.get('HTTP_REFERER') or ''
-    if not referer:
-        return False
-    host = (request.get_host() or '').split(':')[0].lower()
-    ref_host = (urlparse(referer).hostname or '').lower()
-    return bool(host and ref_host == host)
-
-
 def _should_rate_limit_request(request) -> bool:
-    """Хит — только новый заход на сайт, не прогулка по страницам.
-
-    Повторные заходы с одного IP без сессии (бот, DDoS) считаются каждый.
-    Переходы по товарам у того, кто уже открыл сайт, не считаются.
-    """
+    """Каждое открытие страницы — хит. Пинги, картинки и служебные запросы не считаются."""
     if _is_staff_user(request):
         return False
     if _is_uncounted_path(request):
         return False
     if _is_page_subrequest(request):
-        return False
-    if _is_browsing_request(request):
         return False
     return True
 
@@ -431,10 +407,11 @@ def record_site_visit(request) -> None:
                 )
 
             if open_visit is not None:
-                updates = {'last_hit_at': now}
-                if not _is_browsing_request(request):
-                    updates['hit_count'] = F('hit_count') + 1
-                SiteVisit.objects.filter(pk=open_visit.pk).update(**updates)
+                SiteVisit.objects.filter(pk=open_visit.pk).update(
+                    hit_count=F('hit_count') + 1,
+                    last_hit_at=now,
+                    path=path,
+                )
                 _touch_authenticated_user_visit(request, now)
                 return
 
