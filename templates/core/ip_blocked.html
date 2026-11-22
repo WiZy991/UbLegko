@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -8,23 +9,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261118footerfont">
   <style>
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      min-height: 100%;
-    }
-    body {
+    body.block-page {
       min-height: 100vh;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px 16px;
+      flex-direction: column;
       font-family: Manrope, "Segoe UI", sans-serif;
       color: #1b2228;
       background:
-        radial-gradient(circle at 50% 0%, rgba(0, 172, 215, 0.18), transparent 42%),
+        radial-gradient(circle at 50% 120px, rgba(0, 172, 215, 0.16), transparent 36%),
         #f3f6f9;
+    }
+    body.block-page .brand-banner {
+      cursor: default;
+    }
+    .page {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 28px 16px;
     }
     .card {
       width: min(560px, 100%);
@@ -41,14 +46,14 @@
     .card__body {
       padding: 32px 28px 28px;
     }
-    h1 {
+    .card h1 {
       margin: 0 0 18px;
       font-size: 26px;
       line-height: 1.3;
       font-weight: 800;
       color: #0099c7;
     }
-    p {
+    .card p {
       margin: 0 0 14px;
       font-size: 17px;
       line-height: 1.5;
@@ -71,31 +76,81 @@
       color: #1b2228;
       font-weight: 600;
     }
-    @media (max-width: 520px) {
-      .card__body { padding: 24px 18px 20px; }
-      h1 { font-size: 22px; }
+    @media (max-width: 900px) {
+      .page { padding: 20px 12px 28px; }
+      .card__body { padding: 22px 16px 18px; }
+      .card h1 { font-size: 22px; }
+      .card p { font-size: 16px; }
       .phone { font-size: 24px; }
     }
   </style>
 </head>
-<body>
-  <main class="card">
-    <div class="card__bar"></div>
-    <div class="card__body">
-      {% if automatic %}
-      <h1>Сработала автоматическая защита от интернет-роботов.</h1>
-      {% else %}
-      <h1>Доступ с этого IP закрыт.</h1>
-      {% endif %}
-      <p>Если Вы человек, и Вас заблокировало по ошибке, напишите или позвоните по телефону:</p>
-      <a class="phone" href="tel:+79914961897">8-991-496-18-97</a>
-      <p>Вас разблокируют вручную.</p>
-      {% if automatic %}
-      <p class="note">Защита работает 60 минут. Через час Вы будете разблокированы автоматически.</p>
-      {% else %}
-      <p class="note">Эта блокировка сама не снимется. Позвоните по телефону выше.</p>
-      {% endif %}
-    </div>
-  </main>
+<body class="block-page">
+  <div class="brand-banner">
+    <span class="brand-stars brand-stars--left" aria-hidden="true">
+      <span class="brand-stars__item brand-stars__item--lg">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--lg">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--md brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm brand-stars__item--extra">✦</span>
+    </span>
+    <span class="brand-banner__content">
+      <p class="brand-banner__title">УБИРАЕМСЯ ЛЕГКО</p>
+      <p class="brand-banner__tagline">{{ tagline }}</p>
+    </span>
+    <span class="brand-stars brand-stars--right" aria-hidden="true">
+      <span class="brand-stars__item brand-stars__item--lg">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--lg">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm">✦</span>
+      <span class="brand-stars__item brand-stars__item--md">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--tiny brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--md brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--xs brand-stars__item--extra">✦</span>
+      <span class="brand-stars__item brand-stars__item--sm brand-stars__item--extra">✦</span>
+    </span>
+  </div>
+  <div class="page">
+    <main class="card">
+      <div class="card__bar"></div>
+      <div class="card__body">
+        {% if automatic %}
+        <h1>Сработала автоматическая защита от интернет-роботов.</h1>
+        {% else %}
+        <h1>Доступ с этого IP закрыт.</h1>
+        {% endif %}
+        <p>Если Вы человек, и Вас заблокировало по ошибке, напишите или позвоните по телефону:</p>
+        <a class="phone" href="tel:+79914961897">8-991-496-18-97</a>
+        <p>Вас разблокируют вручную.</p>
+        {% if automatic %}
+        <p class="note">Защита работает 60 минут. Через час Вы будете разблокированы автоматически.</p>
+        {% else %}
+        <p class="note">Эта блокировка сама не снимется. Позвоните по телефону выше.</p>
+        {% endif %}
+      </div>
+    </main>
+  </div>
 </body>
 </html>

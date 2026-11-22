@@ -12,11 +12,15 @@ from core.analytics import (
 )
 
 def _blocked_page(ip):
-    from core.models import BlockedIP
+    from core.models import BlockedIP, SiteSettings
 
     block = BlockedIP.objects.filter(ip_address=ip).only('is_manual').first()
     automatic = not (block and block.is_manual)
-    html = render_to_string('core/ip_blocked.html', {'automatic': automatic})
+    settings_row = SiteSettings.load()
+    html = render_to_string('core/ip_blocked.html', {
+        'automatic': automatic,
+        'tagline': settings_row.tagline,
+    })
     return HttpResponseForbidden(html)
 
 
