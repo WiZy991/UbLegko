@@ -1,0 +1,42 @@
+<script>
+(function () {
+  var key = "{{ col_key|escapejs }}";
+  var raw = null;
+  try { raw = localStorage.getItem(key); } catch (e) {}
+  if (!raw && key.indexOf("model-product") !== -1) {
+    try {
+      var old = JSON.parse(localStorage.getItem("ublegko-product-admin-layout") || "{}");
+      if (old && old.columns) raw = JSON.stringify(old.columns);
+    } catch (e) {}
+  }
+  if (!raw) return;
+  var data;
+  try { data = JSON.parse(raw); } catch (e) { return; }
+  if (!data || typeof data !== "object") return;
+  var sum = 0;
+  var css = "";
+  Object.keys(data).forEach(function (name) {
+    var px = Math.round(Number(data[name]));
+    if (!px || px < 1) return;
+    sum += px;
+    var selectors = [];
+    if (name === "action-checkbox") {
+      selectors = ["th.action-checkbox-column", "td.action-checkbox"];
+    } else if (name.indexOf("column-") === 0) {
+      selectors = ["th." + name, "td.field-" + name.slice("column-".length)];
+    } else {
+      return;
+    }
+    selectors.forEach(function (selector) {
+      css += "html body.change-list #changelist #result_list " + selector +
+        "{width:" + px + "px !important;min-width:" + px + "px !important;max-width:" + px + "px !important;}";
+    });
+  });
+  if (!sum) return;
+  css = "html body.change-list #changelist #result_list{table-layout:fixed !important;width:max-content !important;min-width:max-content !important;max-width:none !important;}" + css;
+  var style = document.createElement("style");
+  style.id = "ublegko-col-widths";
+  style.textContent = css;
+  document.head.appendChild(style);
+})();
+</script>

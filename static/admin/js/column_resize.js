@@ -66,123 +66,68 @@
     return group;
   }
 
-  function cellsInColumn(table, index) {
-    var list = [];
-    Array.prototype.forEach.call(table.rows, function (row) {
-      var cell = row.cells[index];
-      if (cell && cell.colSpan === 1) list.push(cell);
-    });
-    return list;
-  }
+  var widths = {};
 
   function columnSelectors(key) {
     if (key === 'action-checkbox') {
-      return [
-        '#result_list.has-user-widths th.action-checkbox-column',
-        '#result_list.has-user-widths td.action-checkbox',
-        '#result_list.has-user-widths .action-checkbox',
-      ];
+      return ['th.action-checkbox-column', 'td.action-checkbox'];
     }
     if (key.indexOf('column-') !== 0) return [];
-    var field = 'field-' + key.slice('column-'.length);
-    return [
-      '#result_list.has-user-widths th.' + key,
-      '#result_list.has-user-widths td.' + field,
-      '#result_list.has-user-widths .' + field,
-    ];
+    return ['th.' + key, 'td.field-' + key.slice('column-'.length)];
   }
 
-  function writeWidthStyle(table, widths) {
+  function writeWidthStyle() {
     var sum = 0;
-    Object.keys(widths).forEach(function (key) {
-      sum += widths[key] || 0;
-    });
-    var css = 'body.change-list #changelist #result_list.has-user-widths{table-layout:fixed !important;width:' +
-      sum + 'px !important;min-width:' + sum + 'px !important;max-width:none !important;}';
+    var css = '';
     Object.keys(widths).forEach(function (key) {
       var px = widths[key];
+      if (!px) return;
+      sum += px;
       columnSelectors(key).forEach(function (selector) {
-        css += selector + '{width:' + px + 'px !important;min-width:' + px + 'px !important;max-width:' + px + 'px !important;}';
+        css += 'html body.change-list #changelist #result_list ' + selector +
+          '{width:' + px + 'px !important;min-width:' + px + 'px !important;max-width:' + px + 'px !important;}';
       });
     });
+    if (!sum) return;
+    css = 'html body.change-list #changelist #result_list{table-layout:fixed !important;width:max-content !important;min-width:max-content !important;max-width:none !important;}' + css;
     var style = document.getElementById('ublegko-col-widths');
     if (!style) {
       style = document.createElement('style');
       style.id = 'ublegko-col-widths';
       document.head.appendChild(style);
     }
-    style.textContent = css;
-    table.classList.add('has-user-widths');
+    if (style.textContent !== css) style.textContent = css;
   }
 
-  function syncTableWidth(table) {
-    var headers = table.querySelectorAll('thead th');
-    var cols = table.querySelectorAll('colgroup col');
-    var widths = {};
-    var sum = 0;
-    Array.prototype.forEach.call(headers, function (th, index) {
-      var key = columnKey(th);
-      var width = cols[index] ? parseFloat(cols[index].style.width) || 0 : 0;
-      if (!width) width = Math.round(th.getBoundingClientRect().width);
-      if (key && width) widths[key] = Math.round(width);
-      sum += width || 0;
+  function rememberWidths() {
+    var saved = loadColumns();
+    Object.keys(saved).forEach(function (key) {
+      var px = Math.round(Number(saved[key]));
+      if (px > 0) widths[key] = px;
     });
-    if (sum > 0) {
-      var px = Math.ceil(sum) + 'px';
-      table.style.setProperty('width', px, 'important');
-      table.style.setProperty('min-width', px, 'important');
-      table.style.setProperty('max-width', 'none', 'important');
-      writeWidthStyle(table, widths);
-    }
   }
 
   function paintColumnWidth(table, th, px) {
+    var key = columnKey(th);
     var width = Math.max(minWidth(th), Math.round(px));
+    if (key) widths[key] = width;
     var cols = ensureCols(table);
     var col = cols.children[th.cellIndex];
     if (col) col.style.width = width + 'px';
-    var value = width + 'px';
-    cellsInColumn(table, th.cellIndex).forEach(function (cell) {
-      cell.style.setProperty('width', value, 'important');
-      cell.style.setProperty('min-width', value, 'important');
-      cell.style.setProperty('max-width', value, 'important');
-    });
-    table.classList.add('has-user-widths');
-    syncTableWidth(table);
+    writeWidthStyle();
   }
 
-  function lockAllColumns(table, overrides) {
-    var headers = Array.prototype.slice.call(table.querySelectorAll('thead th'));
-    var measured = headers.map(function (th) {
-      return Math.round(th.getBoundingClientRect().width);
-    });
-    headers.forEach(function (th, index) {
+  function seedMissing(table) {
+    Array.prototype.forEach.call(table.querySelectorAll('thead th'), function (th) {
       var key = columnKey(th);
-      var width = measured[index];
-      if (key && overrides && overrides[key]) width = overrides[key];
-      paintColumnWidth(table, th, width || minWidth(th));
+      if (!key || widths[key]) return;
+      var width = Math.round(th.getBoundingClientRect().width);
+      if (width) widths[key] = Math.max(minWidth(th), width);
     });
-    table.setAttribute('data-cols-locked', '1');
   }
 
-  function persistColumns(table) {
-    var headers = table.querySelectorAll('thead th');
-    var cols = table.querySelectorAll('colgroup col');
-    var stored = {};
-    Array.prototype.forEach.call(headers, function (th, index) {
-      var key = columnKey(th);
-      if (!key) return;
-      var width = cols[index] ? parseFloat(cols[index].style.width) : 0;
-      if (!width) width = Math.round(th.getBoundingClientRect().width);
-      if (width) stored[key] = Math.round(width);
-    });
-    saveColumns(stored);
-  }
-
-  function applySaved(table) {
-    var saved = loadColumns();
-    if (!Object.keys(saved).length) return;
-    lockAllColumns(table, saved);
+  function persistColumns() {
+    saveColumns(widths);
   }
 
   function init() {
@@ -190,7 +135,7 @@
     if (!table) return;
     var headers = table.querySelectorAll('thead th');
     if (!headers.length) return;
-    applySaved(table);
+    rememberWidths();
     if (table.getAttribute('data-col-resize') === '1') return;
     table.setAttribute('data-col-resize', '1');
 
@@ -205,7 +150,7 @@
         if (event.button !== 0) return;
         event.preventDefault();
         event.stopPropagation();
-        if (table.getAttribute('data-cols-locked') !== '1') lockAllColumns(table, loadColumns());
+        seedMissing(table);
         var startX = event.clientX;
         var startW = th.getBoundingClientRect().width;
         var latest = startW;
@@ -214,7 +159,7 @@
         function move(ev) {
           latest = Math.max(minWidth(th), startW + (ev.clientX - startX));
           paintColumnWidth(table, th, latest);
-          persistColumns(table);
+          persistColumns();
         }
 
         function up() {
@@ -223,7 +168,7 @@
           window.removeEventListener('pointercancel', up);
           document.body.classList.remove('product-col-dragging');
           paintColumnWidth(table, th, latest);
-          persistColumns(table);
+          persistColumns();
         }
 
         window.addEventListener('pointermove', move);
@@ -238,5 +183,4 @@
   } else {
     init();
   }
-  window.addEventListener('load', init);
 })();

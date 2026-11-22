@@ -160,12 +160,6 @@ body.model-product.change-list {
   min-width: 0;
 }
 
-#result_list.has-user-widths {
-  width: max-content !important;
-  min-width: max-content !important;
-  max-width: none !important;
-}
-
 #result_list th,
 #result_list td,
 #result_list td.nowrap {

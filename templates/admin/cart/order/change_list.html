@@ -2,10 +2,11 @@
 {% load static admin_list %}
 
 {% block extrahead %}
+  {% include "admin/includes/column_widths_boot.html" with col_key="ublegko-cols:app-cart:model-order" %}
   {{ block.super }}
   <link rel="stylesheet" href="{% static 'admin/css/inbox_expandable.css' %}?v=16">
-  <link rel="stylesheet" href="{% static 'admin/css/column_resize.css' %}?v=2">
-  <script defer src="{% static 'admin/js/column_resize.js' %}?v=2"></script>
+  <link rel="stylesheet" href="{% static 'admin/css/column_resize.css' %}?v=3">
+  <script defer src="{% static 'admin/js/column_resize.js' %}?v=3"></script>
   <script defer src="{% static 'admin/js/inbox_expandable.js' %}?v=9"></script>
 {% endblock %}
 

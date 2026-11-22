@@ -34,13 +34,6 @@ body.product-col-dragging {
   user-select: none;
 }
 
-body.change-list #changelist #result_list.has-user-widths {
-  table-layout: fixed !important;
-  width: max-content !important;
-  min-width: max-content !important;
-  max-width: none !important;
-}
-
 body.change-list #changelist .results {
   overflow-x: auto;
 }
