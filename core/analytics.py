@@ -88,6 +88,8 @@ def _is_staff_user(request) -> bool:
 
 def _should_rate_limit_request(request) -> bool:
     path = (request.path or '/').split('?', 1)[0]
+    if path == '/presence/':
+        return False
     if path.startswith('/static/') or path.startswith('/media/'):
         return False
     if path in {'/favicon.ico', '/robots.txt'}:
@@ -245,6 +247,29 @@ def _touch_authenticated_user_visit(request, when) -> None:
     from accounts.models import Profile
 
     Profile.objects.filter(user_id=user.pk).update(last_site_visit_at=when)
+
+
+def touch_site_presence(request) -> None:
+    """Пока вкладка открыта, двигает последний хит. Счётчик заходов не увеличивает."""
+    try:
+        if _is_bot(request):
+            return
+        from core.models import SiteVisit
+
+        key = visitor_key_for_request(request)
+        if not key:
+            return
+        visit_id = (
+            SiteVisit.objects.filter(visitor_key=key)
+            .order_by('-last_hit_at')
+            .values_list('pk', flat=True)
+            .first()
+        )
+        if not visit_id:
+            return
+        SiteVisit.objects.filter(pk=visit_id).update(last_hit_at=timezone.now())
+    except Exception:
+        logger.exception('Не удалось обновить присутствие на сайте')
 
 
 def record_site_visit(request) -> None:

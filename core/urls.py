@@ -5,6 +5,7 @@ from . import views
 app_name = 'core'
 
 urlpatterns = [
+    path('presence/', views.presence, name='presence'),
     path('contacts/', views.contacts, name='contacts'),
     path('privacy/', views.privacy, name='privacy'),
     path('set-city/', views.set_city, name='set_city'),

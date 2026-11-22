@@ -748,6 +748,20 @@
     })();
   </script>
   <script src="{% static 'js/main.js' %}?v=20260904pricespaces2"></script>
+  <script>
+    (function () {
+      var url = "{% url 'core:presence' %}";
+      function ping() {
+        if (document.visibilityState === "hidden") return;
+        fetch(url, {method: "POST", credentials: "same-origin", keepalive: true}).catch(function () {});
+      }
+      ping();
+      window.setInterval(ping, 1000);
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") ping();
+      });
+    })();
+  </script>
   <script src="{% static 'js/gsap.min.js' %}?v=3.12.5" defer></script>
   <script src="{% static 'js/pill_nav_topbar.js' %}?v=14" defer></script>
   {% block extra_js %}{% endblock %}

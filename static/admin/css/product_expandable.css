@@ -244,8 +244,10 @@ body.model-product.change-list {
   box-sizing: border-box;
 }
 
+#result_list th.column-name,
 #result_list .field-name {
-  width: auto;
+  width: 32%;
+  min-width: 240px;
 }
 
 #result_list .field-name input {
@@ -254,6 +256,47 @@ body.model-product.change-list {
   max-width: 100%;
   box-sizing: border-box;
 }
+
+/* Узкие колонки галочек — чтобы название помещалось целиком */
+#result_list th.column-is_visible,
+#result_list td.field-is_visible,
+#result_list th.column-is_new,
+#result_list td.field-is_new,
+#result_list th.column-is_hit,
+#result_list td.field-is_hit,
+#result_list th.column-has_main_photo,
+#result_list td.field-has_main_photo {
+  width: 52px !important;
+  min-width: 52px !important;
+  max-width: 52px !important;
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+  text-align: center;
+  overflow: hidden;
+}
+
+#result_list th.column-is_visible .text span,
+#result_list th.column-is_new .text span,
+#result_list th.column-is_hit .text span,
+#result_list th.column-has_main_photo .text span {
+  font-size: 0;
+  line-height: 1.15;
+}
+
+#result_list th.column-is_visible .text span::after,
+#result_list th.column-is_new .text span::after,
+#result_list th.column-is_hit .text span::after,
+#result_list th.column-has_main_photo .text span::after {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: normal;
+}
+
+#result_list th.column-is_visible .text span::after { content: "Каталог"; }
+#result_list th.column-is_new .text span::after { content: "Новинка"; }
+#result_list th.column-is_hit .text span::after { content: "Хит"; }
+#result_list th.column-has_main_photo .text span::after { content: "Фото"; }
 
 .product-row-detail__name {
   width: 100%;

@@ -24,7 +24,7 @@ ONLINE_WINDOW = timedelta(seconds=3)
 
 
 def count_online_now() -> int:
-    """Сколько разных посетителей открывали витрину в последние секунды."""
+    """Посетители с открытой витриной. После ухода пропадают через 3 секунды."""
     online_since = timezone.now() - ONLINE_WINDOW
     return (
         SiteVisit.objects.filter(last_hit_at__gte=online_since)

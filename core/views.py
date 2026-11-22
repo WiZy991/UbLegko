@@ -1,6 +1,7 @@
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 import logging
 
@@ -34,6 +35,15 @@ def privacy(request):
             'site': SiteSettings.load(),
         },
     )
+
+
+@csrf_exempt
+@require_POST
+def presence(request):
+    from core.analytics import touch_site_presence
+
+    touch_site_presence(request)
+    return HttpResponse(status=204)
 
 
 @require_POST
