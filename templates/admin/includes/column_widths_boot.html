@@ -109,7 +109,7 @@
       th.style.setProperty("max-width", px + "px", "important");
       var clip = window.ublegkoColumnKey(th) === "action-checkbox" || window.ublegkoColumnKey(th) === "column-expand_toggle"
         ? ""
-        : "overflow:hidden !important;text-overflow:ellipsis !important;";
+        : "white-space:normal !important;overflow-wrap:anywhere !important;word-break:break-word !important;overflow:hidden !important;text-overflow:clip !important;";
       columnSelectors(window.ublegkoColumnKey(th)).forEach(function (selector) {
         css += "html body.change-list #result_list " + selector +
           "{box-sizing:border-box !important;width:" + px + "px !important;min-width:" + px +

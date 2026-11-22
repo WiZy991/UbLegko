@@ -8,7 +8,9 @@
   font-size: 12px;
   font-weight: 700;
   line-height: 1.3;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .user-activity-badge--on {

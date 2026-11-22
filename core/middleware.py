@@ -1,5 +1,6 @@
 from django.contrib.auth import logout
 from django.http import HttpResponseForbidden
+from django.template.loader import render_to_string
 
 from core.analytics import (
     _is_staff_user,
@@ -10,10 +11,13 @@ from core.analytics import (
     record_site_visit,
 )
 
-_FORBIDDEN_TEXT = (
-    'Доступ с этого IP временно закрыт. '
-    'Снимается через час или кнопкой «Разблокировать» в статистике сайта.'
-)
+def _blocked_page(ip):
+    from core.models import BlockedIP
+
+    block = BlockedIP.objects.filter(ip_address=ip).only('is_manual').first()
+    automatic = not (block and block.is_manual)
+    html = render_to_string('core/ip_blocked.html', {'automatic': automatic})
+    return HttpResponseForbidden(html)
 
 
 class BlockedUserMiddleware:
@@ -45,10 +49,10 @@ class IPBlockMiddleware:
         ip = client_ip_for_request(request)
         if ip:
             if is_ip_blocked(ip):
-                return HttpResponseForbidden(_FORBIDDEN_TEXT)
+                return _blocked_page(ip)
             if _should_rate_limit_request(request):
                 if _register_rate_hit_and_maybe_block(ip):
-                    return HttpResponseForbidden(_FORBIDDEN_TEXT)
+                    return _blocked_page(ip)
         return self.get_response(request)
 
 

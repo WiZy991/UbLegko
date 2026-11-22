@@ -234,7 +234,8 @@ body.product-col-dragging {
   width: 260px !important;
   min-width: 260px !important;
   max-width: 280px !important;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 #result_list .field-category .related-widget-wrapper,
