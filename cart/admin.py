@@ -676,8 +676,7 @@ class StainHelpRequestAdmin(InboxExpandableAdminMixin, admin.ModelAdmin):
 
     @admin.display(description='Проблема')
     def short_problem(self, obj):
-        text = (obj.problem or '').strip().replace('\n', ' ')
-        return text if len(text) <= 40 else f'{text[:37]}…'
+        return (obj.problem or '').strip().replace('\n', ' ')
 
     @admin.display(description='Статус', ordering='is_processed')
     def status_control(self, obj):

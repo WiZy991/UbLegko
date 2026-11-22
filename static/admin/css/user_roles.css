@@ -2,16 +2,23 @@
 
 .user-role-select,
 .user-membership-select {
-  max-width: 200px;
-  min-width: 140px;
-  padding: 4px 6px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 4px 22px 4px 6px;
   border: 1px solid #c5d5de;
   border-radius: 6px;
-  background: #fff;
+  background-color: #fff;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.3;
   cursor: pointer;
+}
+
+#result_list td.field-access_role_col,
+#result_list td.field-membership_col {
+  overflow: visible;
 }
 
 .user-role-select--admin {

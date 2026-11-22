@@ -138,7 +138,15 @@
   word-break: break-word;
 }
 
-#result_list tbody tr.inbox-row > td.field-short_problem,
+#result_list th.column-short_problem,
+#result_list tbody tr.inbox-row > td.field-short_problem {
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+}
+
 #result_list tbody tr.inbox-row > td.field-address_col,
 #result_list tbody tr.inbox-row > td.field-contact_col,
 #result_list tbody tr.inbox-row > td.field-address_name_col,
