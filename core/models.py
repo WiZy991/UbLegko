@@ -1,3 +1,4 @@
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -94,6 +95,18 @@ class SiteSettings(models.Model):
         default=10,
         help_text='Окно времени в секундах для подсчёта хитов.',
     )
+    ticker_text = models.TextField(
+        'Текст',
+        blank=True,
+        default='',
+        help_text='Если поле пустое, строка на сайте не показывается.',
+    )
+    ticker_speed_seconds = models.PositiveSmallIntegerField(
+        'Скорость, секунд',
+        default=18,
+        validators=[MinValueValidator(4), MaxValueValidator(180)],
+        help_text='Длительность одного круга в секундах. Чем меньше число, тем быстрее.',
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -102,6 +115,10 @@ class SiteSettings(models.Model):
 
     def __str__(self):
         return 'Настройки сайта'
+
+    @property
+    def ticker_line(self):
+        return ' '.join((self.ticker_text or '').split())
 
     def save(self, *args, **kwargs):
         self.pk = 1

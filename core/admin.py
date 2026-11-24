@@ -27,7 +27,24 @@ class SiteSettingsAdmin(admin.ModelAdmin):
                 ),
             },
         ),
+        (
+            'Бегущая строка',
+            {
+                'fields': ('ticker_text', 'ticker_speed_seconds'),
+                'description': 'Текст едет по синей полосе под шапкой. Пустой текст строку скрывает.',
+            },
+        ),
     )
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        text = form.base_fields.get('ticker_text')
+        if text is not None:
+            text.widget.attrs['rows'] = 3
+        speed = form.base_fields.get('ticker_speed_seconds')
+        if speed is not None:
+            speed.widget.attrs.update({'min': 4, 'max': 180})
+        return form
 
     def has_add_permission(self, request):
         return not SiteSettings.objects.exists()

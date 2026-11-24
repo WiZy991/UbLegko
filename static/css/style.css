@@ -814,6 +814,46 @@ select {
   color: var(--cyan);
 }
 
+.ticker {
+  --ticker-seconds: 18;
+  background: var(--cyan);
+  color: #fff;
+  overflow: hidden;
+  height: 34px;
+  display: flex;
+  align-items: center;
+}
+
+.ticker__track {
+  display: flex;
+  width: max-content;
+  animation: ticker-move calc(var(--ticker-seconds) * 1s) linear infinite;
+}
+
+.ticker__group {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.ticker__item {
+  padding-right: 3.5rem;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@keyframes ticker-move {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker__track {
+    animation: none;
+  }
+}
+
 .search-row {
   position: relative;
   z-index: 10;
@@ -4336,6 +4376,15 @@ select.form-input {
 
   .search-row {
     padding: 8px 0;
+  }
+
+  .ticker {
+    height: 30px;
+  }
+
+  .ticker__item {
+    font-size: 13px;
+    padding-right: 2.5rem;
   }
 
   .topbar__inner {
