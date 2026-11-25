@@ -43,7 +43,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             text.widget.attrs['rows'] = 3
         speed = form.base_fields.get('ticker_speed_seconds')
         if speed is not None:
-            speed.widget.attrs.update({'min': 4, 'max': 180})
+            speed.widget.attrs.update({'min': 4, 'max': 600})
         return form
 
     def has_add_permission(self, request):

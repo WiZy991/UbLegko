@@ -819,15 +819,19 @@ select {
   background: var(--cyan);
   color: #fff;
   overflow: hidden;
-  height: 34px;
+  height: auto;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  padding: 2px 0 0;
 }
 
 .ticker__track {
   display: flex;
   width: max-content;
-  animation: ticker-move calc(var(--ticker-seconds) * 1s) linear infinite;
+  animation-name: ticker-move;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-duration: calc(var(--ticker-seconds) * 1s);
 }
 
 .ticker__group {
@@ -836,11 +840,15 @@ select {
 }
 
 .ticker__item {
-  padding-right: 3.5rem;
-  font-size: 15px;
+  padding-right: 4rem;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.05;
   white-space: nowrap;
+}
+
+.ticker + .search-row {
+  padding-top: 2px;
 }
 
 @keyframes ticker-move {
@@ -4380,11 +4388,18 @@ select.form-input {
 
   .ticker {
     height: 30px;
+    align-items: center;
+    padding: 0;
   }
 
   .ticker__item {
     font-size: 13px;
+    line-height: 1;
     padding-right: 2.5rem;
+  }
+
+  .ticker + .search-row {
+    padding-top: 8px;
   }
 
   .topbar__inner {
@@ -4709,6 +4724,10 @@ select.form-input {
 
   .search-row {
     padding: 6px 0;
+  }
+
+  .ticker + .search-row {
+    padding-top: 6px;
   }
 
   .search-row__inner {

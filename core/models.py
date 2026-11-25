@@ -104,8 +104,11 @@ class SiteSettings(models.Model):
     ticker_speed_seconds = models.PositiveSmallIntegerField(
         'Скорость, секунд',
         default=18,
-        validators=[MinValueValidator(4), MaxValueValidator(180)],
-        help_text='Длительность одного круга в секундах. Чем меньше число, тем быстрее.',
+        validators=[MinValueValidator(4), MaxValueValidator(600)],
+        help_text=(
+            'Сколько секунд весь написанный текст едет один круг. '
+            '180 — три минуты, 600 — десять минут. Чем больше число, тем медленнее.'
+        ),
     )
     updated_at = models.DateTimeField(auto_now=True)
 

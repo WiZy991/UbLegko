@@ -102,17 +102,17 @@
   function fillTicker() {
     document.querySelectorAll(".ticker").forEach((ticker) => {
       const track = ticker.querySelector(".ticker__track");
-      const groups = track ? track.querySelectorAll(".ticker__group") : [];
+      const groups = track ? Array.from(track.querySelectorAll(".ticker__group")) : [];
       const first = groups[0] && groups[0].querySelector(".ticker__item");
-      if (!first || groups.length < 2) return;
+      if (!track || !first || groups.length < 2) return;
       const text = first.textContent || "";
       const itemWidth = first.getBoundingClientRect().width;
       const viewWidth = ticker.clientWidth;
-      if (!text || !itemWidth || !viewWidth) return;
-      const copies = Math.max(2, Math.ceil(viewWidth / itemWidth) + 1);
+      if (!text || itemWidth < 1 || viewWidth < 1) return;
+      const copies = Math.max(1, Math.ceil(viewWidth / itemWidth));
       groups.forEach((group, groupIndex) => {
         const items = group.querySelectorAll(".ticker__item");
-        if (items.length === copies && items[0].textContent === text) return;
+        if (items.length === copies && (items[0].textContent || "") === text) return;
         group.replaceChildren();
         for (let i = 0; i < copies; i += 1) {
           const span = document.createElement("span");
@@ -122,6 +122,15 @@
           group.appendChild(span);
         }
       });
+      const seconds = parseFloat(getComputedStyle(ticker).getPropertyValue("--ticker-seconds"));
+      const lap = Math.min(600, Math.max(4, Number.isFinite(seconds) ? seconds : 18));
+      const one = groups[0].querySelector(".ticker__item").getBoundingClientRect().width;
+      const groupWidth = groups[0].getBoundingClientRect().width;
+      if (one < 1 || groupWidth < 1) return;
+      const duration = (lap * (groupWidth / one)).toFixed(2) + "s";
+      if (track.style.animationDuration !== duration) {
+        track.style.animationDuration = duration;
+      }
     });
   }
 
