@@ -122,14 +122,15 @@
           group.appendChild(span);
         }
       });
-      const seconds = parseFloat(getComputedStyle(ticker).getPropertyValue("--ticker-seconds"));
-      const lap = Math.min(600, Math.max(4, Number.isFinite(seconds) ? seconds : 18));
+      const raw = parseFloat(ticker.getAttribute("data-ticker-seconds"));
+      const lap = Math.min(1000, Math.max(4, Number.isFinite(raw) ? raw : 18));
       const one = groups[0].querySelector(".ticker__item").getBoundingClientRect().width;
       const groupWidth = groups[0].getBoundingClientRect().width;
       if (one < 1 || groupWidth < 1) return;
-      const duration = (lap * (groupWidth / one)).toFixed(2) + "s";
-      if (track.style.animationDuration !== duration) {
-        track.style.animationDuration = duration;
+      const next = lap * (groupWidth / one);
+      const current = parseFloat(track.style.animationDuration);
+      if (!Number.isFinite(current) || Math.abs(current - next) > 0.05) {
+        track.style.animationDuration = next + "s";
       }
     });
   }

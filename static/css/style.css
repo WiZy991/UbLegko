@@ -816,6 +816,8 @@ select {
 
 .ticker {
   --ticker-seconds: 18;
+  --ticker-font-size: 32px;
+  font-family: var(--ticker-font, "Manrope", sans-serif);
   background: var(--cyan);
   color: #fff;
   overflow: hidden;
@@ -841,7 +843,8 @@ select {
 
 .ticker__item {
   padding-right: 4rem;
-  font-size: 32px;
+  font-family: inherit;
+  font-size: var(--ticker-font-size, 32px);
   font-weight: 700;
   line-height: 1.05;
   white-space: nowrap;
@@ -4393,7 +4396,7 @@ select.form-input {
   }
 
   .ticker__item {
-    font-size: 13px;
+    font-size: 15px;
     line-height: 1;
     padding-right: 2.5rem;
   }

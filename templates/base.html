@@ -32,7 +32,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261125tickerfont">
+  {% if site_settings.ticker_line and site_settings.ticker_google_font_href %}
+    <link rel="stylesheet" href="{{ site_settings.ticker_google_font_href }}">
+  {% endif %}
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261126ticker">
   <link rel="stylesheet" href="{% static 'css/pill_nav_topbar.css' %}?v=14">
   {% block extra_css %}{% endblock %}
   {% block json_ld %}
@@ -338,7 +341,11 @@
       </div>
     </div>
     {% if site_settings.ticker_line %}
-      <div class="ticker" style="--ticker-seconds: {{ site_settings.ticker_speed_seconds|default:18 }};">
+      <div
+        class="ticker"
+        data-ticker-seconds="{{ site_settings.ticker_seconds }}"
+        style="--ticker-seconds: {{ site_settings.ticker_seconds }}; --ticker-font-size: {{ site_settings.ticker_font_size_px }}px; --ticker-font: {{ site_settings.ticker_font_family }};"
+      >
         <div class="ticker__track">
           <div class="ticker__group">
             <span class="ticker__item">{{ site_settings.ticker_line }}</span>
@@ -759,7 +766,7 @@
       else if (mq.addListener) mq.addListener(schedule);
     })();
   </script>
-  <script src="{% static 'js/main.js' %}?v=20261125ticker"></script>
+  <script src="{% static 'js/main.js' %}?v=20261126ticker"></script>
   <script>
     (function () {
       var url = "{% url 'core:presence' %}";

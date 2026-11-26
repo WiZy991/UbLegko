@@ -30,7 +30,7 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         (
             'Бегущая строка',
             {
-                'fields': ('ticker_text', 'ticker_speed_seconds'),
+                'fields': ('ticker_text', 'ticker_font', 'ticker_font_size', 'ticker_speed_seconds'),
                 'description': 'Текст едет по синей полосе под шапкой. Пустой текст строку скрывает.',
             },
         ),
@@ -43,7 +43,10 @@ class SiteSettingsAdmin(admin.ModelAdmin):
             text.widget.attrs['rows'] = 3
         speed = form.base_fields.get('ticker_speed_seconds')
         if speed is not None:
-            speed.widget.attrs.update({'min': 4, 'max': 600})
+            speed.widget.attrs.update({'min': 4, 'max': 1000})
+        size = form.base_fields.get('ticker_font_size')
+        if size is not None:
+            size.widget.attrs.update({'min': 12, 'max': 72})
         return form
 
     def has_add_permission(self, request):
