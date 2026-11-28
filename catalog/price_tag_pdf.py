@@ -21,8 +21,8 @@ COLS = 3
 ROWS = 7
 BARCODE_W = 26.0
 BARCODE_H = 4.0
-BADGE_W = 23.0
-BADGE_H = 6.8
+BADGE_W = 22.0
+BADGE_H = 6.2
 PRICE_H = 9.0
 
 
@@ -214,8 +214,9 @@ def _draw_tag(pdf, ox, oy, tag: dict):
         _write(pdf, left, cursor + index * desc_h, desc_w, desc_h, line)
 
     if tag.get('promo'):
-        _draw_badge(pdf, left, price_top + (PRICE_H - BADGE_H) / 2)
-    _draw_price(pdf, left + (BADGE_W + 0.8 if tag.get('promo') else 0), right, price_top + 0.2, tag)
+        _draw_badge(pdf, ox + 0.2, price_top + (PRICE_H - BADGE_H) / 2)
+    price_left = ox + 0.2 + BADGE_W + 0.6 if tag.get('promo') else left
+    _draw_price(pdf, price_left, right, price_top + 0.2, tag)
 
     meta_w = 22.0
     meta_x = right - meta_w
@@ -268,8 +269,19 @@ def build_price_tags_pdf(tags: list[dict]) -> bytes:
 
 
 def render_price_tags_pdf(tags: list[dict]) -> HttpResponse:
-    response = HttpResponse(build_price_tags_pdf(tags), content_type='application/pdf')
-    response['Content-Disposition'] = (
-        "attachment; filename=\"cenniki.pdf\"; filename*=UTF-8''%D1%86%D0%B5%D0%BD%D0%BD%D0%B8%D0%BA%D0%B8.pdf"
-    )
+    try:
+        payload = build_price_tags_pdf(tags)
+    except ModuleNotFoundError:
+        return HttpResponse(
+            'Не удалось собрать PDF: на сервере не установлена библиотека fpdf2. '
+            'В каталоге проекта выполните pip install -r requirements.txt и перезапустите сайт.',
+            content_type='text/plain; charset=utf-8',
+        )
+    except Exception as exc:
+        return HttpResponse(
+            f'Не удалось собрать PDF: {exc}',
+            content_type='text/plain; charset=utf-8',
+        )
+    response = HttpResponse(payload, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="cenniki.pdf"'
     return response

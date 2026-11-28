@@ -344,13 +344,14 @@
 
 .tag__badge {
   position: relative;
-  flex: 0 0 23mm;
-  width: 23mm;
-  height: 6.8mm;
+  flex: 0 0 22mm;
+  width: 22mm;
+  height: 6.2mm;
+  margin-left: -1.3mm;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 4mm 0 0;
+  padding: 0 3.6mm 0 0.3mm;
 }
 
 .tag__badge svg {

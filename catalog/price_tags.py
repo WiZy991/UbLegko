@@ -5,7 +5,7 @@ import re
 from decimal import Decimal, InvalidOperation
 
 from django.core.paginator import Paginator
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.shortcuts import render
 from django.utils import timezone
 from django.utils.html import escape, strip_tags
@@ -303,7 +303,14 @@ def render_price_tags_print(request, products=None):
                 continue
             tags.extend(_tag_copies(item, product, printed_on, company))
     if request.POST.get('format') == 'pdf':
-        from .price_tag_pdf import render_price_tags_pdf
+        try:
+            from .price_tag_pdf import render_price_tags_pdf
+        except ModuleNotFoundError:
+            return HttpResponse(
+                'Не удалось собрать PDF: на сервере не установлена библиотека fpdf2. '
+                'В каталоге проекта выполните pip install -r requirements.txt и перезапустите сайт.',
+                content_type='text/plain; charset=utf-8',
+            )
         return render_price_tags_pdf(tags)
     return render(request, 'admin/catalog/price_tags_print.html', {
         'title': 'Ценники',
