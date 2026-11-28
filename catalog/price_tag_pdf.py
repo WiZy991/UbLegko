@@ -22,8 +22,8 @@ ROWS = 7
 BARCODE_W = 26.0
 BARCODE_H = 4.0
 BADGE_W = 22.0
-BADGE_H = 6.2
-PRICE_H = 9.0
+BADGE_H = 9.0
+PRICE_H = 9.5
 
 
 def _pt(points: float) -> float:
@@ -92,12 +92,13 @@ def _draw_badge(pdf, x, y):
     pdf.set_fill_color(225, 6, 0)
     pdf.polygon(points, style='F')
     label = 'АКЦИЯ!'
-    pdf.set_font('PTSans', 'B', 16)
+    pdf.set_font('PTSans', 'B', 17)
     pdf.set_text_color(255, 225, 0)
     body_w = BADGE_W * 122 / 148
     text_w = pdf.get_string_width(label)
-    pdf.set_xy(x + max(0.4, (body_w - text_w) / 2), y + (BADGE_H - _pt(16)) / 2)
-    pdf.cell(text_w, _pt(16), label)
+    text_h = _pt(17)
+    pdf.set_xy(x + max(0.3, (body_w - text_w) / 2), y + (BADGE_H - text_h) / 2)
+    pdf.cell(text_w, text_h, label)
     pdf.set_text_color(0, 0, 0)
 
 
@@ -115,46 +116,55 @@ def _draw_price(pdf, left, right, top, tag):
     pdf.set_char_spacing(0)
     block_w = rub_w + 0.35 + col_w
     block_x = max(left, right - block_w)
+    rub_h = _pt(rub_size) * 0.78
     pdf.set_char_spacing(-0.03 * _pt(rub_size))
     pdf.set_font('Fjalla', '', rub_size)
-    _write(pdf, block_x, top, rub_w, _pt(rub_size) * 0.8, rubles)
+    _write(pdf, block_x, top, rub_w, rub_h, rubles)
     pdf.set_char_spacing(0)
     kop_x = block_x + rub_w + 0.35
     pdf.set_font('Fjalla', '', 11)
-    _write(pdf, kop_x, top + 0.15, col_w, _pt(11) * 0.9, kopecks, align='C')
-    line_y = top + 0.15 + _pt(11) * 0.92
+    _write(pdf, kop_x, top + 0.1, col_w, _pt(11) * 0.9, kopecks, align='C')
+    line_y = top + 0.1 + _pt(11) * 0.9
     pdf.set_draw_color(17, 17, 17)
     pdf.set_line_width(0.28)
     pdf.line(kop_x + (col_w - kop_w) / 2, line_y, kop_x + (col_w + kop_w) / 2, line_y)
     pdf.set_font('Roboto', '', 7.5)
-    _write(pdf, kop_x, line_y + 0.2, col_w, _pt(7.5) * 1.05, 'руб.', align='C')
+    _write(pdf, kop_x, line_y + 0.15, col_w, _pt(7.5) * 1.05, 'руб.', align='C')
 
 
 def _draw_old_price(pdf, right, top, tag) -> float:
     pdf.set_font('Roboto', '', 5.2)
-    label_w = max(13.5, pdf.get_string_width('Старая цена:'))
-    _write(pdf, right - label_w, top, label_w, _pt(5.2) * 1.1, 'Старая цена:', align='R')
-    y = top + _pt(5.2) * 1.2
+    label = 'Старая цена:'
+    label_w = max(13.5, pdf.get_string_width(label) + 0.2)
+    label_h = _pt(5.2) * 1.1
+    _write(pdf, right - label_w, top, label_w, label_h, label, align='R')
+
+    y = top + label_h + 0.05
     old_rubles = str(tag.get('old_rubles') or '')
     old_kopecks = str(tag.get('old_kopecks') or '')
     pdf.set_font('Fjalla', '', 10)
+    rub_h = _pt(10) * 0.85
     rub_w = pdf.get_string_width(old_rubles)
     pdf.set_font('Fjalla', '', 5.5)
     kop_w = pdf.get_string_width(old_kopecks)
     total = rub_w + kop_w
     x = right - total
+
     pdf.set_font('Fjalla', '', 10)
-    _write(pdf, x, y, rub_w, _pt(10) * 0.9, old_rubles)
+    _write(pdf, x, y, rub_w, rub_h, old_rubles)
     pdf.set_font('Fjalla', '', 5.5)
-    _write(pdf, x + rub_w, y + 0.15, kop_w, _pt(5.5), old_kopecks)
+    _write(pdf, x + rub_w, y + 0.05, kop_w, _pt(5.5), old_kopecks)
+
+    # В fpdf глифы сидят выше ячейки — линию чуть выше середины, наклон как в CSS (~-8°).
+    mid = y + rub_h * 0.24
+    rise = total * 0.14
     pdf.set_draw_color(225, 6, 0)
-    pdf.set_line_width(0.32)
-    strike_y = y + _pt(10) * 0.5
-    pdf.line(x - 0.3, strike_y + 0.4, x + total + 0.35, strike_y - 0.35)
+    pdf.set_line_width(0.4)
+    pdf.line(x - 0.35, mid + rise / 2, x + total + 0.35, mid - rise / 2)
     pdf.set_draw_color(17, 17, 17)
-    y2 = y + _pt(10) * 0.95
+
     pdf.set_font('Roboto', '', 4.5)
-    _write(pdf, right - label_w, y2, label_w, _pt(4.5), 'руб.', align='R')
+    _write(pdf, right - label_w, y + rub_h * 0.88, label_w, _pt(4.5), 'руб.', align='R')
     return label_w
 
 
@@ -187,36 +197,38 @@ def _draw_tag(pdf, ox, oy, tag: dict):
     inner_w = right - left
     bottom = oy + TAG_H - PAD_B
     bits = _ean13_bits(tag.get('barcode') or '')
-    foot_h = _pt(5.4) * 1.15 + (0.25 + BARCODE_H if bits else 0)
+    foot_h = _pt(5.4) * 1.1 + (0.2 + BARCODE_H if bits else 0)
     price_top = bottom - foot_h - PRICE_H
 
     pdf.set_font('Roboto', '', 5)
     printed_on = tag.get('printed_on') or ''
-    date_w = pdf.get_string_width(printed_on) + 0.6
-    _write(pdf, right - date_w, oy + PAD_T, date_w, _pt(5) * 1.1, printed_on, align='R')
+    date_w = pdf.get_string_width(printed_on) + 0.4
+    _write(pdf, right - date_w, oy + PAD_T + 0.2, date_w, _pt(5) * 1.1, printed_on, align='R')
 
-    pdf.set_font('Roboto', '', 10)
-    name_w = inner_w - date_w - 0.8
+    pdf.set_font('Roboto', 'B', 10)
+    name_w = max(8.0, inner_w - date_w - 0.8)
     name_h = _pt(10) * 1.05
     name_lines = _lines(pdf, tag.get('name') or '', name_w, 2)
     for index, line in enumerate(name_lines):
         _write(pdf, left, oy + PAD_T + index * name_h, name_w, name_h, line)
-    cursor = oy + PAD_T + max(len(name_lines), 1) * name_h + 0.4
+    cursor = oy + PAD_T + max(len(name_lines), 1) * name_h + 0.3
 
     old_w = 0.0
     if tag.get('promo'):
         old_w = _draw_old_price(pdf, right, cursor, tag) + 1.0
-    desc_w = inner_w - old_w
+    desc_w = max(4.0, inner_w - old_w)
     pdf.set_font('Roboto', '', 7)
     desc_h = _pt(7) * 1.15
-    max_desc = min(4, int((price_top - cursor - 0.3) / desc_h))
+    max_desc = min(4, max(0, int((price_top - cursor - 0.4) / desc_h)))
     for index, line in enumerate(_lines(pdf, tag.get('description') or '', desc_w, max_desc)):
         _write(pdf, left, cursor + index * desc_h, desc_w, desc_h, line)
 
+    badge_x = ox + 0.2
+    price_y = price_top + max(0.0, (PRICE_H - BADGE_H) / 2)
     if tag.get('promo'):
-        _draw_badge(pdf, ox + 0.2, price_top + (PRICE_H - BADGE_H) / 2)
-    price_left = ox + 0.2 + BADGE_W + 0.6 if tag.get('promo') else left
-    _draw_price(pdf, price_left, right, price_top + 0.2, tag)
+        _draw_badge(pdf, badge_x, price_y)
+    price_left = badge_x + BADGE_W + 0.5 if tag.get('promo') else left
+    _draw_price(pdf, price_left, right, price_y + 0.15, tag)
 
     meta_w = 22.0
     meta_x = right - meta_w
@@ -225,22 +237,23 @@ def _draw_tag(pdf, ox, oy, tag: dict):
         meta_lines.append((tag['country'], '', 5.2))
     if tag.get('company'):
         meta_lines.append((tag['company'], '', 5.2))
-    meta_heights = []
-    for _text, style, size in meta_lines:
-        meta_heights.append(_pt(size) * (1.05 if style == 'B' else 1.12))
+    meta_heights = [
+        _pt(size) * (1.05 if style == 'B' else 1.12)
+        for _text, style, size in meta_lines
+    ]
     meta_y = bottom - sum(meta_heights)
     for (text, style, size), height in zip(meta_lines, meta_heights):
         pdf.set_font('Roboto', style, size)
         _write(pdf, meta_x, meta_y, meta_w, height, text, align='R')
         meta_y += height
 
-    sku_h = _pt(5.4) * 1.15
+    sku_h = _pt(5.4) * 1.1
     sku_y = bottom - foot_h
     pdf.set_font('Roboto', '', 5.4)
     sku = 'Код: ' + (tag.get('sku') or '')
-    _write(pdf, left, sku_y, meta_x - left - 0.6, sku_h, sku)
+    _write(pdf, left, sku_y, max(4.0, meta_x - left - 0.6), sku_h, sku)
     if bits:
-        _draw_barcode(pdf, left, sku_y + sku_h + 0.25, bits)
+        _draw_barcode(pdf, left, sku_y + sku_h + 0.15, bits)
 
 
 def build_price_tags_pdf(tags: list[dict]) -> bytes:
