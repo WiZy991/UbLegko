@@ -1,0 +1,296 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/price_tags.css' %}?v=20261128tags6">
+{% endblock %}
+
+{% block content %}
+<div class="pricetags" data-pricetags>
+  <div class="pricetags__settings">
+    <h1>Ценники</h1>
+    <div class="pricetags__facts">
+      <div>
+        <span>Дата</span>
+        <strong>{{ printed_on }}</strong>
+      </div>
+      <div>
+        <span>Организация</span>
+        <strong>{{ company }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <form class="pricetags__search" method="get" action="">
+    <input type="search" name="q" value="{{ query }}" placeholder="Найти товар по названию">
+    <button type="submit" class="button">Найти</button>
+    {% if query %}<a href="{% url 'admin:catalog_product_pricetags' %}">Сбросить</a>{% endif %}
+  </form>
+
+  <div class="pricetags__bar">
+    <label class="pricetags__checkall">
+      <input type="checkbox" data-check-page>
+      Отметить товары на этой странице
+    </label>
+    <span data-selected-count>Выбрано: 0</span>
+    <button type="button" class="button" data-clear-selected>Снять все галочки</button>
+  </div>
+
+  <div class="pricetags__table-wrap">
+    <table class="pricetags__table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Наименование товара</th>
+          <th>Описание товара</th>
+          <th>Ед. измерения</th>
+          <th>Код товара</th>
+          <th>Штрихкод</th>
+          <th>Цена</th>
+          <th>Старая цена</th>
+          <th>Страна производитель</th>
+          <th>Количество ценников</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr data-row data-id="{{ row.product.pk }}" data-save-url="{% url 'admin:catalog_product_quick_update' row.product.pk %}">
+            <td>
+              <input type="checkbox" data-product-id="{{ row.product.pk }}" aria-label="Выбрать {{ row.product.name }}">
+            </td>
+            <td><textarea data-field="name" rows="2">{{ row.product.name }}</textarea></td>
+            <td><textarea data-field="description" rows="3">{{ row.description }}</textarea></td>
+            <td><input data-field="unit" value="{{ row.product.unit }}"></td>
+            <td><input data-field="sku" value="{{ row.product.sku }}"></td>
+            <td><input data-field="barcode" value="{{ row.product.barcode }}"></td>
+            <td><input data-field="price" inputmode="decimal" value="{{ row.price_input }}"></td>
+            <td><input data-field="old_price" inputmode="decimal" value="{{ row.old_price_input }}"></td>
+            <td><input data-field="country" value="{{ row.product.country }}"></td>
+            <td><input data-field="qty" type="number" min="1" max="99" value="1"></td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="10">Товары не найдены.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if page.paginator.num_pages > 1 %}
+    <nav class="pricetags__pages" aria-label="Страницы">
+      {% if page.has_previous %}
+        <a href="?page={{ page.previous_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}">Назад</a>
+      {% endif %}
+      <span>Страница {{ page.number }} из {{ page.paginator.num_pages }}</span>
+      {% if page.has_next %}
+        <a href="?page={{ page.next_page_number }}{% if query %}&q={{ query|urlencode }}{% endif %}">Дальше</a>
+      {% endif %}
+    </nav>
+  {% endif %}
+
+  <section class="pricetags__templates">
+    <h2>Шаблоны ценников</h2>
+    <div class="pricetags__cards">
+      <figure>
+        <figcaption>
+          <strong>Обычный шаблон</strong>
+          <span>{{ tag_width_cm }} × {{ tag_height_cm }} см</span>
+        </figcaption>
+        <div class="tag-frame">
+          <i class="tag-frame__w">{{ tag_width_cm }} см</i>
+          <i class="tag-frame__h">{{ tag_height_cm }} см</i>
+          {% include "admin/catalog/includes/price_tag_card.html" with tag=sample_regular %}
+        </div>
+      </figure>
+      <figure>
+        <figcaption>
+          <strong>Акционный шаблон</strong>
+          <span>для товаров со старой ценой, {{ tag_width_cm }} × {{ tag_height_cm }} см</span>
+        </figcaption>
+        <div class="tag-frame">
+          <i class="tag-frame__w">{{ tag_width_cm }} см</i>
+          <i class="tag-frame__h">{{ tag_height_cm }} см</i>
+          {% include "admin/catalog/includes/price_tag_card.html" with tag=sample_promo %}
+        </div>
+      </figure>
+    </div>
+    <form method="post" action="{% url 'admin:catalog_product_pricetags_print' %}" target="_blank" data-print-form>
+      {% csrf_token %}
+      <button type="submit" class="button default" data-print>Печать</button>
+    </form>
+  </section>
+</div>
+<script>
+(function () {
+  var root = document.querySelector("[data-pricetags]");
+  if (!root) return;
+  var key = "ublegko-pricetags";
+  var editKey = "ublegko-pricetags-edits";
+  var fields = ["name", "description", "unit", "sku", "barcode", "price", "old_price", "country", "qty"];
+  var timers = {};
+
+  function read() {
+    try { return JSON.parse(sessionStorage.getItem(key) || "[]"); }
+    catch (e) { return []; }
+  }
+  function write(ids) {
+    sessionStorage.setItem(key, JSON.stringify(ids));
+  }
+  function readEdits() {
+    try { return JSON.parse(sessionStorage.getItem(editKey) || "{}"); }
+    catch (e) { return {}; }
+  }
+  function writeEdits(edits) {
+    sessionStorage.setItem(editKey, JSON.stringify(edits));
+  }
+  function selected() {
+    var set = {};
+    read().forEach(function (id) { set[String(id)] = true; });
+    return set;
+  }
+  function csrf() {
+    var input = root.querySelector("[name=csrfmiddlewaretoken]");
+    return input ? input.value : "";
+  }
+  function rowValues(row) {
+    var data = {id: row.getAttribute("data-id")};
+    fields.forEach(function (name) {
+      var field = row.querySelector("[data-field='" + name + "']");
+      data[name] = field ? field.value : "";
+    });
+    return data;
+  }
+  function remember(row) {
+    var edits = readEdits();
+    edits[row.getAttribute("data-id")] = rowValues(row);
+    writeEdits(edits);
+  }
+  function applyEdits() {
+    var edits = readEdits();
+    root.querySelectorAll("[data-row]").forEach(function (row) {
+      var saved = edits[row.getAttribute("data-id")];
+      if (!saved) return;
+      fields.forEach(function (name) {
+        if (saved[name] == null) return;
+        var field = row.querySelector("[data-field='" + name + "']");
+        if (field) field.value = saved[name];
+      });
+    });
+  }
+  function count() { return read().length; }
+  function paint() {
+    var set = selected();
+    var boxes = root.querySelectorAll("[data-product-id]");
+    var pageChecked = 0;
+    boxes.forEach(function (box) {
+      box.checked = !!set[box.getAttribute("data-product-id")];
+      if (box.checked) pageChecked += 1;
+    });
+    var counter = root.querySelector("[data-selected-count]");
+    if (counter) counter.textContent = "Выбрано: " + count();
+    var pageBox = root.querySelector("[data-check-page]");
+    if (pageBox) pageBox.checked = boxes.length > 0 && pageChecked === boxes.length;
+  }
+  function toggle(id, on) {
+    var ids = read().map(String).filter(function (item) { return item !== String(id); });
+    if (on) ids.push(String(id));
+    write(ids);
+    paint();
+  }
+  function saveRow(row) {
+    var url = row.getAttribute("data-save-url");
+    if (!url) return;
+    var data = rowValues(row);
+    if (!String(data.name || "").trim()) return;
+    row.classList.add("is-saving");
+    fetch(url, {
+      method: "POST",
+      headers: {"Content-Type": "application/json", "X-CSRFToken": csrf()},
+      body: JSON.stringify({
+        name: data.name,
+        description: data.description,
+        price_tag_description: data.description,
+        unit: data.unit,
+        sku: data.sku,
+        barcode: data.barcode,
+        price: data.price,
+        old_price: data.old_price,
+        country: data.country
+      })
+    }).then(function (response) {
+      row.classList.toggle("is-error", !response.ok);
+      row.classList.remove("is-saving");
+    }).catch(function () {
+      row.classList.add("is-error");
+      row.classList.remove("is-saving");
+    });
+  }
+  root.addEventListener("input", function (event) {
+    var field = event.target.closest("[data-field]");
+    if (!field) return;
+    var row = field.closest("[data-row]");
+    if (!row) return;
+    remember(row);
+    row.classList.remove("is-error");
+    if (field.getAttribute("data-field") === "qty") return;
+    var id = row.getAttribute("data-id");
+    clearTimeout(timers[id]);
+    timers[id] = setTimeout(function () { saveRow(row); }, 500);
+  });
+  root.addEventListener("change", function (event) {
+    var box = event.target.closest("[data-product-id]");
+    if (box) {
+      var row = box.closest("[data-row]");
+      if (row) remember(row);
+      toggle(box.getAttribute("data-product-id"), box.checked);
+      return;
+    }
+    if (event.target.matches("[data-check-page]")) {
+      var ids = read().map(String);
+      var have = {};
+      ids.forEach(function (id) { have[id] = true; });
+      root.querySelectorAll("[data-row]").forEach(function (row) {
+        var id = row.getAttribute("data-id");
+        if (event.target.checked) {
+          have[id] = true;
+          remember(row);
+        } else {
+          delete have[id];
+        }
+      });
+      write(Object.keys(have));
+      paint();
+    }
+  });
+  var clearBtn = root.querySelector("[data-clear-selected]");
+  if (clearBtn) clearBtn.addEventListener("click", function () { write([]); paint(); });
+  var form = root.querySelector("[data-print-form]");
+  if (form) form.addEventListener("submit", function (event) {
+    var ids = read();
+    if (!ids.length) {
+      event.preventDefault();
+      window.alert("Отметьте товары галочками.");
+      return;
+    }
+    var edits = readEdits();
+    root.querySelectorAll("[data-row]").forEach(remember);
+    edits = readEdits();
+    form.querySelectorAll("input[name='ids'], input[name='items']").forEach(function (node) { node.remove(); });
+    var items = ids.map(function (id) {
+      var row = root.querySelector("[data-row][data-id='" + id + "']");
+      if (row) return rowValues(row);
+      return edits[id] || {id: id, qty: "1"};
+    });
+    var input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "items";
+    input.value = JSON.stringify(items);
+    form.appendChild(input);
+  });
+  applyEdits();
+  paint();
+})();
+</script>
+{% endblock %}

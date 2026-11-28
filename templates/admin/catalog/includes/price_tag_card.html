@@ -1,0 +1,48 @@
+<article class="tag{% if tag.promo %} tag--promo{% endif %}">
+  <div class="tag__top">
+    <div class="tag__name">{{ tag.name }}</div>
+    <div class="tag__date">{{ tag.printed_on }}</div>
+  </div>
+  <div class="tag__mid">
+    <div class="tag__desc">{{ tag.description }}</div>
+    {% if tag.promo %}
+      <div class="tag__old">
+        <div class="tag__old-label">Старая цена:</div>
+        <div class="tag__old-value">
+          <span class="tag__old-num"><span class="tag__old-rub">{{ tag.old_rubles }}</span><span class="tag__old-kop">{{ tag.old_kopecks }}</span></span>
+          <i>руб.</i>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+  <div class="tag__gap"></div>
+  <div class="tag__price-row">
+    {% if tag.promo %}
+      <div class="tag__badge">
+        <svg viewBox="0 0 148 42" preserveAspectRatio="none" aria-hidden="true">
+          <polygon points="0,0 122,0 148,21 122,42 0,42" fill="#e10600"/>
+        </svg>
+        <span>АКЦИЯ!</span>
+      </div>
+    {% endif %}
+    <div class="tag__price{% if tag.rubles|length >= 5 %} tag__price--long{% endif %}">
+      <span class="tag__rub">{{ tag.rubles }}</span>
+      <span class="tag__after">
+        <span class="tag__kop">{{ tag.kopecks }}</span>
+        <span class="tag__cur">руб.</span>
+      </span>
+    </div>
+  </div>
+  <div class="tag__foot">
+    <div class="tag__code">
+      <div class="tag__sku">Код: {{ tag.sku }}</div>
+      {% if tag.barcode_svg %}{{ tag.barcode_svg }}{% endif %}
+      {% if tag.barcode %}<div class="tag__ean">{{ tag.barcode }}</div>{% endif %}
+    </div>
+    <div class="tag__meta">
+      <div class="tag__unit">Цена за: {{ tag.unit }}</div>
+      {% if tag.country %}<div>{{ tag.country }}</div>{% endif %}
+      <div>{{ tag.company }}</div>
+    </div>
+  </div>
+</article>

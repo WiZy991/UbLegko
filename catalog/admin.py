@@ -815,9 +815,33 @@ class ProductAdmin(admin.ModelAdmin):
     def has_main_photo(self, obj):
         return bool(obj.image)
 
+    def price_tags_view(self, request):
+        if not self.has_view_permission(request):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        from .price_tags import render_price_tags
+        return render_price_tags(request)
+
+    def price_tags_print_view(self, request):
+        if not self.has_view_permission(request):
+            from django.core.exceptions import PermissionDenied
+            raise PermissionDenied
+        from .price_tags import render_price_tags_print
+        return render_price_tags_print(request)
+
     def get_urls(self):
         urls = super().get_urls()
         custom = [
+            path(
+                'pricetags/',
+                self.admin_site.admin_view(self.price_tags_view),
+                name='catalog_product_pricetags',
+            ),
+            path(
+                'pricetags/print/',
+                self.admin_site.admin_view(self.price_tags_print_view),
+                name='catalog_product_pricetags_print',
+            ),
             path(
                 '<int:product_id>/quick-update/',
                 self.admin_site.admin_view(self.quick_update_view),
