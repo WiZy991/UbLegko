@@ -128,7 +128,7 @@ def is_promo_price(product: Product) -> bool:
 
 
 def tag_description(product: Product) -> str:
-    raw = (product.price_tag_description or '').strip() or (product.description or '').strip()
+    raw = (product.price_tag_description or '').strip()
     return ' '.join(strip_tags(raw).replace('\xa0', ' ').split())
 
 
