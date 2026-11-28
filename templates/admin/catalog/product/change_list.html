@@ -77,11 +77,6 @@
 {% endblock %}
 
 {% block result_list %}
-  <p class="product-expandable-hint">
-    <strong>▼</strong> — подробности и фото. Край заголовка столбца и угол поля с текстом можно потянуть: размер запоминается для всех товаров.
-    Перетащите ⠿ у фото галереи — порядок на сайте.
-    <strong>Сохранить</strong> зелёная после правок.
-  </p>
   {% if action_form and actions_on_top and cl.show_admin_actions %}{% admin_actions %}{% endif %}
   {% if expandable_rows %}
     {% include "admin/catalog/product/change_list_results.html" %}
