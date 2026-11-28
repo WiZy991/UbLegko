@@ -344,13 +344,13 @@
 
 .tag__badge {
   position: relative;
-  flex: 0 0 28mm;
-  width: 28mm;
-  height: 8.4mm;
+  flex: 0 0 23mm;
+  width: 23mm;
+  height: 6.8mm;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 3.4mm 0 0;
+  padding: 0 4mm 0 0;
 }
 
 .tag__badge svg {
@@ -391,14 +391,6 @@ html[data-bs-theme="light"] .app-main .tag__badge span,
   font-size: 20pt;
 }
 
-.tag--promo .tag__rub {
-  font-size: 24pt;
-}
-
-.tag--promo .tag__price--long .tag__rub {
-  font-size: 16pt;
-}
-
 .tag__after {
   display: flex;
   flex-direction: column;
@@ -436,17 +428,10 @@ html[data-bs-theme="light"] .app-main .tag__badge span,
   line-height: 1.1;
 }
 
-.tag__ean {
-  font-family: "Courier New", Courier, monospace;
-  font-size: 4pt;
-  line-height: 1;
-  letter-spacing: 0.02em;
-}
-
 .tag__barcode {
   display: block;
   width: 26mm;
-  height: 6mm;
+  height: 4mm;
 }
 
 .tag__meta {
@@ -473,6 +458,26 @@ html[data-bs-theme="light"] .app-main .tag__badge span,
   gap: 12px;
   align-items: center;
   margin: 12px;
+}
+
+.pricetags-print__bar form {
+  display: flex;
+  margin: 0;
+}
+
+.pricetags-print__bar button {
+  appearance: none;
+  border: 0;
+  border-radius: 4px;
+  background: #00acd7;
+  color: #fff;
+  font: 600 14px Arial, sans-serif;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.pricetags-print__bar button:hover {
+  background: #0099c7;
 }
 
 .pricetags-print__sheet {

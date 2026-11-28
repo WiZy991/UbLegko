@@ -4,17 +4,28 @@
 <head>
   <meta charset="utf-8">
   <title>{{ title }}</title>
-  <link rel="stylesheet" href="{% static 'admin/css/price_tags.css' %}?v=20261128tags6">
+  <link rel="stylesheet" href="{% static 'admin/css/price_tags.css' %}?v=20261128tags7">
 </head>
 <body class="pricetags-print">
   <div class="pricetags-print__bar">
     <button type="button" onclick="window.print()">Печать</button>
-    <script>
-      window.addEventListener('load', function () {
-        var ready = document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve();
-        ready.then(function () { window.print(); });
-      });
-    </script>
+    {% if tags %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="format" value="pdf">
+        {% if reprint.select_across %}
+          <input type="hidden" name="select_across" value="1">
+          <input type="hidden" name="query" value="{{ reprint.query }}">
+        {% elif reprint.items %}
+          <input type="hidden" name="items" value="{{ reprint.items }}">
+        {% else %}
+          {% for raw_id in reprint.ids %}
+            <input type="hidden" name="ids" value="{{ raw_id }}">
+          {% endfor %}
+        {% endif %}
+        <button type="submit">Скачать в PDF</button>
+      </form>
+    {% endif %}
     <span>{{ tags|length }} шт., {{ tag_width_cm }} × {{ tag_height_cm }} см</span>
   </div>
   {% if tags %}

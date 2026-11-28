@@ -37,7 +37,6 @@
     <div class="tag__code">
       <div class="tag__sku">Код: {{ tag.sku }}</div>
       {% if tag.barcode_svg %}{{ tag.barcode_svg }}{% endif %}
-      {% if tag.barcode %}<div class="tag__ean">{{ tag.barcode }}</div>{% endif %}
     </div>
     <div class="tag__meta">
       <div class="tag__unit">Цена за: {{ tag.unit }}</div>

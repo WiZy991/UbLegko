@@ -302,9 +302,37 @@ def render_price_tags_print(request, products=None):
             if product is None:
                 continue
             tags.extend(_tag_copies(item, product, printed_on, company))
+    if request.POST.get('format') == 'pdf':
+        from .price_tag_pdf import render_price_tags_pdf
+        return render_price_tags_pdf(tags)
     return render(request, 'admin/catalog/price_tags_print.html', {
         'title': 'Ценники',
         'tags': tags,
         'tag_width_cm': TAG_WIDTH_CM,
         'tag_height_cm': TAG_HEIGHT_CM,
+        'reprint': _reprint_payload(request, products),
     })
+
+
+def _reprint_payload(request, products) -> dict:
+    if products is not None:
+        return {
+            'select_across': True,
+            'query': request.POST.get('query') or '',
+            'items': '',
+            'ids': [],
+        }
+    items_raw = request.POST.get('items') or ''
+    if items_raw.strip():
+        return {
+            'select_across': False,
+            'query': '',
+            'items': items_raw,
+            'ids': [],
+        }
+    return {
+        'select_across': False,
+        'query': '',
+        'items': '',
+        'ids': request.POST.getlist('ids'),
+    }
