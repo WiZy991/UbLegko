@@ -827,7 +827,25 @@ class ProductAdmin(admin.ModelAdmin):
             from django.core.exceptions import PermissionDenied
             raise PermissionDenied
         from .price_tags import render_price_tags_print
-        return render_price_tags_print(request)
+
+        products = None
+        if request.method == 'POST' and request.POST.get('select_across') == '1':
+            products = self._price_tag_changelist_products(request)
+        return render_price_tags_print(request, products)
+
+    def _price_tag_changelist_products(self, request):
+        from django.http import QueryDict
+
+        saved_get = request.GET
+        saved_method = request.method
+        try:
+            request.GET = QueryDict(request.POST.get('query') or '')
+            request.method = 'GET'
+            cl = self.get_changelist_instance(request)
+            return list(cl.queryset)
+        finally:
+            request.GET = saved_get
+            request.method = saved_method
 
     def get_urls(self):
         urls = super().get_urls()

@@ -12,6 +12,34 @@
   white-space: nowrap;
 }
 
+/* Список действий: родной select прячется, остаётся один выпадающий список Select2.
+   Иначе при открытии видны сразу два меню. */
+html[data-bs-theme] .app-main .actions select.select2-hidden-accessible {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+.model-product .actions .select2-container {
+  min-width: 240px;
+  width: auto !important;
+}
+
+.model-product #changelist .actions,
+.model-product #changelist-form > .actions {
+  overflow: visible;
+  position: relative;
+  z-index: 20;
+}
+
 /* Поиск всегда строкой ниже фильтров: поле + «Найти» рядом */
 .admin-search-group {
   display: flex;
@@ -137,7 +165,7 @@
 
 /* Страница не ездит целиком — скролл только у .results */
 body.model-product.change-list {
-  overflow-x: clip;
+  overflow-x: visible;
 }
 
 .model-product #changelist,

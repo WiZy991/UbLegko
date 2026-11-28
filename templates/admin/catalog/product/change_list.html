@@ -5,6 +5,7 @@
   <div class="product-db-tools">
     <a class="btn btn-success" href="{% url 'admin:catalog_product_export_database' %}">Скачать базу Excel</a>
     <a class="btn btn-success" href="{% url 'admin:catalog_product_import' %}">Залить базу Excel</a>
+    <button type="button" class="btn btn-success" id="product-price-tags" data-url="{% url 'admin:catalog_product_pricetags_print' %}">Сформировать ценники</button>
     {{ block.super }}
   </div>
 {% endblock %}
@@ -12,7 +13,7 @@
 {% block extrahead %}
   {% include "admin/includes/column_widths_boot.html" with col_key="ublegko-cols:app-catalog:model-product" %}
   {{ block.super }}
-  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=47">
+  <link rel="stylesheet" href="{% static 'admin/css/product_expandable.css' %}?v=48">
   <link rel="stylesheet" href="{% static 'admin/css/column_resize.css' %}?v=3">
   {{ product_category_choices|json_script:"product-category-choices" }}
   <script defer src="{% static 'admin/js/price_input_format.js' %}?v=2"></script>
@@ -22,6 +23,57 @@
     window.UBLEGKO_PRODUCT_SEARCH_SUGGEST = "{{ product_search_suggest_url|default:''|escapejs }}";
   </script>
   <script defer src="{% static 'admin/js/product_search_suggest.js' %}?v=3"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var button = document.getElementById('product-price-tags');
+      if (!button) return;
+      button.addEventListener('click', function () {
+        var form = document.getElementById('changelist-form');
+        var checked = form ? form.querySelectorAll('input[name="_selected_action"]:checked') : [];
+        var across = form ? form.querySelector('input[name="select_across"]') : null;
+        var all = across && across.value === '1';
+        if (!checked.length && !all) {
+          window.alert('Отметьте товары галочками.');
+          return;
+        }
+        var post = document.createElement('form');
+        post.method = 'POST';
+        post.action = button.getAttribute('data-url');
+        post.target = '_blank';
+        var csrf = form && form.querySelector('[name="csrfmiddlewaretoken"]');
+        if (csrf) {
+          var token = document.createElement('input');
+          token.type = 'hidden';
+          token.name = 'csrfmiddlewaretoken';
+          token.value = csrf.value;
+          post.appendChild(token);
+        }
+        if (all) {
+          var flag = document.createElement('input');
+          flag.type = 'hidden';
+          flag.name = 'select_across';
+          flag.value = '1';
+          post.appendChild(flag);
+          var query = document.createElement('input');
+          query.type = 'hidden';
+          query.name = 'query';
+          query.value = window.location.search.replace(/^\?/, '');
+          post.appendChild(query);
+        } else {
+          checked.forEach(function (box) {
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = box.value;
+            post.appendChild(input);
+          });
+        }
+        document.body.appendChild(post);
+        post.submit();
+        post.remove();
+      });
+    });
+  </script>
 {% endblock %}
 
 {% block result_list %}

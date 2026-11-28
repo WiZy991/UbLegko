@@ -277,28 +277,31 @@ def _tag_copies(item: dict, product: Product, printed_on: str, company: str) -> 
     return [tag for _ in range(qty)]
 
 
-def render_price_tags_print(request):
+def render_price_tags_print(request, products=None):
     if request.method != 'POST':
         return HttpResponseForbidden('Отметьте товары и нажмите печать.')
-    items = _posted_items(request)
-    ids = []
-    for item in items:
-        try:
-            ids.append(int(item.get('id')))
-        except (TypeError, ValueError):
-            continue
-    products = {product.pk: product for product in Product.objects.filter(pk__in=ids)}
     printed_on = _printed_on()
     company = _company_name()
-    tags = []
-    for item in items:
-        try:
-            product = products.get(int(item.get('id')))
-        except (TypeError, ValueError):
-            product = None
-        if product is None:
-            continue
-        tags.extend(_tag_copies(item, product, printed_on, company))
+    if products is not None:
+        tags = [tag_context(product, printed_on, company) for product in products]
+    else:
+        items = _posted_items(request)
+        ids = []
+        for item in items:
+            try:
+                ids.append(int(item.get('id')))
+            except (TypeError, ValueError):
+                continue
+        found = {product.pk: product for product in Product.objects.filter(pk__in=ids)}
+        tags = []
+        for item in items:
+            try:
+                product = found.get(int(item.get('id')))
+            except (TypeError, ValueError):
+                product = None
+            if product is None:
+                continue
+            tags.extend(_tag_copies(item, product, printed_on, company))
     return render(request, 'admin/catalog/price_tags_print.html', {
         'title': 'Ценники',
         'tags': tags,

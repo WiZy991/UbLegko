@@ -39,14 +39,6 @@ JAZZMIN_SETTINGS = {
     'copyright': 'ООО СОЛНЕЧНЫЙ МЕЧ',
     'search_model': ['catalog.Product', 'auth.User', 'cart.Order'],
     'user_avatar': None,
-    'custom_links': {
-        'catalog': [{
-            'name': 'Ценники',
-            'url': 'admin:catalog_product_pricetags',
-            'icon': 'fas fa-tags',
-            'permissions': ['catalog.view_product'],
-        }],
-    },
     'topmenu_links': [
         {'name': 'Открыть сайт', 'url': '/', 'new_window': True},
         {'name': 'Каталог', 'url': 'admin:catalog_product_changelist', 'permissions': ['catalog.view_product']},
