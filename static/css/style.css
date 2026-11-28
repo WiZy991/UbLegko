@@ -149,13 +149,13 @@ select {
 }
 
 /* Левое поле — зигзаг от самого края до заголовка */
-.brand-stars--left .brand-stars__item:nth-child(1)  { left: 0;   top: 8%;  }
+.brand-stars--left .brand-stars__item:nth-child(1)  { left: 14px; top: 8%;  }
 .brand-stars--left .brand-stars__item:nth-child(2)  { left: 19%; top: 42%; }
 .brand-stars--left .brand-stars__item:nth-child(3)  { left: 36%; top: 12%; }
 .brand-stars--left .brand-stars__item:nth-child(4)  { left: 50%; top: 58%; }
 .brand-stars--left .brand-stars__item:nth-child(5)  { left: 67%; top: 22%; }
 .brand-stars--left .brand-stars__item:nth-child(6)  { left: 82%; top: 48%; }
-.brand-stars--left .brand-stars__item:nth-child(7)  { left: 8%;  top: 72%; }
+.brand-stars--left .brand-stars__item:nth-child(7)  { left: 8%;  top: 56%; }
 .brand-stars--left .brand-stars__item:nth-child(8)  { left: 27%; top: 28%; }
 .brand-stars--left .brand-stars__item:nth-child(9)  { left: 44%; top: 78%; }
 .brand-stars--left .brand-stars__item:nth-child(10) { left: 61%; top: 6%;  }
@@ -163,13 +163,13 @@ select {
 .brand-stars--left .brand-stars__item:nth-child(12) { left: 90%; top: 32%; }
 
 /* Правое поле — зеркально, до самого края */
-.brand-stars--right .brand-stars__item:nth-child(1)  { right: 0;   top: 8%;  }
+.brand-stars--right .brand-stars__item:nth-child(1)  { right: 14px; top: 8%;  }
 .brand-stars--right .brand-stars__item:nth-child(2)  { right: 19%; top: 42%; }
 .brand-stars--right .brand-stars__item:nth-child(3)  { right: 36%; top: 12%; }
 .brand-stars--right .brand-stars__item:nth-child(4)  { right: 50%; top: 58%; }
 .brand-stars--right .brand-stars__item:nth-child(5)  { right: 67%; top: 22%; }
 .brand-stars--right .brand-stars__item:nth-child(6)  { right: 82%; top: 48%; }
-.brand-stars--right .brand-stars__item:nth-child(7)  { right: 8%;  top: 72%; }
+.brand-stars--right .brand-stars__item:nth-child(7)  { right: 8%;  top: 56%; }
 .brand-stars--right .brand-stars__item:nth-child(8)  { right: 27%; top: 28%; }
 .brand-stars--right .brand-stars__item:nth-child(9)  { right: 44%; top: 78%; }
 .brand-stars--right .brand-stars__item:nth-child(10) { right: 61%; top: 6%;  }
