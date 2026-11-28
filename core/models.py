@@ -40,6 +40,7 @@ class City(models.Model):
 TICKER_FONT_CHOICES = [
     ('manrope', 'Manrope'),
     ('arial', 'Arial'),
+    ('arialblack', 'Arial Black'),
     ('verdana', 'Verdana'),
     ('tahoma', 'Tahoma'),
     ('segoe', 'Segoe UI'),
@@ -60,6 +61,7 @@ TICKER_FONT_CHOICES = [
 TICKER_FONT_FAMILY = {
     'manrope': '"Manrope", sans-serif',
     'arial': 'Arial, Helvetica, sans-serif',
+    'arialblack': '"Arial Black", "Arial Bold", Gadget, sans-serif',
     'verdana': 'Verdana, Geneva, sans-serif',
     'tahoma': 'Tahoma, Geneva, sans-serif',
     'segoe': '"Segoe UI", sans-serif',

@@ -347,6 +347,13 @@ html[data-bs-theme="dark"] .app-main textarea {
   max-width: 100%;
 }
 
+textarea#id_ticker_text {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 180px;
+  box-sizing: border-box;
+}
+
 /* Подсказки: светлый фон, чёрный текст в любой теме */
 .product-expandable-hint,
 .product-expandable-hint strong,

@@ -40,7 +40,10 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         form = super().get_form(request, obj, **kwargs)
         text = form.base_fields.get('ticker_text')
         if text is not None:
-            text.widget.attrs['rows'] = 3
+            text.widget.attrs.update({
+                'rows': 8,
+                'style': 'width: 100%; max-width: 100%; box-sizing: border-box;',
+            })
         speed = form.base_fields.get('ticker_speed_seconds')
         if speed is not None:
             speed.widget.attrs.update({'min': 4, 'max': 1000})
